@@ -33,17 +33,28 @@ zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッ�
 src/
   cli/
     index.ts
+  shared/
+    protocol.ts
   server/
     app.ts
     index.ts
+    realtime.ts
     session.ts
     view.ts
+    watch.ts
+  web/
+    App.tsx
+    index.html
+    main.tsx
+    styles.css
   meta.ts
 bin/
   zatto.js
 test/
   cli.test.ts
   server.test.ts
+  watch.test.ts
+  web.test.tsx
 docs/
   overview.md
 ```

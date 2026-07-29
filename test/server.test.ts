@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
+import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
 
 describe("zatto server", () => {
@@ -99,7 +100,7 @@ describe("zatto server", () => {
 
     const store = new SessionStore(sessionFilePath);
     await store.load();
-    const app = createApp({ sessionStore: store });
+    const app = await createApp({ sessionStore: store });
 
     const addResponse = await app.inject({
       method: "POST",
@@ -152,7 +153,7 @@ describe("zatto server", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [entry] = await store.addEntries([htmlPath]);
-    const app = createApp({ sessionStore: store });
+    const app = await createApp({ sessionStore: store });
 
     const htmlResponse = await app.inject({
       method: "GET",
@@ -160,7 +161,7 @@ describe("zatto server", () => {
     });
     expect(htmlResponse.statusCode).toBe(200);
     expect(htmlResponse.body).toContain("Viewer");
-    expect(htmlResponse.body).toContain("/ws");
+    expect(htmlResponse.body).not.toContain("/ws");
 
     const cssResponse = await app.inject({
       method: "GET",
@@ -185,11 +186,122 @@ describe("zatto server", () => {
     await app.close();
   });
 
+  test("セッション変更を WebSocket で配信する", async () => {
+    const htmlPath = path.join(tempDir, "realtime.html");
+    await writeFile(htmlPath, "<title>Realtime</title>", "utf8");
+
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const realtimeHub = new RealtimeHub();
+    const onSessionChanged = vi.fn();
+    const app = await createApp({
+      sessionStore: store,
+      realtimeHub,
+      onSessionChanged,
+    });
+    await app.ready();
+
+    const socket = await app.injectWS("/ws");
+    const updatePromise = new Promise<string>((resolve) => {
+      socket.once("message", (data) => resolve(data.toString()));
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/session/add",
+      payload: { paths: [htmlPath] },
+    });
+    const message = JSON.parse(await updatePromise) as {
+      type: string;
+      entries: Array<{ absPath: string }>;
+    };
+
+    expect(response.statusCode).toBe(201);
+    expect(message).toMatchObject({
+      type: "session:update",
+      entries: [{ absPath: htmlPath }],
+    });
+    expect(onSessionChanged).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [expect.objectContaining({ absPath: htmlPath })],
+      }),
+    );
+
+    const addedId = response.json().added[0].id as string;
+    const deleteUpdatePromise = new Promise<string>((resolve) => {
+      socket.once("message", (data) => resolve(data.toString()));
+    });
+    const deleteResponse = await app.inject({
+      method: "DELETE",
+      url: `/api/session/${addedId}`,
+    });
+    const deleteMessage = JSON.parse(await deleteUpdatePromise) as {
+      type: string;
+      entries: unknown[];
+    };
+
+    expect(deleteResponse.statusCode).toBe(204);
+    expect(deleteMessage).toEqual({
+      type: "session:update",
+      entries: [],
+    });
+    const restoredStore = new SessionStore(sessionFilePath);
+    await expect(restoredStore.load()).resolves.toEqual({ entries: [] });
+    expect(onSessionChanged).toHaveBeenCalledTimes(2);
+
+    socket.close();
+    await app.close();
+  });
+
+  test("ビルド済みフロントとアセットを配信する", async () => {
+    const frontendRoot = path.join(tempDir, "dist", "web");
+    const frontendIndexPath = path.join(frontendRoot, "index.html");
+    await mkdir(path.join(frontendRoot, "assets"), { recursive: true });
+    await writeFile(
+      frontendIndexPath,
+      '<div id="root"></div><script src="/assets/app.js"></script>',
+      "utf8",
+    );
+    await writeFile(
+      path.join(frontendRoot, "assets", "app.js"),
+      "window.zatto = true;",
+      "utf8",
+    );
+
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const app = await createApp({
+      sessionStore: store,
+      frontendDistPath: frontendIndexPath,
+    });
+
+    const indexResponse = await app.inject({ method: "GET", url: "/" });
+    const assetResponse = await app.inject({
+      method: "GET",
+      url: "/assets/app.js",
+    });
+    const traversalResponse = await app.inject({
+      method: "GET",
+      url: "/assets/..%2Findex.html",
+    });
+
+    expect(indexResponse.statusCode).toBe(200);
+    expect(indexResponse.body).toContain('id="root"');
+    expect(assetResponse.statusCode).toBe(200);
+    expect(assetResponse.headers["content-type"]).toContain(
+      "application/javascript",
+    );
+    expect(assetResponse.body).toContain("window.zatto");
+    expect(traversalResponse.statusCode).toBe(403);
+
+    await app.close();
+  });
+
   test("shutdown エンドポイントで終了フックを呼ぶ", async () => {
     const shutdown = vi.fn();
     const store = new SessionStore(sessionFilePath);
     await store.load();
-    const app = createApp({ sessionStore: store, shutdown });
+    const app = await createApp({ sessionStore: store, shutdown });
     vi.useFakeTimers();
 
     const response = await app.inject({
@@ -208,7 +320,7 @@ describe("zatto server", () => {
   test("GET / は暫定プレースホルダを返す", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
-    const app = createApp({ sessionStore: store });
+    const app = await createApp({ sessionStore: store });
 
     const response = await app.inject({
       method: "GET",
@@ -216,7 +328,7 @@ describe("zatto server", () => {
     });
 
     expect(response.statusCode).toBe(503);
-    expect(response.body).toContain("Issue #4");
+    expect(response.body).toContain("先にビルドを実行してください");
 
     await app.close();
   });
@@ -224,7 +336,7 @@ describe("zatto server", () => {
   test("health エンドポイントがバージョンを返す", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
-    const app = createApp({ sessionStore: store });
+    const app = await createApp({ sessionStore: store });
 
     const response = await app.inject({
       method: "GET",
