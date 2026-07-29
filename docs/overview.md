@@ -31,12 +31,18 @@ zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッ�
 
 ```text
 src/
+  cli/
+    index.ts
   server/
     app.ts
     index.ts
     session.ts
     view.ts
+  meta.ts
+bin/
+  zatto.js
 test/
+  cli.test.ts
   server.test.ts
 docs/
   overview.md

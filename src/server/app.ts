@@ -1,11 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import Fastify, { type FastifyInstance } from "fastify";
+import { APP_NAME, APP_VERSION } from "../meta.js";
 import { fileExists, type SessionStore } from "./session.js";
 import { readAsset, renderEntryHtml } from "./view.js";
-
-const APP_NAME = "zatto";
-const APP_VERSION = "0.1.0";
 
 type CreateAppOptions = {
   sessionStore: SessionStore;
