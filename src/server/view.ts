@@ -2,26 +2,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Entry } from "./session.js";
 
-const LIVE_RELOAD_SCRIPT = `<script>
-(() => {
-  if (window.__zattoLiveReloadLoaded) return;
-  window.__zattoLiveReloadLoaded = true;
-  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const url = protocol + "//" + location.host + "/ws";
-  try {
-    const socket = new WebSocket(url);
-    socket.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data?.type === "file:changed" && data.entryId === "__ENTRY_ID__") {
-          location.reload();
-        }
-      } catch {}
-    });
-  } catch {}
-})();
-</script>`;
-
 const CONTENT_TYPES = new Map<string, string>([
   [".css", "text/css; charset=utf-8"],
   [".gif", "image/gif"],
@@ -37,17 +17,15 @@ const CONTENT_TYPES = new Map<string, string>([
   [".webp", "image/webp"],
 ]);
 
-export function injectLiveReload(html: string, entryId: string): string {
-  const script = LIVE_RELOAD_SCRIPT.replace("__ENTRY_ID__", entryId);
-  if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${script}</body>`);
-  }
-  return `${html}${script}`;
+export function contentTypeForPath(filePath: string): string {
+  return (
+    CONTENT_TYPES.get(path.extname(filePath).toLowerCase()) ??
+    "application/octet-stream"
+  );
 }
 
 export async function renderEntryHtml(entry: Entry): Promise<string> {
-  const html = await readFile(entry.absPath, "utf8");
-  return injectLiveReload(html, entry.id);
+  return readFile(entry.absPath, "utf8");
 }
 
 export function resolveAssetPath(
@@ -83,9 +61,7 @@ export async function readAsset(
   }
 
   const body = await readFile(resolvedPath);
-  const contentType =
-    CONTENT_TYPES.get(path.extname(resolvedPath).toLowerCase()) ??
-    "application/octet-stream";
+  const contentType = contentTypeForPath(resolvedPath);
 
   return { body, contentType };
 }

@@ -1,22 +1,35 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import path, { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { APP_NAME, APP_VERSION } from "../meta.js";
-import { fileExists, type SessionStore } from "./session.js";
-import { readAsset, renderEntryHtml } from "./view.js";
+import { RealtimeHub } from "./realtime.js";
+import { fileExists, type Session, type SessionStore } from "./session.js";
+import { contentTypeForPath, readAsset, renderEntryHtml } from "./view.js";
 
 type CreateAppOptions = {
   sessionStore: SessionStore;
   shutdown?: () => Promise<void> | void;
   frontendDistPath?: string;
+  realtimeHub?: RealtimeHub;
+  onSessionChanged?: (session: Session) => Promise<void> | void;
 };
 
 type AddSessionBody = {
   paths?: string[];
 };
 
-export function createApp(options: CreateAppOptions): FastifyInstance {
+export async function createApp(
+  options: CreateAppOptions,
+): Promise<FastifyInstance> {
   const app = Fastify();
+  const realtimeHub = options.realtimeHub ?? new RealtimeHub();
+  await app.register(websocket);
+
+  app.get("/ws", { websocket: true }, (socket) => {
+    realtimeHub.add(socket);
+  });
 
   app.get("/", async (_request, reply) => {
     if (
@@ -39,10 +52,33 @@ export function createApp(options: CreateAppOptions): FastifyInstance {
   <body>
     <main>
       <h1>zatto サーバーは起動中です</h1>
-      <p>フロントエンドは Issue #4 で実装されます。</p>
+      <p>フロントエンドが見つかりません。先にビルドを実行してください。</p>
     </main>
   </body>
 </html>`);
+  });
+
+  app.get<{ Params: { "*": string } }>("/assets/*", async (request, reply) => {
+    if (!options.frontendDistPath) {
+      return reply.code(404).send({ message: "ファイルが見つかりません" });
+    }
+
+    const distRoot = path.dirname(options.frontendDistPath);
+    const assetsRoot = path.resolve(distRoot, "assets");
+    const assetPath = path.resolve(assetsRoot, request.params["*"] ?? "");
+    const relativePath = path.relative(assetsRoot, assetPath);
+    if (
+      relativePath.startsWith("..") ||
+      path.isAbsolute(relativePath) ||
+      relativePath === ""
+    ) {
+      return reply
+        .code(403)
+        .send({ message: "アセットディレクトリ外にはアクセスできません" });
+    }
+
+    const body = await readFile(assetPath);
+    return reply.type(contentTypeForPath(assetPath)).send(body);
   });
 
   app.get("/api/health", async () => {
@@ -72,6 +108,9 @@ export function createApp(options: CreateAppOptions): FastifyInstance {
 
       const addedEntries =
         await options.sessionStore.addEntries(normalizedPaths);
+      if (addedEntries.length > 0) {
+        await publishSessionUpdate();
+      }
       return reply.code(201).send({
         added: addedEntries,
         session: options.sessionStore.getSession(),
@@ -86,12 +125,17 @@ export function createApp(options: CreateAppOptions): FastifyInstance {
       if (!removed) {
         return reply.code(404).send({ message: "エントリが見つかりません" });
       }
+      await publishSessionUpdate();
       return reply.code(204).send();
     },
   );
 
   app.delete("/api/session", async (_request, reply) => {
+    const hadEntries = options.sessionStore.getSession().entries.length > 0;
     await options.sessionStore.clear();
+    if (hadEntries) {
+      await publishSessionUpdate();
+    }
     return reply.code(204).send();
   });
 
@@ -140,11 +184,20 @@ export function createApp(options: CreateAppOptions): FastifyInstance {
     return reply.code(500).send({ message: "サーバーエラー" });
   });
 
+  async function publishSessionUpdate(): Promise<void> {
+    const session = options.sessionStore.getSession();
+    await options.onSessionChanged?.(session);
+    realtimeHub.broadcast({
+      type: "session:update",
+      entries: session.entries,
+    });
+  }
+
   return app;
 }
 
 export function defaultFrontendDistPath(): string {
-  return resolve(process.cwd(), "dist", "web", "index.html");
+  return fileURLToPath(new URL("../../dist/web/index.html", import.meta.url));
 }
 
 export async function closeAppAndExit(app: FastifyInstance): Promise<void> {
