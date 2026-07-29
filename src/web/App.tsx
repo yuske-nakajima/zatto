@@ -1,11 +1,25 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { type DragEvent, useEffect, useEffectEvent, useState } from "react";
 import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
+
+export type FilePanelView = "list" | "directories";
+
+export type DirectoryGroup = {
+  directory: string;
+  name: string;
+  entries: Entry[];
+};
+
+const FILE_PANEL_VIEW_KEY = "zatto:file-panel-view";
 
 export function App() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [filePanelView, setFilePanelView] =
+    useState<FilePanelView>(readFilePanelView);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting");
@@ -39,6 +53,10 @@ export function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    storeFilePanelView(filePanelView);
+  }, [filePanelView]);
 
   const handleSocketMessage = useEffectEvent((event: MessageEvent) => {
     const message = parseServerMessage(event.data);
@@ -112,6 +130,50 @@ export function App() {
     setErrorMessage("エントリを全削除できませんでした");
   }
 
+  async function reorderEntries(targetId: string): Promise<void> {
+    if (!draggedId || draggedId === targetId) {
+      resetDragState();
+      return;
+    }
+
+    const previousEntries = entries;
+    const reorderedEntries = moveEntry(entries, draggedId, targetId);
+    setEntries(reorderedEntries);
+    resetDragState();
+
+    try {
+      const response = await fetch("/api/session/order", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ids: reorderedEntries.map((entry) => entry.id),
+        }),
+      });
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // 下の共通エラー表示へ進む。
+    }
+
+    setEntries(previousEntries);
+    setErrorMessage("エントリを並べ替えられませんでした");
+  }
+
+  function resetDragState(): void {
+    setDraggedId(null);
+    setDropTargetId(null);
+  }
+
+  function handleDragStart(
+    event: DragEvent<HTMLButtonElement>,
+    id: string,
+  ): void {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
+    setDraggedId(id);
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -140,37 +202,66 @@ export function App() {
           </button>
         </div>
 
-        <nav className="entry-list" aria-label="HTML エントリ">
-          {entries.map((entry, index) => (
-            <div
-              className={`entry-row${entry.id === selectedId ? " entry-row--selected" : ""}`}
-              key={entry.id}
-            >
-              <button
-                className="entry-select"
-                type="button"
-                aria-label={`${entry.title} を表示`}
-                onClick={() => setSelectedId(entry.id)}
-              >
-                <span className="entry-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="entry-copy">
-                  <strong>{entry.title}</strong>
-                  <small>{fileName(entry.absPath)}</small>
-                </span>
-              </button>
-              <button
-                className="entry-remove"
-                type="button"
-                aria-label={`${entry.title} を削除`}
-                onClick={() => removeEntry(entry.id)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </nav>
+        <fieldset className="view-switcher">
+          <legend className="visually-hidden">ファイルパネルの表示方式</legend>
+          <button
+            type="button"
+            aria-pressed={filePanelView === "list"}
+            onClick={() => setFilePanelView("list")}
+          >
+            リスト
+          </button>
+          <button
+            type="button"
+            aria-pressed={filePanelView === "directories"}
+            onClick={() => setFilePanelView("directories")}
+          >
+            ディレクトリ
+          </button>
+        </fieldset>
+
+        {filePanelView === "list" ? (
+          <ol className="entry-list" aria-label="HTML エントリ">
+            {entries.map((entry, index) => (
+              <EntryRow
+                entry={entry}
+                index={index}
+                isSelected={entry.id === selectedId}
+                isDragging={entry.id === draggedId}
+                isDropTarget={entry.id === dropTargetId}
+                key={entry.id}
+                onSelect={setSelectedId}
+                onRemove={removeEntry}
+                onDragStart={handleDragStart}
+                onDragEnter={setDropTargetId}
+                onDragEnd={resetDragState}
+                onDrop={reorderEntries}
+              />
+            ))}
+          </ol>
+        ) : (
+          <nav className="entry-list" aria-label="ディレクトリ別 HTML エントリ">
+            {groupEntriesByDirectory(entries).map((group) => (
+              <section className="directory-group" key={group.directory}>
+                <header className="directory-heading">
+                  <strong>{group.name}</strong>
+                  <small title={group.directory}>{group.directory}</small>
+                </header>
+                <ul className="directory-entry-list">
+                  {group.entries.map((entry) => (
+                    <EntryRow
+                      entry={entry}
+                      isSelected={entry.id === selectedId}
+                      key={entry.id}
+                      onSelect={setSelectedId}
+                      onRemove={removeEntry}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </nav>
+        )}
 
         {entries.length === 0 && (
           <div className="empty-list">
@@ -212,6 +303,105 @@ export function App() {
   );
 }
 
+type EntryRowProps = {
+  entry: Entry;
+  index?: number;
+  isSelected: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
+  onDragStart?: (event: DragEvent<HTMLButtonElement>, id: string) => void;
+  onDragEnter?: (id: string) => void;
+  onDragEnd?: () => void;
+  onDrop?: (id: string) => void;
+};
+
+function EntryRow({
+  entry,
+  index,
+  isSelected,
+  isDragging = false,
+  isDropTarget = false,
+  onSelect,
+  onRemove,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
+}: EntryRowProps) {
+  const draggable = Boolean(onDragStart);
+  const rowClassNames = [
+    "entry-row",
+    isSelected && "entry-row--selected",
+    isDragging && "entry-row--dragging",
+    isDropTarget && !isDragging && "entry-row--drop-target",
+    !draggable && "entry-row--grouped",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <li
+      className={rowClassNames}
+      onDragOver={
+        onDrop
+          ? (event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              onDragEnter?.(entry.id);
+            }
+          : undefined
+      }
+      onDrop={
+        onDrop
+          ? (event) => {
+              event.preventDefault();
+              void onDrop(entry.id);
+            }
+          : undefined
+      }
+    >
+      {draggable && (
+        <button
+          className="entry-drag"
+          type="button"
+          draggable
+          aria-label={`${entry.title} を並べ替え`}
+          onDragStart={(event) => onDragStart?.(event, entry.id)}
+          onDragEnd={onDragEnd}
+        >
+          ⠿
+        </button>
+      )}
+      <button
+        className="entry-select"
+        type="button"
+        aria-label={`${entry.title} を表示`}
+        onClick={() => onSelect(entry.id)}
+      >
+        {index !== undefined && (
+          <span className="entry-index">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        )}
+        <span className="entry-copy">
+          <strong>{entry.title}</strong>
+          <small>{fileName(entry.absPath)}</small>
+        </span>
+      </button>
+      <button
+        className="entry-remove"
+        type="button"
+        aria-label={`${entry.title} を削除`}
+        onClick={() => onRemove(entry.id)}
+      >
+        ×
+      </button>
+    </li>
+  );
+}
+
 export function selectAvailableEntry(
   selectedId: string | null,
   entries: Entry[],
@@ -220,6 +410,59 @@ export function selectAvailableEntry(
     return selectedId;
   }
   return entries[0]?.id ?? null;
+}
+
+export function moveEntry(
+  entries: Entry[],
+  draggedId: string,
+  targetId: string,
+): Entry[] {
+  const fromIndex = entries.findIndex((entry) => entry.id === draggedId);
+  const targetIndex = entries.findIndex((entry) => entry.id === targetId);
+  if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) {
+    return entries;
+  }
+
+  const reordered = [...entries];
+  const [draggedEntry] = reordered.splice(fromIndex, 1);
+  reordered.splice(targetIndex, 0, draggedEntry);
+  return reordered;
+}
+
+export function groupEntriesByDirectory(entries: Entry[]): DirectoryGroup[] {
+  const groups = new Map<string, DirectoryGroup>();
+  for (const entry of entries) {
+    const directory = parentDirectory(entry.absPath);
+    const group = groups.get(directory);
+    if (group) {
+      group.entries.push(entry);
+      continue;
+    }
+
+    groups.set(directory, {
+      directory,
+      name: fileName(directory),
+      entries: [entry],
+    });
+  }
+  return [...groups.values()];
+}
+
+function readFilePanelView(): FilePanelView {
+  try {
+    const storedView = window.localStorage.getItem(FILE_PANEL_VIEW_KEY);
+    return storedView === "directories" ? "directories" : "list";
+  } catch {
+    return "list";
+  }
+}
+
+function storeFilePanelView(filePanelView: FilePanelView): void {
+  try {
+    window.localStorage.setItem(FILE_PANEL_VIEW_KEY, filePanelView);
+  } catch {
+    // ブラウザがストレージを無効化していても表示切り替えは継続する。
+  }
 }
 
 function parseServerMessage(data: unknown): ServerMessage | null {
@@ -233,6 +476,15 @@ function parseServerMessage(data: unknown): ServerMessage | null {
   }
 }
 
+function parentDirectory(absPath: string): string {
+  const normalizedPath = absPath.replaceAll("\\", "/");
+  const separatorIndex = normalizedPath.lastIndexOf("/");
+  if (separatorIndex < 0) {
+    return ".";
+  }
+  return normalizedPath.slice(0, separatorIndex) || "/";
+}
+
 function fileName(absPath: string): string {
-  return absPath.split(/[\\/]/).at(-1) ?? absPath;
+  return absPath.split(/[\\/]/).filter(Boolean).at(-1) ?? absPath;
 }
