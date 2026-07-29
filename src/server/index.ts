@@ -7,7 +7,7 @@ import { EntryWatcher } from "./watch.js";
 export const DEFAULT_PORT = 6280;
 
 export async function startServer(port = DEFAULT_PORT) {
-  const sessionStore = new SessionStore();
+  const sessionStore = new SessionStore(process.env.ZATTO_SESSION_FILE);
   await sessionStore.load();
   const realtimeHub = new RealtimeHub();
   const entryWatcher = new EntryWatcher((id) => {

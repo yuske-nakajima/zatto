@@ -117,6 +117,31 @@ export class SessionStore {
     return true;
   }
 
+  async reorderEntries(ids: string[]): Promise<boolean> {
+    if (
+      ids.length !== this.session.entries.length ||
+      new Set(ids).size !== ids.length
+    ) {
+      return false;
+    }
+
+    const entriesById = new Map(
+      this.session.entries.map((entry) => [entry.id, entry]),
+    );
+    const reorderedEntries: Entry[] = [];
+    for (const id of ids) {
+      const entry = entriesById.get(id);
+      if (!entry) {
+        return false;
+      }
+      reorderedEntries.push(entry);
+    }
+
+    this.session = { entries: reorderedEntries };
+    await this.persist();
+    return true;
+  }
+
   async clear(): Promise<void> {
     if (this.session.entries.length === 0) {
       return;

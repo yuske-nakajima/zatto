@@ -20,6 +20,10 @@ type AddSessionBody = {
   paths?: string[];
 };
 
+type ReorderSessionBody = {
+  ids?: string[];
+};
+
 export async function createApp(
   options: CreateAppOptions,
 ): Promise<FastifyInstance> {
@@ -115,6 +119,28 @@ export async function createApp(
         added: addedEntries,
         session: options.sessionStore.getSession(),
       });
+    },
+  );
+
+  app.patch<{ Body: ReorderSessionBody }>(
+    "/api/session/order",
+    async (request, reply) => {
+      const ids = request.body?.ids;
+      if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+        return reply
+          .code(400)
+          .send({ message: "`ids` は文字列の配列である必要があります" });
+      }
+
+      const reordered = await options.sessionStore.reorderEntries(ids);
+      if (!reordered) {
+        return reply.code(400).send({
+          message: "`ids` には現在の全エントリを重複なく指定してください",
+        });
+      }
+
+      await publishSessionUpdate();
+      return reply.code(204).send();
     },
   );
 

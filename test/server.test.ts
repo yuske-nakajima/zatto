@@ -94,6 +94,53 @@ describe("zatto server", () => {
     expect(session.entries[0]?.id).toBe("keep");
   });
 
+  test("エントリを指定順に並べ替えて永続化する", async () => {
+    const firstPath = path.join(tempDir, "first.html");
+    const secondPath = path.join(tempDir, "second.html");
+    await writeFile(firstPath, "<title>First</title>", "utf8");
+    await writeFile(secondPath, "<title>Second</title>", "utf8");
+
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const [first, second] = await store.addEntries([firstPath, secondPath]);
+
+    await expect(store.reorderEntries([second.id, first.id])).resolves.toBe(
+      true,
+    );
+    expect(store.getSession().entries.map((entry) => entry.id)).toEqual([
+      second.id,
+      first.id,
+    ]);
+
+    const restoredStore = new SessionStore(sessionFilePath);
+    await expect(restoredStore.load()).resolves.toMatchObject({
+      entries: [{ id: second.id }, { id: first.id }],
+    });
+  });
+
+  test("並べ替えでIDの重複・欠落・不明なIDを拒否する", async () => {
+    const firstPath = path.join(tempDir, "first.html");
+    const secondPath = path.join(tempDir, "second.html");
+    await writeFile(firstPath, "<title>First</title>", "utf8");
+    await writeFile(secondPath, "<title>Second</title>", "utf8");
+
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const [first] = await store.addEntries([firstPath, secondPath]);
+
+    await expect(store.reorderEntries([first.id])).resolves.toBe(false);
+    await expect(store.reorderEntries([first.id, first.id])).resolves.toBe(
+      false,
+    );
+    await expect(store.reorderEntries([first.id, "unknown"])).resolves.toBe(
+      false,
+    );
+    expect(store.getSession().entries.map((entry) => entry.id)).toEqual([
+      first.id,
+      expect.any(String),
+    ]);
+  });
+
   test("API で追加・一覧取得・個別削除・全削除ができる", async () => {
     const htmlPath = path.join(tempDir, "api.html");
     await writeFile(htmlPath, "<title>API</title><body>api</body>", "utf8");
@@ -130,6 +177,62 @@ describe("zatto server", () => {
     });
     expect(clearResponse.statusCode).toBe(204);
 
+    await app.close();
+  });
+
+  test("API で並べ替えて WebSocket に配信する", async () => {
+    const firstPath = path.join(tempDir, "first.html");
+    const secondPath = path.join(tempDir, "second.html");
+    await writeFile(firstPath, "<title>First</title>", "utf8");
+    await writeFile(secondPath, "<title>Second</title>", "utf8");
+
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const [first, second] = await store.addEntries([firstPath, secondPath]);
+    const app = await createApp({ sessionStore: store });
+    await app.ready();
+    const socket = await app.injectWS("/ws");
+    const updatePromise = new Promise<string>((resolve) => {
+      socket.once("message", (data) => resolve(data.toString()));
+    });
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/session/order",
+      payload: { ids: [second.id, first.id] },
+    });
+    const message = JSON.parse(await updatePromise) as {
+      type: string;
+      entries: Array<{ id: string }>;
+    };
+
+    expect(response.statusCode).toBe(204);
+    expect(message).toEqual({
+      type: "session:update",
+      entries: [second, first],
+    });
+
+    const duplicateResponse = await app.inject({
+      method: "PATCH",
+      url: "/api/session/order",
+      payload: { ids: [first.id, first.id] },
+    });
+    const missingResponse = await app.inject({
+      method: "PATCH",
+      url: "/api/session/order",
+      payload: { ids: [first.id] },
+    });
+    const unknownResponse = await app.inject({
+      method: "PATCH",
+      url: "/api/session/order",
+      payload: { ids: [first.id, "unknown"] },
+    });
+
+    expect(duplicateResponse.statusCode).toBe(400);
+    expect(missingResponse.statusCode).toBe(400);
+    expect(unknownResponse.statusCode).toBe(400);
+
+    socket.close();
     await app.close();
   });
 

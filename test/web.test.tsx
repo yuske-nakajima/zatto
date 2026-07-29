@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
-import { App } from "../src/web/App.js";
+import { App, groupEntriesByDirectory, moveEntry } from "../src/web/App.js";
 
 class FakeWebSocket extends EventTarget {
   static instance: FakeWebSocket | null = null;
@@ -25,11 +31,11 @@ class FakeWebSocket extends EventTarget {
   }
 }
 
-function entry(id: string, title: string): Entry {
+function entry(id: string, title: string, absPath = `/tmp/${id}.html`): Entry {
   return {
     id,
     title,
-    absPath: `/tmp/${id}.html`,
+    absPath,
     addedAt: 1,
   };
 }
@@ -38,6 +44,7 @@ describe("App", () => {
   const initialEntries = [entry("a", "Alpha"), entry("b", "Bravo")];
 
   beforeEach(() => {
+    window.localStorage.clear();
     FakeWebSocket.instance = null;
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
@@ -109,5 +116,95 @@ describe("App", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/session", {
       method: "DELETE",
     });
+  });
+
+  test("表示方式を切り替えてブラウザに保存する", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha のプレビュー");
+
+    await user.click(screen.getByRole("button", { name: "ディレクトリ" }));
+
+    expect(
+      screen
+        .getByRole("button", { name: "ディレクトリ" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(window.localStorage.getItem("zatto:file-panel-view")).toBe(
+      "directories",
+    );
+    expect(screen.getByTitle("Alpha のプレビュー")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Alpha を並べ替え" }),
+    ).toBeNull();
+  });
+
+  test("保存した表示方式を再読み込み時に復元する", async () => {
+    window.localStorage.setItem("zatto:file-panel-view", "directories");
+    render(<App />);
+    await screen.findByTitle("Alpha のプレビュー");
+
+    expect(
+      screen
+        .getByRole("button", { name: "ディレクトリ" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  test("ドラッグアンドドロップした順序をAPIへ送る", async () => {
+    render(<App />);
+    await screen.findByTitle("Alpha のプレビュー");
+    const fetchMock = vi.mocked(fetch);
+    const dataTransfer = {
+      effectAllowed: "",
+      dropEffect: "",
+      setData: vi.fn(),
+    };
+
+    fireEvent.dragStart(
+      screen.getByRole("button", { name: "Alpha を並べ替え" }),
+      { dataTransfer },
+    );
+    const targetRow = screen
+      .getByRole("button", { name: "Bravo を表示" })
+      .closest(".entry-row");
+    expect(targetRow).not.toBeNull();
+    fireEvent.dragOver(targetRow as Element, { dataTransfer });
+    fireEvent.drop(targetRow as Element, { dataTransfer });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/session/order", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids: ["b", "a"] }),
+    });
+  });
+});
+
+describe("ファイルパネルの表示変換", () => {
+  const first = entry("a", "Alpha", "/work/first/index.html");
+  const second = entry("b", "Bravo", "/work/second/index.html");
+  const third = entry("c", "Charlie", "/work/first/report.html");
+
+  test("並べ替え対象を指定位置へ移動する", () => {
+    expect(moveEntry([first, second, third], "a", "c")).toEqual([
+      second,
+      third,
+      first,
+    ]);
+  });
+
+  test("親ディレクトリごとにリスト順でまとめる", () => {
+    expect(groupEntriesByDirectory([first, second, third])).toEqual([
+      {
+        directory: "/work/first",
+        name: "first",
+        entries: [first, third],
+      },
+      {
+        directory: "/work/second",
+        name: "second",
+        entries: [second],
+      },
+    ]);
   });
 });

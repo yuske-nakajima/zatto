@@ -26,6 +26,7 @@ zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッ�
 
 - ポート番号: `6280`
 - セッション保存先: `~/.config/zatto/session.json`
+- 開発時の保存先上書き: `ZATTO_SESSION_FILE`
 
 ## ディレクトリ構成
 
@@ -68,5 +69,5 @@ docs/
 | リロード方式 | フロント主導（WS `file:changed` を受けて iframe を reload） |
 | `<title>` 抽出 | 表示名に HTML の `<title>` を使い、無ければファイル名を使う |
 | サーバーの寿命 | 自動終了しない。停止は `zatto --stop` のみ |
-| セッションの永続化 | v1 に含め、追加・削除のたびに `~/.config/zatto/session.json` へ保存する |
+| セッションの永続化 | v1 に含め、追加・削除のたびに `~/.config/zatto/session.json` へ保存する。開発時は `ZATTO_SESSION_FILE` で保存先を上書きできる |
 | エントリの削除 | ユーザーの明示操作のみ。個別削除と全削除の両方を用意する |
