@@ -18,3 +18,10 @@ Temporary Items
 
 # JetBrains IDE
 .idea/
+
+# Node.js
+node_modules/
+.pnpm-store/
+dist/
+.vite/
+.vitest/
