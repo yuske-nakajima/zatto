@@ -431,7 +431,7 @@ describe("zatto server", () => {
     });
 
     expect(response.statusCode).toBe(503);
-    expect(response.body).toContain("先にビルドを実行してください");
+    expect(response.body).toContain("Run the build first");
 
     await app.close();
   });
