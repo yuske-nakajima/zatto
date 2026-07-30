@@ -1,4 +1,10 @@
-import { type DragEvent, useEffect, useEffectEvent, useState } from "react";
+import {
+  type DragEvent,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import zattoLogo from "./assets/zatto-logo-black.png";
@@ -29,6 +35,7 @@ export function App() {
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
+  const copyRequestId = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -70,6 +77,7 @@ export function App() {
     }
 
     if (message.type === "session:update") {
+      copyRequestId.current += 1;
       setEntries(message.entries);
       setSelectedId((current) =>
         selectAvailableEntry(current, message.entries),
@@ -98,6 +106,7 @@ export function App() {
     entries.find((entry) => entry.id === selectedId) ?? null;
 
   function selectEntry(id: string): void {
+    copyRequestId.current += 1;
     setSelectedId(id);
     setCopyFeedback(null);
   }
@@ -107,11 +116,19 @@ export function App() {
       return;
     }
 
+    const requestId = copyRequestId.current + 1;
+    copyRequestId.current = requestId;
     setCopyFeedback(null);
     try {
       await navigator.clipboard.writeText(selectedEntry.absPath);
+      if (copyRequestId.current !== requestId) {
+        return;
+      }
       setCopyFeedback({ kind: "success", message: "Path copied." });
     } catch {
+      if (copyRequestId.current !== requestId) {
+        return;
+      }
       setCopyFeedback({
         kind: "error",
         message: "Could not copy the file path.",
@@ -290,8 +307,6 @@ export function App() {
               <code>zatto page.html</code>
             </div>
           )}
-
-          {errorMessage && <p className="error-message">{errorMessage}</p>}
         </aside>
       )}
 
@@ -307,13 +322,14 @@ export function App() {
           >
             <span aria-hidden="true">{isFilePanelVisible ? "⇤" : "⇥"}</span>
           </button>
-          <p title={selectedEntry?.absPath}>
+          <p id="selected-file-path" title={selectedEntry?.absPath}>
             {selectedEntry?.absPath ?? "NO FILE SELECTED"}
           </p>
           <button
             className="copy-path-button"
             type="button"
             aria-label="Copy file path"
+            aria-describedby={selectedEntry ? "selected-file-path" : undefined}
             disabled={!selectedEntry}
             onClick={() => void copySelectedFilePath()}
           >
@@ -328,6 +344,12 @@ export function App() {
             </span>
           )}
         </header>
+
+        {errorMessage && (
+          <p className="error-message" role="alert">
+            {errorMessage}
+          </p>
+        )}
 
         <div className="viewer-canvas">
           {selectedEntry ? (
@@ -376,6 +398,7 @@ function EntryRow({
   onDrop,
 }: EntryRowProps) {
   const draggable = Boolean(onDragStart);
+  const pathDescriptionId = `entry-path-${entry.id}`;
   const rowClassNames = [
     "entry-row",
     isSelected && "entry-row--selected",
@@ -423,6 +446,7 @@ function EntryRow({
         className="entry-select"
         type="button"
         aria-label={`Open ${entry.title}`}
+        aria-describedby={pathDescriptionId}
         onClick={() => onSelect(entry.id)}
       >
         {index !== undefined && (
@@ -433,6 +457,9 @@ function EntryRow({
         <span className="entry-copy">
           <strong title={entry.title}>{entry.title}</strong>
           <small title={entry.absPath}>{fileName(entry.absPath)}</small>
+          <span className="visually-hidden" id={pathDescriptionId}>
+            {entry.absPath}
+          </span>
         </span>
       </button>
       <button

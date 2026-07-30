@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   act,
   cleanup,
@@ -11,6 +13,13 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App, groupEntriesByDirectory, moveEntry } from "../src/web/App.js";
+
+const webStyles = readFileSync(resolve("src/web/styles.css"), "utf8");
+const hiddenPanelRule =
+  webStyles.match(/\.app-shell--panel-hidden\s*{[^}]*}/)?.[0] ?? "";
+const webStyleElement = document.createElement("style");
+webStyleElement.textContent = hiddenPanelRule;
+document.head.append(webStyleElement);
 
 class FakeWebSocket extends EventTarget {
   static instance: FakeWebSocket | null = null;
@@ -166,7 +175,11 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Hide file panel" }));
 
     expect(screen.queryByRole("complementary")).toBeNull();
-    expect(container.querySelector(".app-shell--panel-hidden")).not.toBeNull();
+    const appShell = container.querySelector(".app-shell--panel-hidden");
+    expect(appShell).not.toBeNull();
+    expect(getComputedStyle(appShell as Element).gridTemplateColumns).toBe(
+      "1fr",
+    );
     expect(
       screen.getByRole("button", { name: "Show file panel" }),
     ).toBeTruthy();
@@ -179,6 +192,30 @@ describe("App", () => {
     ).toBeTruthy();
   });
 
+  test("狭い画面のパネル非表示時に単一のビューアー行を定義する", () => {
+    expect(webStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.app-shell--panel-hidden\s*{[^}]*grid-template-rows:\s*minmax\(420px,\s*calc\(100vh - 24px\)\)/,
+    );
+  });
+
+  test("ファイルパネル非表示中もAPIエラーを表示する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("session unavailable");
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Hide file panel" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not load the session.",
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
   test("一覧とフォルダー表示で完全なタイトルとパスをツールチップに表示する", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -188,9 +225,23 @@ describe("App", () => {
     expect(screen.getByText("a.html").getAttribute("title")).toBe(
       "/tmp/a.html",
     );
-    expect(screen.getByText("/tmp/a.html").getAttribute("title")).toBe(
-      "/tmp/a.html",
-    );
+    expect(
+      screen
+        .getByText("/tmp/a.html", { selector: ".viewer-header p" })
+        .getAttribute("title"),
+    ).toBe("/tmp/a.html");
+    const listEntryButton = screen.getByRole("button", { name: "Open Alpha" });
+    const listPathDescriptionId =
+      listEntryButton.getAttribute("aria-describedby");
+    expect(listPathDescriptionId).not.toBeNull();
+    expect(
+      document.getElementById(listPathDescriptionId ?? "")?.textContent,
+    ).toBe("/tmp/a.html");
+    expect(
+      screen
+        .getByRole("button", { name: "Copy file path" })
+        .getAttribute("aria-describedby"),
+    ).toBe("selected-file-path");
 
     await user.click(screen.getByRole("button", { name: "Folders" }));
 
@@ -198,6 +249,14 @@ describe("App", () => {
     expect(screen.getByText("a.html").getAttribute("title")).toBe(
       "/tmp/a.html",
     );
+    const folderEntryButton = screen.getByRole("button", {
+      name: "Open Alpha",
+    });
+    expect(
+      document.getElementById(
+        folderEntryButton.getAttribute("aria-describedby") ?? "",
+      )?.textContent,
+    ).toBe("/tmp/a.html");
   });
 
   test("未選択時の固定文言にはツールチップを付けない", async () => {
@@ -257,6 +316,69 @@ describe("App", () => {
     expect(copyButton.hasAttribute("disabled")).toBe(true);
     await user.click(copyButton);
     expect(writeText).not.toHaveBeenCalled();
+  });
+
+  test("コピー中に選択が変わった場合は古い成功結果を表示しない", async () => {
+    let resolveCopy: (() => void) | undefined;
+    const pendingCopy = new Promise<void>((resolve) => {
+      resolveCopy = resolve;
+    });
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockReturnValueOnce(pendingCopy);
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Copy file path" }));
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
+    resolveCopy?.();
+
+    await act(async () => pendingCopy);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("コピー中のsession更新後は古い失敗結果を表示しない", async () => {
+    let rejectCopy: ((error: Error) => void) | undefined;
+    const pendingCopy = new Promise<void>((_resolve, reject) => {
+      rejectCopy = reject;
+    });
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockReturnValueOnce(pendingCopy);
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Copy file path" }));
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: [...initialEntries, entry("c", "Charlie")],
+      });
+    });
+    rejectCopy?.(new Error("permission denied"));
+
+    await act(async () => pendingCopy.catch(() => undefined));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("Clipboard APIが利用できない場合は失敗を表示する", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: undefined,
+    });
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not copy the file path.",
+    );
   });
 
   test("ドラッグアンドドロップした順序をAPIへ送る", async () => {

@@ -343,14 +343,20 @@ button {
 }
 
 .error-message {
-  margin: auto 16px 16px;
+  position: absolute;
+  z-index: 3;
+  right: 12px;
+  bottom: 12px;
+  margin: 0;
   padding: 10px;
   border: 1px solid #181818;
   background: #b8b8b8;
+  box-shadow: 3px 3px 0 #181818;
   font-size: 12px;
 }
 
 .viewer {
+  position: relative;
   display: grid;
   grid-template-rows: 43px 1fr;
   background: #181818;
