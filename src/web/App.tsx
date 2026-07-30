@@ -278,7 +278,9 @@ export function App() {
           >
             <span aria-hidden="true">{isFilePanelVisible ? "⇤" : "⇥"}</span>
           </button>
-          <p>{selectedEntry?.absPath ?? "NO FILE SELECTED"}</p>
+          <p title={selectedEntry?.absPath}>
+            {selectedEntry?.absPath ?? "NO FILE SELECTED"}
+          </p>
         </header>
 
         <div className="viewer-canvas">
@@ -383,8 +385,8 @@ function EntryRow({
           </span>
         )}
         <span className="entry-copy">
-          <strong>{entry.title}</strong>
-          <small>{fileName(entry.absPath)}</small>
+          <strong title={entry.title}>{entry.title}</strong>
+          <small title={entry.absPath}>{fileName(entry.absPath)}</small>
         </span>
       </button>
       <button

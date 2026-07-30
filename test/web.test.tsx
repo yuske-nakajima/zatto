@@ -173,6 +173,38 @@ describe("App", () => {
     ).toBeTruthy();
   });
 
+  test("一覧とフォルダー表示で完全なタイトルとパスをツールチップに表示する", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    expect(screen.getByText("Alpha").getAttribute("title")).toBe("Alpha");
+    expect(screen.getByText("a.html").getAttribute("title")).toBe(
+      "/tmp/a.html",
+    );
+    expect(screen.getByText("/tmp/a.html").getAttribute("title")).toBe(
+      "/tmp/a.html",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    expect(screen.getByText("Alpha").getAttribute("title")).toBe("Alpha");
+    expect(screen.getByText("a.html").getAttribute("title")).toBe(
+      "/tmp/a.html",
+    );
+  });
+
+  test("未選択時の固定文言にはツールチップを付けない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ entries: [] })),
+    );
+    render(<App />);
+
+    const emptyPath = await screen.findByText("NO FILE SELECTED");
+    expect(emptyPath.getAttribute("title")).toBeNull();
+  });
+
   test("ドラッグアンドドロップした順序をAPIへ送る", async () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
