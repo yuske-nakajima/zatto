@@ -1,6 +1,7 @@
 import { type DragEvent, useEffect, useEffectEvent, useState } from "react";
 import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
+import zattoLogo from "./assets/zatto-logo-black.png";
 
 export type FilePanelView = "list" | "directories";
 
@@ -20,9 +21,6 @@ export function App() {
     useState<FilePanelView>(readFilePanelView);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const [connectionState, setConnectionState] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("connecting");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,12 +79,6 @@ export function App() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-    socket.addEventListener("open", () => {
-      setConnectionState("connected");
-    });
-    socket.addEventListener("close", () => {
-      setConnectionState("disconnected");
-    });
     socket.addEventListener("message", handleSocketMessage);
 
     return () => {
@@ -177,12 +169,10 @@ export function App() {
         <header className="sidebar-header">
           <div>
             <p className="eyebrow">LOCAL HTML VIEWER</p>
-            <h1>zatto</h1>
+            <h1>
+              <img src={zattoLogo} alt="zatto" />
+            </h1>
           </div>
-          <span
-            className={`connection-dot connection-dot--${connectionState}`}
-            title={`WebSocket: ${connectionState}`}
-          />
         </header>
 
         <div className="list-heading">
@@ -273,11 +263,6 @@ export function App() {
 
       <section className="viewer">
         <header className="viewer-header">
-          <div className="window-controls" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
           <p>{selectedEntry?.absPath ?? "NO FILE SELECTED"}</p>
         </header>
 

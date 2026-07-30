@@ -61,10 +61,13 @@ describe("App", () => {
 
   test("先頭を自動選択し、クリックでビューを切り替える", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
 
     const firstFrame = await screen.findByTitle("Alpha preview");
     expect(firstFrame.getAttribute("src")).toBe("/f/a/");
+    expect(screen.getByRole("img", { name: "zatto" })).toBeTruthy();
+    expect(container.querySelector(".connection-dot")).toBeNull();
+    expect(container.querySelector(".window-controls")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Open Bravo" }));
     expect(screen.getByTitle("Bravo preview").getAttribute("src")).toBe(
