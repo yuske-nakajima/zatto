@@ -147,6 +147,8 @@ button {
 }
 
 .clear-button,
+.directory-path-copy,
+.entry-path-copy,
 .entry-remove,
 .entry-drag {
   border: 0;
@@ -175,7 +177,7 @@ button {
 
 .entry-row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 42px;
+  grid-template-columns: 30px minmax(0, 1fr) 34px 42px;
   min-height: 72px;
   border-bottom: 1px solid #181818;
   background: #f4f4f4;
@@ -202,7 +204,7 @@ button {
 }
 
 .entry-row--grouped {
-  grid-template-columns: minmax(0, 1fr) 42px;
+  grid-template-columns: minmax(0, 1fr) 34px 42px;
 }
 
 .entry-drag {
@@ -264,14 +266,29 @@ button {
   font-size: 10px;
 }
 
+.entry-path-copy,
 .entry-remove {
   border-left: 1px solid #181818;
+}
+
+.entry-path-copy {
+  font-size: 14px;
+}
+
+.entry-remove {
   font-size: 21px;
+}
+
+.directory-path-copy,
+.entry-path-copy,
+.entry-remove {
   transition:
     color 120ms ease,
     background 120ms ease;
 }
 
+.directory-path-copy:hover,
+.entry-path-copy:hover,
 .entry-remove:hover {
   color: #f4f4f4;
   background: #181818;
@@ -292,6 +309,7 @@ button {
   top: 0;
   z-index: 1;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
   min-width: 0;
   padding: 10px 14px;
   border-bottom: 1px solid #181818;
@@ -300,6 +318,7 @@ button {
 
 .directory-heading strong,
 .directory-heading small {
+  grid-column: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -315,6 +334,14 @@ button {
   color: #5c5c5c;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 9px;
+}
+
+.directory-path-copy {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  margin: -4px 0 -4px 8px;
+  border: 1px solid #181818;
+  font-size: 13px;
 }
 
 .empty-list {

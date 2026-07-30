@@ -286,6 +286,138 @@ describe("App", () => {
     );
   });
 
+  test("Listの未選択ファイルを選択変更せずにコピーする", async () => {
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    render(<App />);
+    const selectedFrame = await screen.findByTitle("Alpha preview");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy file path /tmp/b.html",
+      }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith("/tmp/b.html");
+    expect(screen.getByTitle("Alpha preview")).toBe(selectedFrame);
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Path copied.",
+    );
+  });
+
+  test("Foldersのファイルパスをコピーする", async () => {
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy file path /tmp/b.html",
+      }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith("/tmp/b.html");
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Path copied.",
+    );
+  });
+
+  test("Foldersの完全なディレクトリパスをコピーする", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          entries: [
+            entry("a", "Alpha", "/work/first/index.html"),
+            entry("b", "Bravo", "/work/second/report.html"),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy directory path /work/first",
+      }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith("/work/first");
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Path copied.",
+    );
+  });
+
+  test("同名ファイルと同名ディレクトリを完全なパスで区別してコピーする", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          entries: [
+            entry("a", "Index", "/work/a/src/index.html"),
+            entry("b", "Index", "/work/b/src/index.html"),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    render(<App />);
+    await screen.findByTitle("Index preview");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy file path /work/a/src/index.html",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy file path /work/b/src/index.html",
+      }),
+    );
+    expect(writeText).toHaveBeenNthCalledWith(1, "/work/a/src/index.html");
+    expect(writeText).toHaveBeenNthCalledWith(2, "/work/b/src/index.html");
+
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    expect(
+      screen.getByRole("button", {
+        name: "Copy file path /work/a/src/index.html",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "Copy file path /work/b/src/index.html",
+      }),
+    ).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy directory path /work/a/src",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copy directory path /work/b/src",
+      }),
+    );
+    expect(writeText).toHaveBeenNthCalledWith(3, "/work/a/src");
+    expect(writeText).toHaveBeenNthCalledWith(4, "/work/b/src");
+  });
+
   test("ファイルパスのコピー失敗を利用者へ表示する", async () => {
     const user = userEvent.setup();
     writeText = vi
@@ -297,7 +429,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Copy file path" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not copy the file path.",
+      "Could not copy the path.",
     );
   });
 
@@ -377,7 +509,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Copy file path" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not copy the file path.",
+      "Could not copy the path.",
     );
   });
 

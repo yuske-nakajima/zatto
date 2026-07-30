@@ -111,16 +111,12 @@ export function App() {
     setCopyFeedback(null);
   }
 
-  async function copySelectedFilePath(): Promise<void> {
-    if (!selectedEntry) {
-      return;
-    }
-
+  async function copyPath(path: string): Promise<void> {
     const requestId = copyRequestId.current + 1;
     copyRequestId.current = requestId;
     setCopyFeedback(null);
     try {
-      await navigator.clipboard.writeText(selectedEntry.absPath);
+      await navigator.clipboard.writeText(path);
       if (copyRequestId.current !== requestId) {
         return;
       }
@@ -131,7 +127,7 @@ export function App() {
       }
       setCopyFeedback({
         kind: "error",
-        message: "Could not copy the file path.",
+        message: "Could not copy the path.",
       });
     }
   }
@@ -268,6 +264,7 @@ export function App() {
                   isDropTarget={entry.id === dropTargetId}
                   key={entry.id}
                   onSelect={selectEntry}
+                  onCopyPath={copyPath}
                   onRemove={removeEntry}
                   onDragStart={handleDragStart}
                   onDragEnter={setDropTargetId}
@@ -283,6 +280,14 @@ export function App() {
                   <header className="directory-heading">
                     <strong>{group.name}</strong>
                     <small title={group.directory}>{group.directory}</small>
+                    <button
+                      className="directory-path-copy"
+                      type="button"
+                      aria-label={`Copy directory path ${group.directory}`}
+                      onClick={() => void copyPath(group.directory)}
+                    >
+                      <span aria-hidden="true">⧉</span>
+                    </button>
                   </header>
                   <ul className="directory-entry-list">
                     {group.entries.map((entry) => (
@@ -291,6 +296,7 @@ export function App() {
                         isSelected={entry.id === selectedId}
                         key={entry.id}
                         onSelect={selectEntry}
+                        onCopyPath={copyPath}
                         onRemove={removeEntry}
                       />
                     ))}
@@ -331,7 +337,11 @@ export function App() {
             aria-label="Copy file path"
             aria-describedby={selectedEntry ? "selected-file-path" : undefined}
             disabled={!selectedEntry}
-            onClick={() => void copySelectedFilePath()}
+            onClick={() => {
+              if (selectedEntry) {
+                void copyPath(selectedEntry.absPath);
+              }
+            }}
           >
             Copy
           </button>
@@ -377,6 +387,7 @@ type EntryRowProps = {
   isDragging?: boolean;
   isDropTarget?: boolean;
   onSelect: (id: string) => void;
+  onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
   onDragStart?: (event: DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnter?: (id: string) => void;
@@ -391,6 +402,7 @@ function EntryRow({
   isDragging = false,
   isDropTarget = false,
   onSelect,
+  onCopyPath,
   onRemove,
   onDragStart,
   onDragEnter,
@@ -461,6 +473,14 @@ function EntryRow({
             {entry.absPath}
           </span>
         </span>
+      </button>
+      <button
+        className="entry-path-copy"
+        type="button"
+        aria-label={`Copy file path ${entry.absPath}`}
+        onClick={() => onCopyPath(entry.absPath)}
+      >
+        <span aria-hidden="true">⧉</span>
       </button>
       <button
         className="entry-remove"
