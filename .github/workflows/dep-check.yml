@@ -1,0 +1,14 @@
+name: Dependency Check
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dependency-check:
+    uses: yuske-nakajima/shared-workflows/.github/workflows/dep-check.yml@v1
