@@ -61,13 +61,16 @@ describe("App", () => {
 
   test("先頭を自動選択し、クリックでビューを切り替える", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
 
-    const firstFrame = await screen.findByTitle("Alpha のプレビュー");
+    const firstFrame = await screen.findByTitle("Alpha preview");
     expect(firstFrame.getAttribute("src")).toBe("/f/a/");
+    expect(screen.getByRole("img", { name: "zatto" })).toBeTruthy();
+    expect(container.querySelector(".connection-dot")).toBeNull();
+    expect(container.querySelector(".window-controls")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Bravo を表示" }));
-    expect(screen.getByTitle("Bravo のプレビュー").getAttribute("src")).toBe(
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
+    expect(screen.getByTitle("Bravo preview").getAttribute("src")).toBe(
       "/f/b/",
     );
   });
@@ -75,28 +78,28 @@ describe("App", () => {
   test("合流更新で選択を維持し、表示中の変更だけ再読込する", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByTitle("Alpha のプレビュー");
-    await user.click(screen.getByRole("button", { name: "Bravo を表示" }));
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
 
-    const selectedFrame = screen.getByTitle("Bravo のプレビュー");
+    const selectedFrame = screen.getByTitle("Bravo preview");
     act(() => {
       FakeWebSocket.instance?.emitMessage({
         type: "session:update",
         entries: [...initialEntries, entry("c", "Charlie")],
       });
     });
-    expect(screen.getByTitle("Bravo のプレビュー")).toBe(selectedFrame);
+    expect(screen.getByTitle("Bravo preview")).toBe(selectedFrame);
     expect(screen.getByText("Charlie")).toBeTruthy();
 
     act(() => {
       FakeWebSocket.instance?.emitMessage({ type: "file:changed", id: "a" });
     });
-    expect(screen.getByTitle("Bravo のプレビュー")).toBe(selectedFrame);
+    expect(screen.getByTitle("Bravo preview")).toBe(selectedFrame);
 
     act(() => {
       FakeWebSocket.instance?.emitMessage({ type: "file:changed", id: "b" });
     });
-    expect(screen.getByTitle("Bravo のプレビュー")).not.toBe(selectedFrame);
+    expect(screen.getByTitle("Bravo preview")).not.toBe(selectedFrame);
   });
 
   test("個別削除と確認付き全削除をAPIへ送る", async () => {
@@ -104,15 +107,15 @@ describe("App", () => {
     const fetchMock = vi.mocked(fetch);
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<App />);
-    await screen.findByTitle("Alpha のプレビュー");
+    await screen.findByTitle("Alpha preview");
 
-    await user.click(screen.getByRole("button", { name: "Alpha を削除" }));
-    await user.click(screen.getByRole("button", { name: "全削除" }));
+    await user.click(screen.getByRole("button", { name: "Remove Alpha" }));
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
 
     expect(fetchMock).toHaveBeenCalledWith("/api/session/a", {
       method: "DELETE",
     });
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledWith("Remove all entries?");
     expect(fetchMock).toHaveBeenCalledWith("/api/session", {
       method: "DELETE",
     });
@@ -121,39 +124,37 @@ describe("App", () => {
   test("表示方式を切り替えてブラウザに保存する", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByTitle("Alpha のプレビュー");
+    await screen.findByTitle("Alpha preview");
 
-    await user.click(screen.getByRole("button", { name: "ディレクトリ" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
 
     expect(
       screen
-        .getByRole("button", { name: "ディレクトリ" })
+        .getByRole("button", { name: "Folders" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(window.localStorage.getItem("zatto:file-panel-view")).toBe(
       "directories",
     );
-    expect(screen.getByTitle("Alpha のプレビュー")).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Alpha を並べ替え" }),
-    ).toBeNull();
+    expect(screen.getByTitle("Alpha preview")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reorder Alpha" })).toBeNull();
   });
 
   test("保存した表示方式を再読み込み時に復元する", async () => {
     window.localStorage.setItem("zatto:file-panel-view", "directories");
     render(<App />);
-    await screen.findByTitle("Alpha のプレビュー");
+    await screen.findByTitle("Alpha preview");
 
     expect(
       screen
-        .getByRole("button", { name: "ディレクトリ" })
+        .getByRole("button", { name: "Folders" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
   });
 
   test("ドラッグアンドドロップした順序をAPIへ送る", async () => {
     render(<App />);
-    await screen.findByTitle("Alpha のプレビュー");
+    await screen.findByTitle("Alpha preview");
     const fetchMock = vi.mocked(fetch);
     const dataTransfer = {
       effectAllowed: "",
@@ -161,12 +162,11 @@ describe("App", () => {
       setData: vi.fn(),
     };
 
-    fireEvent.dragStart(
-      screen.getByRole("button", { name: "Alpha を並べ替え" }),
-      { dataTransfer },
-    );
+    fireEvent.dragStart(screen.getByRole("button", { name: "Reorder Alpha" }), {
+      dataTransfer,
+    });
     const targetRow = screen
-      .getByRole("button", { name: "Bravo を表示" })
+      .getByRole("button", { name: "Open Bravo" })
       .closest(".entry-row");
     expect(targetRow).not.toBeNull();
     fireEvent.dragOver(targetRow as Element, { dataTransfer });

@@ -48,15 +48,15 @@ export async function createApp(
       .code(503)
       .type("text/html; charset=utf-8")
       .send(`<!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>zatto</title>
   </head>
   <body>
     <main>
-      <h1>zatto サーバーは起動中です</h1>
-      <p>フロントエンドが見つかりません。先にビルドを実行してください。</p>
+      <h1>zatto server is running</h1>
+      <p>Frontend not found. Run the build first.</p>
     </main>
   </body>
 </html>`);

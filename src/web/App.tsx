@@ -1,6 +1,7 @@
 import { type DragEvent, useEffect, useEffectEvent, useState } from "react";
 import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
+import zattoLogo from "./assets/zatto-logo-black.png";
 
 export type FilePanelView = "list" | "directories";
 
@@ -20,9 +21,6 @@ export function App() {
     useState<FilePanelView>(readFilePanelView);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const [connectionState, setConnectionState] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("connecting");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,7 +43,7 @@ export function App() {
       })
       .catch(() => {
         if (active) {
-          setErrorMessage("セッションを読み込めませんでした");
+          setErrorMessage("Could not load the session.");
         }
       });
 
@@ -81,12 +79,6 @@ export function App() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-    socket.addEventListener("open", () => {
-      setConnectionState("connected");
-    });
-    socket.addEventListener("close", () => {
-      setConnectionState("disconnected");
-    });
     socket.addEventListener("message", handleSocketMessage);
 
     return () => {
@@ -108,14 +100,11 @@ export function App() {
     } catch {
       // 下の共通エラー表示へ進む。
     }
-    setErrorMessage("エントリを削除できませんでした");
+    setErrorMessage("Could not remove the entry.");
   }
 
   async function clearEntries(): Promise<void> {
-    if (
-      entries.length === 0 ||
-      !window.confirm("すべてのエントリを削除しますか？")
-    ) {
+    if (entries.length === 0 || !window.confirm("Remove all entries?")) {
       return;
     }
 
@@ -127,7 +116,7 @@ export function App() {
     } catch {
       // 下の共通エラー表示へ進む。
     }
-    setErrorMessage("エントリを全削除できませんでした");
+    setErrorMessage("Could not remove all entries.");
   }
 
   async function reorderEntries(targetId: string): Promise<void> {
@@ -157,7 +146,7 @@ export function App() {
     }
 
     setEntries(previousEntries);
-    setErrorMessage("エントリを並べ替えられませんでした");
+    setErrorMessage("Could not reorder the entries.");
   }
 
   function resetDragState(): void {
@@ -180,12 +169,10 @@ export function App() {
         <header className="sidebar-header">
           <div>
             <p className="eyebrow">LOCAL HTML VIEWER</p>
-            <h1>zatto</h1>
+            <h1>
+              <img src={zattoLogo} alt="zatto" />
+            </h1>
           </div>
-          <span
-            className={`connection-dot connection-dot--${connectionState}`}
-            title={`WebSocket: ${connectionState}`}
-          />
         </header>
 
         <div className="list-heading">
@@ -198,30 +185,30 @@ export function App() {
             disabled={entries.length === 0}
             onClick={clearEntries}
           >
-            全削除
+            Clear all
           </button>
         </div>
 
         <fieldset className="view-switcher">
-          <legend className="visually-hidden">ファイルパネルの表示方式</legend>
+          <legend className="visually-hidden">File panel view</legend>
           <button
             type="button"
             aria-pressed={filePanelView === "list"}
             onClick={() => setFilePanelView("list")}
           >
-            リスト
+            List
           </button>
           <button
             type="button"
             aria-pressed={filePanelView === "directories"}
             onClick={() => setFilePanelView("directories")}
           >
-            ディレクトリ
+            Folders
           </button>
         </fieldset>
 
         {filePanelView === "list" ? (
-          <ol className="entry-list" aria-label="HTML エントリ">
+          <ol className="entry-list" aria-label="HTML entries">
             {entries.map((entry, index) => (
               <EntryRow
                 entry={entry}
@@ -240,7 +227,7 @@ export function App() {
             ))}
           </ol>
         ) : (
-          <nav className="entry-list" aria-label="ディレクトリ別 HTML エントリ">
+          <nav className="entry-list" aria-label="HTML entries by folder">
             {groupEntriesByDirectory(entries).map((group) => (
               <section className="directory-group" key={group.directory}>
                 <header className="directory-heading">
@@ -266,7 +253,7 @@ export function App() {
         {entries.length === 0 && (
           <div className="empty-list">
             <span>00</span>
-            <p>CLI から HTML を追加してください</p>
+            <p>Add HTML files from the CLI</p>
             <code>zatto page.html</code>
           </div>
         )}
@@ -276,11 +263,6 @@ export function App() {
 
       <section className="viewer">
         <header className="viewer-header">
-          <div className="window-controls" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
           <p>{selectedEntry?.absPath ?? "NO FILE SELECTED"}</p>
         </header>
 
@@ -288,13 +270,13 @@ export function App() {
           {selectedEntry ? (
             <iframe
               key={`${selectedEntry.id}:${reloadVersion}`}
-              title={`${selectedEntry.title} のプレビュー`}
+              title={`${selectedEntry.title} preview`}
               src={`/f/${encodeURIComponent(selectedEntry.id)}/`}
             />
           ) : (
             <div className="empty-viewer">
               <p>SELECT AN ENTRY</p>
-              <span>左のリストから表示する HTML を選択</span>
+              <span>Choose an HTML file from the panel</span>
             </div>
           )}
         </div>
@@ -367,7 +349,7 @@ function EntryRow({
           className="entry-drag"
           type="button"
           draggable
-          aria-label={`${entry.title} を並べ替え`}
+          aria-label={`Reorder ${entry.title}`}
           onDragStart={(event) => onDragStart?.(event, entry.id)}
           onDragEnd={onDragEnd}
         >
@@ -377,7 +359,7 @@ function EntryRow({
       <button
         className="entry-select"
         type="button"
-        aria-label={`${entry.title} を表示`}
+        aria-label={`Open ${entry.title}`}
         onClick={() => onSelect(entry.id)}
       >
         {index !== undefined && (
@@ -393,7 +375,7 @@ function EntryRow({
       <button
         className="entry-remove"
         type="button"
-        aria-label={`${entry.title} を削除`}
+        aria-label={`Remove ${entry.title}`}
         onClick={() => onRemove(entry.id)}
       >
         ×
