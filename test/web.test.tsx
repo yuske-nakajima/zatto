@@ -42,10 +42,16 @@ function entry(id: string, title: string, absPath = `/tmp/${id}.html`): Entry {
 
 describe("App", () => {
   const initialEntries = [entry("a", "Alpha"), entry("b", "Bravo")];
+  let writeText: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     window.localStorage.clear();
     FakeWebSocket.instance = null;
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
@@ -203,6 +209,54 @@ describe("App", () => {
 
     const emptyPath = await screen.findByText("NO FILE SELECTED");
     expect(emptyPath.getAttribute("title")).toBeNull();
+  });
+
+  test("選択中のファイルパスをコピーして成功を表示する", async () => {
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    expect(writeText).toHaveBeenCalledWith("/tmp/a.html");
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Path copied.",
+    );
+  });
+
+  test("ファイルパスのコピー失敗を利用者へ表示する", async () => {
+    const user = userEvent.setup();
+    writeText = vi
+      .spyOn(window.navigator.clipboard, "writeText")
+      .mockRejectedValueOnce(new Error("permission denied"));
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Copy file path" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not copy the file path.",
+    );
+  });
+
+  test("ファイル未選択時はパスをコピーできない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ entries: [] })),
+    );
+    const user = userEvent.setup();
+    writeText = vi.spyOn(window.navigator.clipboard, "writeText");
+    render(<App />);
+
+    const copyButton = await screen.findByRole("button", {
+      name: "Copy file path",
+    });
+    expect(copyButton.hasAttribute("disabled")).toBe(true);
+    await user.click(copyButton);
+    expect(writeText).not.toHaveBeenCalled();
   });
 
   test("ドラッグアンドドロップした順序をAPIへ送る", async () => {

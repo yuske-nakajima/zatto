@@ -11,6 +11,11 @@ export type DirectoryGroup = {
   entries: Entry[];
 };
 
+interface CopyFeedback {
+  kind: "success" | "error";
+  message: string;
+}
+
 const FILE_PANEL_VIEW_KEY = "zatto:file-panel-view";
 
 export function App() {
@@ -23,6 +28,7 @@ export function App() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +74,7 @@ export function App() {
       setSelectedId((current) =>
         selectAvailableEntry(current, message.entries),
       );
+      setCopyFeedback(null);
       return;
     }
 
@@ -89,6 +96,28 @@ export function App() {
 
   const selectedEntry =
     entries.find((entry) => entry.id === selectedId) ?? null;
+
+  function selectEntry(id: string): void {
+    setSelectedId(id);
+    setCopyFeedback(null);
+  }
+
+  async function copySelectedFilePath(): Promise<void> {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setCopyFeedback(null);
+    try {
+      await navigator.clipboard.writeText(selectedEntry.absPath);
+      setCopyFeedback({ kind: "success", message: "Path copied." });
+    } catch {
+      setCopyFeedback({
+        kind: "error",
+        message: "Could not copy the file path.",
+      });
+    }
+  }
 
   async function removeEntry(id: string): Promise<void> {
     try {
@@ -221,7 +250,7 @@ export function App() {
                   isDragging={entry.id === draggedId}
                   isDropTarget={entry.id === dropTargetId}
                   key={entry.id}
-                  onSelect={setSelectedId}
+                  onSelect={selectEntry}
                   onRemove={removeEntry}
                   onDragStart={handleDragStart}
                   onDragEnter={setDropTargetId}
@@ -244,7 +273,7 @@ export function App() {
                         entry={entry}
                         isSelected={entry.id === selectedId}
                         key={entry.id}
-                        onSelect={setSelectedId}
+                        onSelect={selectEntry}
                         onRemove={removeEntry}
                       />
                     ))}
@@ -281,6 +310,23 @@ export function App() {
           <p title={selectedEntry?.absPath}>
             {selectedEntry?.absPath ?? "NO FILE SELECTED"}
           </p>
+          <button
+            className="copy-path-button"
+            type="button"
+            aria-label="Copy file path"
+            disabled={!selectedEntry}
+            onClick={() => void copySelectedFilePath()}
+          >
+            Copy
+          </button>
+          {copyFeedback && (
+            <span
+              className={`copy-feedback copy-feedback--${copyFeedback.kind}`}
+              role={copyFeedback.kind === "error" ? "alert" : "status"}
+            >
+              {copyFeedback.message}
+            </span>
+          )}
         </header>
 
         <div className="viewer-canvas">
