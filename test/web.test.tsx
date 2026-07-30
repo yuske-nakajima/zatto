@@ -152,6 +152,27 @@ describe("App", () => {
     ).toBe("true");
   });
 
+  test("ファイルパネルを非表示にしてビューアーを利用可能幅へ広げる", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Hide file panel" }));
+
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(container.querySelector(".app-shell--panel-hidden")).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show file panel" }),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Show file panel" }));
+
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Hide file panel" }),
+    ).toBeTruthy();
+  });
+
   test("ドラッグアンドドロップした順序をAPIへ送る", async () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");

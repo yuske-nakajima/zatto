@@ -19,6 +19,7 @@ export function App() {
   const [reloadVersion, setReloadVersion] = useState(0);
   const [filePanelView, setFilePanelView] =
     useState<FilePanelView>(readFilePanelView);
+  const [isFilePanelVisible, setIsFilePanelVisible] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -164,105 +165,119 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <header className="sidebar-header">
-          <div>
-            <p className="eyebrow">LOCAL HTML VIEWER</p>
-            <h1>
-              <img src={zattoLogo} alt="zatto" />
-            </h1>
+    <main
+      className={`app-shell${isFilePanelVisible ? "" : " app-shell--panel-hidden"}`}
+    >
+      {isFilePanelVisible && (
+        <aside className="sidebar">
+          <header className="sidebar-header">
+            <div>
+              <p className="eyebrow">LOCAL HTML VIEWER</p>
+              <h1>
+                <img src={zattoLogo} alt="zatto" />
+              </h1>
+            </div>
+          </header>
+
+          <div className="list-heading">
+            <span>
+              entries <strong>{entries.length}</strong>
+            </span>
+            <button
+              className="clear-button"
+              type="button"
+              disabled={entries.length === 0}
+              onClick={clearEntries}
+            >
+              Clear all
+            </button>
           </div>
-        </header>
 
-        <div className="list-heading">
-          <span>
-            entries <strong>{entries.length}</strong>
-          </span>
-          <button
-            className="clear-button"
-            type="button"
-            disabled={entries.length === 0}
-            onClick={clearEntries}
-          >
-            Clear all
-          </button>
-        </div>
+          <fieldset className="view-switcher">
+            <legend className="visually-hidden">File panel view</legend>
+            <button
+              type="button"
+              aria-pressed={filePanelView === "list"}
+              onClick={() => setFilePanelView("list")}
+            >
+              List
+            </button>
+            <button
+              type="button"
+              aria-pressed={filePanelView === "directories"}
+              onClick={() => setFilePanelView("directories")}
+            >
+              Folders
+            </button>
+          </fieldset>
 
-        <fieldset className="view-switcher">
-          <legend className="visually-hidden">File panel view</legend>
-          <button
-            type="button"
-            aria-pressed={filePanelView === "list"}
-            onClick={() => setFilePanelView("list")}
-          >
-            List
-          </button>
-          <button
-            type="button"
-            aria-pressed={filePanelView === "directories"}
-            onClick={() => setFilePanelView("directories")}
-          >
-            Folders
-          </button>
-        </fieldset>
+          {filePanelView === "list" ? (
+            <ol className="entry-list" aria-label="HTML entries">
+              {entries.map((entry, index) => (
+                <EntryRow
+                  entry={entry}
+                  index={index}
+                  isSelected={entry.id === selectedId}
+                  isDragging={entry.id === draggedId}
+                  isDropTarget={entry.id === dropTargetId}
+                  key={entry.id}
+                  onSelect={setSelectedId}
+                  onRemove={removeEntry}
+                  onDragStart={handleDragStart}
+                  onDragEnter={setDropTargetId}
+                  onDragEnd={resetDragState}
+                  onDrop={reorderEntries}
+                />
+              ))}
+            </ol>
+          ) : (
+            <nav className="entry-list" aria-label="HTML entries by folder">
+              {groupEntriesByDirectory(entries).map((group) => (
+                <section className="directory-group" key={group.directory}>
+                  <header className="directory-heading">
+                    <strong>{group.name}</strong>
+                    <small title={group.directory}>{group.directory}</small>
+                  </header>
+                  <ul className="directory-entry-list">
+                    {group.entries.map((entry) => (
+                      <EntryRow
+                        entry={entry}
+                        isSelected={entry.id === selectedId}
+                        key={entry.id}
+                        onSelect={setSelectedId}
+                        onRemove={removeEntry}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </nav>
+          )}
 
-        {filePanelView === "list" ? (
-          <ol className="entry-list" aria-label="HTML entries">
-            {entries.map((entry, index) => (
-              <EntryRow
-                entry={entry}
-                index={index}
-                isSelected={entry.id === selectedId}
-                isDragging={entry.id === draggedId}
-                isDropTarget={entry.id === dropTargetId}
-                key={entry.id}
-                onSelect={setSelectedId}
-                onRemove={removeEntry}
-                onDragStart={handleDragStart}
-                onDragEnter={setDropTargetId}
-                onDragEnd={resetDragState}
-                onDrop={reorderEntries}
-              />
-            ))}
-          </ol>
-        ) : (
-          <nav className="entry-list" aria-label="HTML entries by folder">
-            {groupEntriesByDirectory(entries).map((group) => (
-              <section className="directory-group" key={group.directory}>
-                <header className="directory-heading">
-                  <strong>{group.name}</strong>
-                  <small title={group.directory}>{group.directory}</small>
-                </header>
-                <ul className="directory-entry-list">
-                  {group.entries.map((entry) => (
-                    <EntryRow
-                      entry={entry}
-                      isSelected={entry.id === selectedId}
-                      key={entry.id}
-                      onSelect={setSelectedId}
-                      onRemove={removeEntry}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </nav>
-        )}
+          {entries.length === 0 && (
+            <div className="empty-list">
+              <span>00</span>
+              <p>Add HTML files from the CLI</p>
+              <code>zatto page.html</code>
+            </div>
+          )}
 
-        {entries.length === 0 && (
-          <div className="empty-list">
-            <span>00</span>
-            <p>Add HTML files from the CLI</p>
-            <code>zatto page.html</code>
-          </div>
-        )}
-
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
-      </aside>
+          {errorMessage && <p className="error-message">{errorMessage}</p>}
+        </aside>
+      )}
 
       <section className="viewer">
         <header className="viewer-header">
+          <button
+            className="file-panel-toggle"
+            type="button"
+            aria-label={
+              isFilePanelVisible ? "Hide file panel" : "Show file panel"
+            }
+            onClick={() => setIsFilePanelVisible((isVisible) => !isVisible)}
+          >
+            <span aria-hidden="true">{isFilePanelVisible ? "⇤" : "⇥"}</span>
+          </button>
           <p>{selectedEntry?.absPath ?? "NO FILE SELECTED"}</p>
         </header>
 

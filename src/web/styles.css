@@ -52,6 +52,10 @@ button {
   gap: 12px;
 }
 
+.app-shell--panel-hidden {
+  grid-template-columns: 1fr;
+}
+
 .sidebar,
 .viewer {
   min-width: 0;
@@ -372,6 +376,24 @@ button {
   white-space: nowrap;
 }
 
+.file-panel-toggle {
+  display: grid;
+  width: 32px;
+  height: 28px;
+  margin-left: 12px;
+  place-items: center;
+  color: #f4f4f4;
+  border: 1px solid #f4f4f4;
+  background: transparent;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  cursor: pointer;
+}
+
+.file-panel-toggle:hover {
+  color: #181818;
+  background: #f4f4f4;
+}
+
 .viewer-canvas {
   position: relative;
   min-height: 0;
@@ -439,6 +461,10 @@ button {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(260px, 42vh) minmax(420px, 58vh);
     min-height: 100vh;
+  }
+
+  .app-shell--panel-hidden {
+    grid-template-rows: minmax(420px, calc(100vh - 24px));
   }
 
   .sidebar-header {
