@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import {
   act,
   cleanup,
+  createEvent,
   fireEvent,
   render,
   screen,
@@ -198,6 +199,30 @@ describe("App", () => {
     );
   });
 
+  test("Figma Variableと主要レイアウト寸法をCSSへ反映する", () => {
+    expect(webStyles).toContain("--color-bg-app: var(--color-gray-50)");
+    expect(webStyles).toContain("--color-bg-success: var(--color-emerald-500)");
+    expect(webStyles).toContain(
+      "--color-text-success: var(--color-emerald-600)",
+    );
+    expect(webStyles).toContain("--spacing-40: 40px");
+    expect(webStyles).toContain("--radius-full: 9999px");
+    expect(webStyles).toMatch(
+      /grid-template-columns:\s*260px minmax\(0,\s*1fr\)/,
+    );
+    expect(webStyles).toMatch(
+      /\.viewer\s*{[\s\S]*?grid-template-rows:\s*64px 1fr/,
+    );
+    expect(webStyles).toMatch(
+      /\.viewer-canvas\s*{[\s\S]*?padding:\s*var\(--spacing-24\)/,
+    );
+    expect(webStyles).toMatch(
+      /\.copy-feedback--success\s*{[\s\S]*?var\(--color-bg-success\) 8%/,
+    );
+    expect(webStyles).toMatch(/\.entry-list\s*{[\s\S]*?overflow-x:\s*hidden/);
+    expect(webStyles).toMatch(/\.entry-tooltip\s*{[\s\S]*?position:\s*fixed/);
+  });
+
   test("ファイルパネル非表示中もAPIエラーを表示する", async () => {
     vi.stubGlobal(
       "fetch",
@@ -221,15 +246,6 @@ describe("App", () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
 
-    expect(screen.getByText("Alpha").getAttribute("title")).toBe("Alpha");
-    expect(screen.getByText("a.html").getAttribute("title")).toBe(
-      "/tmp/a.html",
-    );
-    expect(
-      screen
-        .getByText("/tmp/a.html", { selector: ".viewer-header p" })
-        .getAttribute("title"),
-    ).toBe("/tmp/a.html");
     const listEntryButton = screen.getByRole("button", { name: "Open Alpha" });
     const listPathDescriptionId =
       listEntryButton.getAttribute("aria-describedby");
@@ -242,13 +258,53 @@ describe("App", () => {
         .getByRole("button", { name: "Copy file path" })
         .getAttribute("aria-describedby"),
     ).toBe("selected-file-path");
+    const alphaTitle = screen.getByText("Alpha");
+    vi.spyOn(alphaTitle, "getBoundingClientRect").mockReturnValue({
+      bottom: 300,
+      height: 16,
+      left: 28,
+      right: 178,
+      top: 284,
+      width: 150,
+      x: 28,
+      y: 284,
+      toJSON: () => undefined,
+    });
+    await user.hover(alphaTitle);
+    const titleTooltip = screen.getByRole("tooltip");
+    expect(titleTooltip.textContent).toBe("Alpha");
+    expect(titleTooltip.style.left).toBe("28px");
+    expect(titleTooltip.style.top).toBe("308px");
+    await user.unhover(alphaTitle);
+    vi.spyOn(listEntryButton, "getBoundingClientRect").mockReturnValue({
+      bottom: 320,
+      height: 40,
+      left: 20,
+      right: 208,
+      top: 280,
+      width: 188,
+      x: 20,
+      y: 280,
+      toJSON: () => undefined,
+    });
+    fireEvent.focus(listEntryButton);
+    expect(screen.getByRole("tooltip").textContent).toBe("Alpha");
+    expect(screen.getByRole("tooltip").style.left).toBe("20px");
+    expect(screen.getByRole("tooltip").style.top).toBe("328px");
+    fireEvent.blur(listEntryButton);
+    await user.hover(screen.getByText("a.html"));
+    expect(screen.getByRole("tooltip").textContent).toBe("/tmp/a.html");
+    await user.unhover(screen.getByText("a.html"));
+    fireEvent.focus(
+      screen.getByText("/tmp/a.html", { selector: ".selected-path p" }),
+    );
+    expect(screen.getByRole("tooltip").textContent).toBe("/tmp/a.html");
+    fireEvent.blur(
+      screen.getByText("/tmp/a.html", { selector: ".selected-path p" }),
+    );
 
     await user.click(screen.getByRole("button", { name: "Folders" }));
 
-    expect(screen.getByText("Alpha").getAttribute("title")).toBe("Alpha");
-    expect(screen.getByText("a.html").getAttribute("title")).toBe(
-      "/tmp/a.html",
-    );
     const folderEntryButton = screen.getByRole("button", {
       name: "Open Alpha",
     });
@@ -257,6 +313,8 @@ describe("App", () => {
         folderEntryButton.getAttribute("aria-describedby") ?? "",
       )?.textContent,
     ).toBe("/tmp/a.html");
+    await user.hover(screen.getByText("Alpha"));
+    expect(screen.getByRole("tooltip").textContent).toBe("Alpha");
   });
 
   test("未選択時の固定文言にはツールチップを付けない", async () => {
@@ -282,7 +340,7 @@ describe("App", () => {
 
     expect(writeText).toHaveBeenCalledWith("/tmp/a.html");
     expect((await screen.findByRole("status")).textContent).toBe(
-      "Path copied.",
+      "Path copied!",
     );
   });
 
@@ -303,7 +361,7 @@ describe("App", () => {
     expect(writeText).toHaveBeenCalledWith("/tmp/b.html");
     expect(screen.getByTitle("Alpha preview")).toBe(selectedFrame);
     expect((await screen.findByRole("status")).textContent).toBe(
-      "Path copied.",
+      "Path copied!",
     );
   });
 
@@ -324,7 +382,7 @@ describe("App", () => {
 
     expect(writeText).toHaveBeenCalledWith("/tmp/b.html");
     expect((await screen.findByRole("status")).textContent).toBe(
-      "Path copied.",
+      "Path copied!",
     );
   });
 
@@ -356,7 +414,7 @@ describe("App", () => {
 
     expect(writeText).toHaveBeenCalledWith("/work/first");
     expect((await screen.findByRole("status")).textContent).toBe(
-      "Path copied.",
+      "Path copied!",
     );
   });
 
@@ -538,6 +596,40 @@ describe("App", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids: ["b", "a"] }),
     });
+  });
+
+  test("ドラッグ中はポインター位置を維持したリスト行全体を表示する", async () => {
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    const dragHandle = screen.getByRole("button", { name: "Reorder Alpha" });
+    const row = dragHandle.closest(".entry-row");
+    expect(row).not.toBeNull();
+    vi.spyOn(row as Element, "getBoundingClientRect").mockReturnValue({
+      bottom: 258,
+      height: 58,
+      left: 100,
+      right: 360,
+      top: 200,
+      width: 260,
+      x: 100,
+      y: 200,
+      toJSON: () => ({}),
+    });
+    const setDragImage = vi.fn();
+    const dataTransfer = {
+      effectAllowed: "",
+      setData: vi.fn(),
+      setDragImage,
+    };
+
+    const dragStart = createEvent.dragStart(dragHandle, { dataTransfer });
+    Object.defineProperties(dragStart, {
+      clientX: { value: 108 },
+      clientY: { value: 224 },
+    });
+    fireEvent(dragHandle, dragStart);
+
+    expect(setDragImage).toHaveBeenCalledWith(row, 8, 24);
   });
 });
 
