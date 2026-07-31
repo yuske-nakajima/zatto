@@ -15,3 +15,4 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Entry ordering with drag and drop
 - URL-based entry selection
 - npm package and `npx @yuske-nakajima/zatto` command
+- Per-user server discovery with a single background process

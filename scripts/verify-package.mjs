@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+const expectedVersion = "0.1.1";
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const packageDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-pack-"));
 const consumerDirectory = await mkdtemp(
@@ -19,6 +20,14 @@ const npmEnvironment = {
   NPM_CONFIG_REGISTRY: registry,
 };
 let serverStarted = false;
+let installedBin;
+const sessionPath = path.join(consumerDirectory, "session.json");
+const runtimePath = path.join(consumerDirectory, "server.json");
+const serverEnvironment = {
+  ...process.env,
+  ZATTO_RUNTIME_FILE: runtimePath,
+  ZATTO_SESSION_FILE: sessionPath,
+};
 
 try {
   console.log("npm tarballを作成します");
@@ -36,6 +45,9 @@ try {
   const [packResult] = JSON.parse(packOutput);
   if (!packResult?.filename || !Array.isArray(packResult.files)) {
     throw new Error("npm packの結果を解析できませんでした");
+  }
+  if (packResult.version !== expectedVersion) {
+    throw new Error(`npm tarballのversionが${expectedVersion}ではありません`);
   }
 
   const packedPaths = packResult.files.map((file) => file.path);
@@ -78,7 +90,7 @@ try {
     { cwd: consumerDirectory, env: npmEnvironment, timeout: 120_000 },
   );
 
-  const installedBin = path.join(
+  installedBin = path.join(
     consumerDirectory,
     "node_modules",
     ".bin",
@@ -94,7 +106,6 @@ try {
 
   console.log("インストールしたCLIからサーバーを起動します");
   const fixturePath = path.join(consumerDirectory, "fixture.html");
-  const sessionPath = path.join(consumerDirectory, "session.json");
   await writeFile(
     fixturePath,
     "<!doctype html><title>Package fixture</title><p>zatto</p>\n",
@@ -105,17 +116,22 @@ try {
     ["--no-open", "--port", String(port), fixturePath],
     {
       cwd: consumerDirectory,
-      env: { ...process.env, ZATTO_SESSION_FILE: sessionPath },
+      env: serverEnvironment,
       timeout: 15_000,
     },
   );
   serverStarted = true;
 
-  const healthResponse = await fetch(`http://127.0.0.1:${port}/api/health`);
-  const pageResponse = await fetch(`http://127.0.0.1:${port}/`);
+  const runtime = JSON.parse(await readFile(runtimePath, "utf8"));
+  const healthResponse = await fetch(
+    `http://127.0.0.1:${runtime.port}/api/health`,
+  );
+  const pageResponse = await fetch(`http://127.0.0.1:${runtime.port}/`);
+  const health = await healthResponse.json();
   const session = await readFile(sessionPath, "utf8");
   if (
     !healthResponse.ok ||
+    health.version !== expectedVersion ||
     !pageResponse.ok ||
     !session.includes("Package fixture")
   ) {
@@ -124,8 +140,9 @@ try {
     );
   }
 
-  await execFileAsync(installedBin, ["--port", String(port), "--stop"], {
+  await execFileAsync(installedBin, ["--stop"], {
     cwd: consumerDirectory,
+    env: serverEnvironment,
     timeout: 10_000,
   });
   serverStarted = false;
@@ -136,16 +153,17 @@ try {
     ["--yes", "--package", tarballPath, "zatto", "--version"],
     { cwd: npxDirectory, env: npmEnvironment, timeout: 120_000 },
   );
-  if (!npxOutput.trim()) {
-    throw new Error("ローカルtarballをnpxで実行できませんでした");
+  if (npxOutput.trim() !== expectedVersion) {
+    throw new Error(`CLIのversionが${expectedVersion}ではありません`);
   }
 
   console.log(`npmパッケージを検証しました: ${packResult.filename}`);
 } finally {
-  if (serverStarted) {
-    await fetch(`http://127.0.0.1:${port}/api/shutdown`, {
-      method: "POST",
-      signal: AbortSignal.timeout(2_000),
+  if (serverStarted && installedBin) {
+    await execFileAsync(installedBin, ["--stop"], {
+      cwd: consumerDirectory,
+      env: serverEnvironment,
+      timeout: 10_000,
     }).catch(() => undefined);
   }
   await rm(packageDirectory, { recursive: true, force: true });

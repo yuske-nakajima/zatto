@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { APP_VERSION } from "../src/meta.js";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
@@ -176,6 +177,50 @@ describe("zatto server", () => {
       url: "/api/session",
     });
     expect(clearResponse.statusCode).toBe(204);
+
+    await app.close();
+  });
+
+  test("healthでserver identityを返し、一致するserverだけを停止する", async () => {
+    vi.useFakeTimers();
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const shutdown = vi.fn();
+    const app = await createApp({
+      sessionStore: store,
+      shutdown,
+      serverIdentity: {
+        instanceId: "managed-instance",
+        protocolVersion: 1,
+      },
+    });
+
+    const healthResponse = await app.inject({
+      method: "GET",
+      url: "/api/health",
+    });
+    expect(healthResponse.json()).toMatchObject({
+      name: "zatto",
+      version: APP_VERSION,
+      instanceId: "managed-instance",
+      protocolVersion: 1,
+    });
+
+    const rejectedResponse = await app.inject({
+      method: "POST",
+      url: "/api/shutdown",
+      headers: { "x-zatto-instance-id": "other-instance" },
+    });
+    expect(rejectedResponse.statusCode).toBe(409);
+
+    const acceptedResponse = await app.inject({
+      method: "POST",
+      url: "/api/shutdown",
+      headers: { "x-zatto-instance-id": "managed-instance" },
+    });
+    expect(acceptedResponse.statusCode).toBe(202);
+    await vi.runAllTimersAsync();
+    expect(shutdown).toHaveBeenCalledOnce();
 
     await app.close();
   });
@@ -449,7 +494,7 @@ describe("zatto server", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       name: "zatto",
-      version: "0.1.0",
+      version: APP_VERSION,
     });
 
     await app.close();

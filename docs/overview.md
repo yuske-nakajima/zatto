@@ -2,7 +2,7 @@
 
 ## ゴール
 
-zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッションに束ね、`localhost:6280` 上で履歴付きに閲覧するための CLI ツールである。`file:///` を都度開く代わりに、同じ画面で HTML を切り替えながら確認する用途を想定する。
+zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッションに束ね、`localhost` 上で履歴付きに閲覧するための CLI ツールである。`file:///` を都度開く代わりに、同じ画面で HTML を切り替えながら確認する用途を想定する。
 
 ## 用語
 
@@ -16,7 +16,7 @@ zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッ�
 ```text
 +-------------+        HTTP         +------------------+        HTTP / iframe        +----------------+
 | CLI         | --------------->   | Server           | -------------------------> | Front (SPA)    |
-| - 起動判定  |                    | - Session 管理   |                            | - Sidebar      |
+| - runtime参照|                    | - Session 管理   |                            | - Sidebar      |
 | - 合流      |                    | - HTML / asset   |                            | - Viewer       |
 | - --stop    |                    | - 永続化         |                            | - Live reload  |
 +-------------+                    +------------------+                            +----------------+
@@ -25,7 +25,9 @@ zatto は、ローカルの HTML ファイルを手で集めて 1 つのセッ�
 ## 既定値と保存先
 
 - ポート番号: `6280`
+- サーバー情報の保存先: `~/.config/zatto/server.json`
 - セッション保存先: `~/.config/zatto/session.json`
+- 開発時のサーバー情報上書き: `ZATTO_RUNTIME_FILE`
 - 開発時の保存先上書き: `ZATTO_SESSION_FILE`
 
 ## ディレクトリ構成
@@ -69,5 +71,8 @@ docs/
 | リロード方式 | フロント主導（WS `file:changed` を受けて iframe を reload） |
 | `<title>` 抽出 | 表示名に HTML の `<title>` を使い、無ければファイル名を使う |
 | サーバーの寿命 | 自動終了しない。停止は `zatto --stop` のみ |
+| サーバーの多重起動 | OSユーザーごとに1プロセスとする。サーバーが保持するlockとruntime recordで合流先を決める |
+| ポート競合 | 初回起動時の希望ポートが使用中なら、OSが割り当てたポートをruntime recordへ保存する |
+| CLI互換性 | health APIの`protocolVersion`と`instanceId`で接続対象を検証する |
 | セッションの永続化 | v1 に含め、追加・削除のたびに `~/.config/zatto/session.json` へ保存する。開発時は `ZATTO_SESSION_FILE` で保存先を上書きできる |
 | エントリの削除 | ユーザーの明示操作のみ。個別削除と全削除の両方を用意する |

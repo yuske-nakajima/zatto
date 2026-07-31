@@ -27,6 +27,8 @@ npx @yuske-nakajima/zatto page.html report.html
 ```
 
 Run the same command again to add files to a running `zatto` server.
+Commands from other directories and Node.js environments join the same
+server for the current OS user.
 
 ```bash
 npx @yuske-nakajima/zatto another-page.html
@@ -36,13 +38,15 @@ npx @yuske-nakajima/zatto another-page.html
 
 | Option | Description |
 | --- | --- |
-| `--port <n>` | Set the starting server port. The default is `6280` |
+| `--port <n>` | Set the port used for the first server start. The default is `6280` |
 | `--no-open` | Start without opening a browser |
-| `--stop` | Stop the background server on the selected port |
+| `--stop` | Stop the background server for the current OS user |
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show the version |
 
-Set a port when starting the server.
+Set the preferred port when starting the server.
+If it is occupied by another application, `zatto` uses an OS-assigned port.
+The option has no effect when a `zatto` server is already running.
 
 ```bash
 npx @yuske-nakajima/zatto --port 7000 page.html
@@ -59,16 +63,10 @@ npx @yuske-nakajima/zatto --no-open page.html
 The `zatto` server continues running in the background after the command exits.
 Later commands add files to the same server.
 
-Stop the server on the default port.
+Stop the server.
 
 ```bash
 npx @yuske-nakajima/zatto --stop
-```
-
-Stop the server on a selected port.
-
-```bash
-npx @yuske-nakajima/zatto --port 7000 --stop
 ```
 
 ## Development
@@ -136,10 +134,11 @@ Build the web application and Node.js code.
 pnpm build
 ```
 
-Start the server in the foreground with a temporary session file.
+Start the server in the foreground with temporary session and runtime files.
 
 ```bash
 ZATTO_SESSION_FILE=/tmp/zatto-session.json \
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node dist/server/index.js --port 6280
 ```
 
@@ -147,20 +146,22 @@ Add an HTML file from another terminal.
 
 ```bash
 ZATTO_SESSION_FILE=/tmp/zatto-session.json \
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node bin/zatto.js --no-open page.html
 ```
 
 Check server health and inspect the session.
 
 ```bash
-curl http://127.0.0.1:6280/api/health
-curl http://127.0.0.1:6280/api/session
+ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
+curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
+curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
 ```
 
 Add an HTML file through the API.
 
 ```bash
-curl -X POST http://127.0.0.1:6280/api/session/add \
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
   -H 'content-type: application/json' \
   --data "{\"paths\":[\"$PWD/page.html\"]}"
 ```
@@ -168,15 +169,16 @@ curl -X POST http://127.0.0.1:6280/api/session/add \
 Reorder entries by sending every ID from `GET /api/session` in display order.
 
 ```bash
-curl -X PATCH http://127.0.0.1:6280/api/session/order \
+curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
 ```
 
-Stop the server through the API.
+Stop the managed server.
 
 ```bash
-curl -X POST http://127.0.0.1:6280/api/shutdown
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
+  node bin/zatto.js --stop
 ```
 
 ## License
