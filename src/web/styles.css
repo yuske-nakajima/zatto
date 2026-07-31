@@ -374,41 +374,67 @@ button:focus-visible,
   max-width: none;
 }
 
-.directory-group {
-  padding-bottom: var(--spacing-4);
-}
-
-.directory-entry-list {
+.directory-tree,
+.directory-children {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.directory-children {
+  padding-left: var(--spacing-12);
+}
+
+.directory-branch {
+  min-width: 0;
+}
+
 .directory-heading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  padding: var(--spacing-12) var(--spacing-12) var(--spacing-8)
-    var(--spacing-16);
+  min-height: 38px;
+  padding: var(--spacing-4) var(--spacing-12) var(--spacing-4) var(--spacing-8);
   background: var(--color-bg-sidebar);
 }
 
-.directory-group + .directory-group .directory-heading {
-  padding-top: var(--spacing-16);
+.directory-branch--contains-selection > .directory-heading {
+  box-shadow: inset 3px 0 0 var(--color-border-accent);
+  background: var(--color-bg-selected);
 }
 
-.directory-title {
+.directory-branch--contains-selection
+  > .directory-heading
+  > .directory-toggle
+  strong {
+  color: var(--color-text-accent);
+}
+
+.directory-toggle {
   display: flex;
   min-width: 0;
+  flex: 1;
   align-items: center;
   gap: var(--spacing-6);
+  padding: var(--spacing-6) var(--spacing-4);
+  text-align: left;
 }
 
-.directory-title strong {
+.directory-toggle:hover {
+  background: var(--color-bg-hover);
+}
+
+.directory-disclosure {
+  width: 10px;
+  flex: none;
+  color: var(--color-text-secondary);
+  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.directory-toggle strong {
   overflow: hidden;
   font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 12px;

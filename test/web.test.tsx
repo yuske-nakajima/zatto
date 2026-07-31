@@ -13,7 +13,7 @@ import {
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
-import { App, groupEntriesByDirectory, moveEntry } from "../src/web/App.js";
+import { App, buildDirectoryTree, moveEntry } from "../src/web/App.js";
 
 const webStyles = readFileSync(resolve("src/web/styles.css"), "utf8");
 const hiddenPanelRule =
@@ -21,6 +21,7 @@ const hiddenPanelRule =
 const webStyleElement = document.createElement("style");
 webStyleElement.textContent = hiddenPanelRule;
 document.head.append(webStyleElement);
+const COLLAPSED_DIRECTORY_PATHS_KEY = "zatto:collapsed-directory-paths";
 
 class FakeWebSocket extends EventTarget {
   static instance: FakeWebSocket | null = null;
@@ -554,6 +555,227 @@ describe("App", () => {
     expect(writeText).toHaveBeenNthCalledWith(4, "/work/b/src");
   });
 
+  test("フォルダを個別に折りたたんでも選択中のプレビューを維持する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          entries: [
+            entry("a", "Alpha", "/work/project/src/index.html"),
+            entry("b", "Bravo", "/work/project/docs/report.html"),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    const srcToggle = screen.getByRole("button", {
+      name: "Collapse directory /work/project/src",
+    });
+    expect(srcToggle.getAttribute("aria-expanded")).toBe("true");
+
+    await user.click(srcToggle);
+
+    expect(screen.queryByRole("button", { name: "Open Alpha" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Open Bravo" })).toBeTruthy();
+    expect(screen.getByTitle("Alpha preview")).toBeTruthy();
+    expect(srcToggle.getAttribute("aria-expanded")).toBe("false");
+    expect(srcToggle.closest(".directory-branch")?.classList).toContain(
+      "directory-branch--contains-selection",
+    );
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Collapse directory /work/project",
+        })
+        .closest(".directory-branch")?.classList,
+    ).toContain("directory-branch--contains-selection");
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Collapse directory /work/project/docs",
+        })
+        .closest(".directory-branch")?.classList,
+    ).not.toContain("directory-branch--contains-selection");
+  });
+
+  test("Listとの切り替え後も折りたたみ状態を復元する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          entries: [
+            entry("a", "Alpha", "/work/project/src/index.html"),
+            entry("b", "Bravo", "/work/project/docs/report.html"),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Collapse directory /work/project/src",
+      }),
+    );
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(COLLAPSED_DIRECTORY_PATHS_KEY) ?? "[]",
+      ),
+    ).toEqual(["/work/project/src"]);
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Expand directory /work/project/src",
+        })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(screen.getByTitle("Alpha preview")).toBeTruthy();
+  });
+
+  test("再mount後も折りたたみ状態を復元する", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          entries: [
+            entry("a", "Alpha", "/work/project/src/index.html"),
+            entry("b", "Bravo", "/work/project/docs/report.html"),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    const firstRender = render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Collapse directory /work/project/src",
+      }),
+    );
+    firstRender.unmount();
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Expand directory /work/project/src",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByTitle("Alpha preview")).toBeTruthy();
+  });
+
+  test("破損した折りたたみ状態を無視する", async () => {
+    window.localStorage.setItem(COLLAPSED_DIRECTORY_PATHS_KEY, "{broken");
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Collapse directory /tmp",
+      }),
+    ).toBeTruthy();
+  });
+
+  test("削除済みディレクトリの保存値を無視する", async () => {
+    window.localStorage.setItem(
+      COLLAPSED_DIRECTORY_PATHS_KEY,
+      JSON.stringify(["/missing"]),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Collapse directory /tmp",
+      }),
+    ).toBeTruthy();
+  });
+
+  test("localStorage例外が発生しても折りたたみ操作を継続する", async () => {
+    const originalGetItem = Storage.prototype.getItem;
+    const originalSetItem = Storage.prototype.setItem;
+    const getItem = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(function (this: Storage, key) {
+        if (key === COLLAPSED_DIRECTORY_PATHS_KEY) {
+          throw new Error("storage unavailable");
+        }
+        return originalGetItem.call(this, key);
+      });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    getItem.mockRestore();
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key, value) {
+        if (key === COLLAPSED_DIRECTORY_PATHS_KEY) {
+          throw new Error("storage unavailable");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    const directoryToggle = screen.getByRole("button", {
+      name: "Collapse directory /tmp",
+    });
+    await user.click(directoryToggle);
+
+    expect(directoryToggle.getAttribute("aria-expanded")).toBe("false");
+    setItem.mockRestore();
+  });
+
+  test("セッション更新に合わせてディレクトリツリーを更新する", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: [
+          ...initialEntries,
+          entry("c", "Charlie", "/work/reports/summary.html"),
+        ],
+      });
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Collapse directory /work/reports",
+      }),
+    ).toBeTruthy();
+
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: initialEntries,
+      });
+    });
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Collapse directory /work/reports",
+      }),
+    ).toBeNull();
+  });
+
   test("ファイルパスのコピー失敗を利用者へ表示する", async () => {
     const user = userEvent.setup();
     writeText = vi
@@ -724,17 +946,67 @@ describe("ファイルパネルの表示変換", () => {
     ]);
   });
 
-  test("親ディレクトリごとにリスト順でまとめる", () => {
-    expect(groupEntriesByDirectory([first, second, third])).toEqual([
+  test("filesystem root内の最深共通親を起点にツリーを構築する", () => {
+    expect(buildDirectoryTree([first, second, third])).toEqual([
+      {
+        directory: "/work",
+        name: "work",
+        entries: [],
+        children: [
+          {
+            directory: "/work/first",
+            name: "first",
+            entries: [first, third],
+            children: [],
+          },
+          {
+            directory: "/work/second",
+            name: "second",
+            entries: [second],
+            children: [],
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("POSIXとWindows driveを分離し、区切り文字を保つ", () => {
+    const windowsFirst = entry(
+      "w1",
+      "Windows Alpha",
+      String.raw`C:\work\project\src\index.html`,
+    );
+    const windowsSecond = entry(
+      "w2",
+      "Windows Bravo",
+      String.raw`C:\work\project\docs\report.html`,
+    );
+
+    expect(buildDirectoryTree([first, windowsFirst, windowsSecond])).toEqual([
       {
         directory: "/work/first",
         name: "first",
-        entries: [first, third],
+        entries: [first],
+        children: [],
       },
       {
-        directory: "/work/second",
-        name: "second",
-        entries: [second],
+        directory: String.raw`C:\work\project`,
+        name: "project",
+        entries: [],
+        children: [
+          {
+            directory: String.raw`C:\work\project\src`,
+            name: "src",
+            entries: [windowsFirst],
+            children: [],
+          },
+          {
+            directory: String.raw`C:\work\project\docs`,
+            name: "docs",
+            entries: [windowsSecond],
+            children: [],
+          },
+        ],
       },
     ]);
   });
