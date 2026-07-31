@@ -2,8 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import { spawnDetachedServer } from "../src/cli/index.js";
+import { APP_VERSION } from "../src/meta.js";
 
 type PackageManifest = {
+  version?: string;
   name?: string;
   private?: boolean;
   files?: string[];
@@ -27,6 +29,8 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
+    expect(manifest.version).toBe("0.1.1");
+    expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
     expect(manifest.bin).toEqual({ zatto: "bin/zatto.js" });
@@ -60,11 +64,19 @@ describe("npmパッケージ", () => {
       ) => { unref(): void }
     >(() => ({ unref() {} }));
 
-    spawnDetachedServer(6280, spawn);
+    spawnDetachedServer(6280, "instance-id", "/tmp/zatto-runtime.json", spawn);
 
     expect(spawn).toHaveBeenCalledWith(
       process.execPath,
-      [expect.stringMatching(/server[/\\]index\.js$/), "--port", "6280"],
+      [
+        expect.stringMatching(/server[/\\]index\.js$/),
+        "--port",
+        "6280",
+        "--instance-id",
+        "instance-id",
+        "--runtime-file",
+        "/tmp/zatto-runtime.json",
+      ],
       {
         detached: true,
         stdio: "ignore",

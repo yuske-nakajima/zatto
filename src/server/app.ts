@@ -14,6 +14,10 @@ type CreateAppOptions = {
   frontendDistPath?: string;
   realtimeHub?: RealtimeHub;
   onSessionChanged?: (session: Session) => Promise<void> | void;
+  serverIdentity?: {
+    instanceId: string;
+    protocolVersion: number;
+  };
 };
 
 type AddSessionBody = {
@@ -86,7 +90,11 @@ export async function createApp(
   });
 
   app.get("/api/health", async () => {
-    return { name: APP_NAME, version: APP_VERSION };
+    return {
+      name: APP_NAME,
+      version: APP_VERSION,
+      ...options.serverIdentity,
+    };
   });
 
   app.get("/api/session", async () => {
@@ -165,7 +173,14 @@ export async function createApp(
     return reply.code(204).send();
   });
 
-  app.post("/api/shutdown", async (_request, reply) => {
+  app.post("/api/shutdown", async (request, reply) => {
+    if (
+      options.serverIdentity &&
+      request.headers["x-zatto-instance-id"] !==
+        options.serverIdentity.instanceId
+    ) {
+      return reply.code(409).send({ message: "サーバー識別子が一致しません" });
+    }
     setTimeout(async () => {
       await options.shutdown?.();
     }, 0);

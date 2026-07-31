@@ -27,6 +27,7 @@ npx @yuske-nakajima/zatto page.html report.html
 ```
 
 起動済みの`zatto`へファイルを追加する場合も、同じコマンドを実行します。
+実行ディレクトリやNode.js環境が異なる場合も、OSユーザーごとに同じサーバーへ合流します。
 
 ```bash
 npx @yuske-nakajima/zatto another-page.html
@@ -36,13 +37,15 @@ npx @yuske-nakajima/zatto another-page.html
 
 | オプション | 説明 |
 | --- | --- |
-| `--port <n>` | サーバーの起点ポートを指定。既定値は`6280` |
+| `--port <n>` | 初回起動時の希望ポートを指定。既定値は`6280` |
 | `--no-open` | ブラウザーを自動で開かずに起動 |
-| `--stop` | 指定ポートで動作する常駐サーバーを停止 |
+| `--stop` | OSユーザーの常駐サーバーを停止 |
 | `-h`, `--help` | ヘルプを表示 |
 | `-v`, `--version` | バージョンを表示 |
 
 ポートを指定して起動する場合は、次のように実行します。
+他のアプリケーションが使用中の場合は、OSが割り当てたポートで起動します。
+`zatto`が起動済みの場合、`--port`の指定に関係なく同じサーバーへ合流します。
 
 ```bash
 npx @yuske-nakajima/zatto --port 7000 page.html
@@ -59,16 +62,10 @@ npx @yuske-nakajima/zatto --no-open page.html
 `zatto`のサーバーは、コマンドの終了後もバックグラウンドで動作します。
 次回の実行時は同じサーバーへファイルを追加します。
 
-既定ポートのサーバーを停止する場合:
+サーバーを停止する場合:
 
 ```bash
 npx @yuske-nakajima/zatto --stop
-```
-
-指定したポートのサーバーを停止する場合:
-
-```bash
-npx @yuske-nakajima/zatto --port 7000 --stop
 ```
 
 ## 開発
@@ -136,10 +133,11 @@ workflowは品質チェックとパッケージ検証を実行します。
 pnpm build
 ```
 
-一時的なセッションファイルを使い、サーバーをフォアグラウンドで起動:
+一時的なセッションファイルとruntime fileを使い、サーバーをフォアグラウンドで起動:
 
 ```bash
 ZATTO_SESSION_FILE=/tmp/zatto-session.json \
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node dist/server/index.js --port 6280
 ```
 
@@ -147,20 +145,22 @@ ZATTO_SESSION_FILE=/tmp/zatto-session.json \
 
 ```bash
 ZATTO_SESSION_FILE=/tmp/zatto-session.json \
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node bin/zatto.js --no-open page.html
 ```
 
 ヘルスチェックとセッションの確認:
 
 ```bash
-curl http://127.0.0.1:6280/api/health
-curl http://127.0.0.1:6280/api/session
+ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
+curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
+curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
 ```
 
 HTMLファイルをAPIから追加:
 
 ```bash
-curl -X POST http://127.0.0.1:6280/api/session/add \
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
   -H 'content-type: application/json' \
   --data "{\"paths\":[\"$PWD/page.html\"]}"
 ```
@@ -168,15 +168,16 @@ curl -X POST http://127.0.0.1:6280/api/session/add \
 `GET /api/session`で取得したIDを、表示順ですべて指定して並べ替え:
 
 ```bash
-curl -X PATCH http://127.0.0.1:6280/api/session/order \
+curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
 ```
 
-サーバーをAPIから停止:
+管理対象のサーバーを停止:
 
 ```bash
-curl -X POST http://127.0.0.1:6280/api/shutdown
+ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
+  node bin/zatto.js --stop
 ```
 
 ## ライセンス
