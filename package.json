@@ -24,7 +24,8 @@
   },
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "README.ja.md"
   ],
   "bin": {
     "zatto": "./bin/zatto.js"

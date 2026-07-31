@@ -26,7 +26,7 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.private).not.toBe(true);
-    expect(manifest.files).toEqual(["bin", "dist"]);
+    expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
     expect(manifest.bin).toEqual({ zatto: "./bin/zatto.js" });
     expect(manifest.license).toBe("MIT");
     expect(manifest.repository).toEqual({
@@ -69,5 +69,37 @@ describe("npmパッケージ", () => {
       },
     );
     expect(spawn.mock.calls[0]?.[1]).not.toContain("tsx/esm");
+  });
+
+  test("英語と日本語のREADMEからロゴと言語切り替えを案内する", async () => {
+    const [englishReadme, japaneseReadme] = await Promise.all([
+      readFile(path.join(repositoryRoot, "README.md"), "utf8"),
+      readFile(path.join(repositoryRoot, "README.ja.md"), "utf8"),
+    ]);
+
+    for (const readme of [englishReadme, japaneseReadme]) {
+      expect(readme).toContain("src/web/assets/zatto-logo-black.png");
+      expect(readme).toContain("src/web/assets/zatto-logo-white.png");
+    }
+    expect(englishReadme).toContain("[日本語](./README.ja.md)");
+    expect(englishReadme).toContain("Browse local HTML files");
+    expect(japaneseReadme).toContain("[English](./README.md)");
+    expect(japaneseReadme).toContain(
+      "ローカルのHTMLファイルをまとめて閲覧できます",
+    );
+  });
+
+  test("GitHub ActionsからOIDCでnpmパッケージを公開する", async () => {
+    const releaseWorkflow = await readFile(
+      path.join(repositoryRoot, ".github", "workflows", "release.yml"),
+      "utf8",
+    );
+
+    expect(releaseWorkflow).toContain("workflow_dispatch:");
+    expect(releaseWorkflow).toContain("id-token: write");
+    expect(releaseWorkflow).toContain("pnpm run verify:package");
+    expect(releaseWorkflow).toContain("npm publish --access public");
+    expect(releaseWorkflow).toContain("gh release create");
+    expect(releaseWorkflow).not.toContain("NPM_TOKEN");
   });
 });

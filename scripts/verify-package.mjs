@@ -42,6 +42,7 @@ try {
   const requiredPaths = [
     "LICENSE",
     "README.md",
+    "README.ja.md",
     "bin/zatto.js",
     "dist/cli/index.js",
     "dist/server/index.js",
