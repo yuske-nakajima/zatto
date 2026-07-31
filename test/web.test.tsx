@@ -18,6 +18,9 @@ import { App, buildDirectoryTree, moveEntry } from "../src/web/App.js";
 const webStyles = readFileSync(resolve("src/web/styles.css"), "utf8");
 const hiddenPanelRule =
   webStyles.match(/\.app-shell--panel-hidden\s*{[^}]*}/)?.[0] ?? "";
+const buttonResetRule =
+  webStyles.match(/\.clear-button,[\s\S]*?\.copy-path-button\s*{[^}]*}/)?.[0] ??
+  "";
 const webStyleElement = document.createElement("style");
 webStyleElement.textContent = hiddenPanelRule;
 document.head.append(webStyleElement);
@@ -387,11 +390,25 @@ describe("App", () => {
     const folderEntryButton = screen.getByRole("button", {
       name: "Open Alpha",
     });
+    expect(buttonResetRule).toContain(".directory-toggle,");
+    expect(buttonResetRule).toContain("border: 0;");
+    expect(buttonResetRule).toContain("background: transparent;");
     expect(
       document.getElementById(
         folderEntryButton.getAttribute("aria-describedby") ?? "",
       )?.textContent,
     ).toBe("/tmp/a.html");
+    const groupedFileName = screen.getByText("a.html", {
+      selector: ".entry-row--grouped small",
+    });
+    expect(
+      screen.queryByText("/tmp/a.html", {
+        selector: ".entry-row--grouped small",
+      }),
+    ).toBeNull();
+    await user.hover(groupedFileName);
+    expect(screen.getByRole("tooltip").textContent).toBe("/tmp/a.html");
+    await user.unhover(groupedFileName);
     await user.hover(screen.getByText("Alpha"));
     expect(screen.getByRole("tooltip").textContent).toBe("Alpha");
   });
@@ -576,6 +593,20 @@ describe("App", () => {
       name: "Collapse directory /work/project/src",
     });
     expect(srcToggle.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      srcToggle.querySelector<HTMLImageElement>('img[data-icon="chevronDown"]'),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", {
+          name: "Collapse directory /work/project",
+        })
+        .closest(".directory-branch")
+        ?.classList.contains("directory-branch--root"),
+    ).toBe(true);
+    expect(webStyles).toMatch(
+      /\.directory-tree\s*>\s*\.directory-branch--root:first-child\s*>\s*\.directory-heading/,
+    );
 
     await user.click(srcToggle);
 
@@ -584,22 +615,35 @@ describe("App", () => {
     expect(screen.getByTitle("Alpha preview")).toBeTruthy();
     expect(srcToggle.getAttribute("aria-expanded")).toBe("false");
     expect(srcToggle.closest(".directory-branch")?.classList).toContain(
-      "directory-branch--contains-selection",
+      "directory-branch--collapsed-selection",
     );
+    expect(
+      srcToggle.querySelector<HTMLImageElement>(
+        'img[data-icon="chevronRight"]',
+      ),
+    ).not.toBeNull();
     expect(
       screen
         .getByRole("button", {
           name: "Collapse directory /work/project",
         })
         .closest(".directory-branch")?.classList,
-    ).toContain("directory-branch--contains-selection");
+    ).not.toContain("directory-branch--collapsed-selection");
+    expect(
+      srcToggle
+        .closest(".directory-branch")
+        ?.querySelector<HTMLImageElement>('img[data-icon="folder"]'),
+    ).not.toBeNull();
+    expect(webStyles).toContain(
+      "border-left: 1px solid var(--color-border-default);",
+    );
     expect(
       screen
         .getByRole("button", {
           name: "Collapse directory /work/project/docs",
         })
         .closest(".directory-branch")?.classList,
-    ).not.toContain("directory-branch--contains-selection");
+    ).not.toContain("directory-branch--collapsed-selection");
   });
 
   test("Listとの切り替え後も折りたたみ状態を復元する", async () => {

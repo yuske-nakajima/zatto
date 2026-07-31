@@ -19,6 +19,7 @@ interface DirectoryBranchProps {
   node: DirectoryTreeNode;
   selectedId: string | null;
   collapsedDirectories: Set<string>;
+  isRoot?: boolean;
   onToggle: (directory: string) => void;
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
@@ -63,6 +64,7 @@ export function DirectoryTree({
             node={node}
             selectedId={selectedId}
             collapsedDirectories={collapsedDirectories}
+            isRoot
             onToggle={toggleDirectory}
             onSelect={onSelect}
             onCopyPath={onCopyPath}
@@ -109,6 +111,7 @@ function DirectoryBranch({
   node,
   selectedId,
   collapsedDirectories,
+  isRoot = false,
   onToggle,
   onSelect,
   onCopyPath,
@@ -117,9 +120,13 @@ function DirectoryBranch({
   const isExpanded = !collapsedDirectories.has(node.directory);
   const containsSelection = nodeContainsEntry(node, selectedId);
   const toggleLabel = `${isExpanded ? "Collapse" : "Expand"} directory ${node.directory}`;
-  const branchClassName = `directory-branch${
-    containsSelection ? " directory-branch--contains-selection" : ""
-  }`;
+  const branchClassName = [
+    "directory-branch",
+    isRoot && "directory-branch--root",
+    containsSelection && !isExpanded && "directory-branch--collapsed-selection",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <li className={branchClassName}>
@@ -131,9 +138,7 @@ function DirectoryBranch({
           aria-expanded={isExpanded}
           onClick={() => onToggle(node.directory)}
         >
-          <span className="directory-disclosure" aria-hidden="true">
-            {isExpanded ? "−" : "+"}
-          </span>
+          <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={12} />
           <Icon name="folder" size={14} />
           <strong>{node.name}</strong>
         </button>
