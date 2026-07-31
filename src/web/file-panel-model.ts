@@ -2,12 +2,6 @@ import type { Entry } from "../server/session.js";
 
 export type FilePanelView = "list" | "directories";
 
-export interface DirectoryGroup {
-  directory: string;
-  name: string;
-  entries: Entry[];
-}
-
 const FILE_PANEL_VIEW_KEY = "zatto:file-panel-view";
 
 export function selectAvailableEntry(
@@ -37,24 +31,6 @@ export function moveEntry(
   return reordered;
 }
 
-export function groupEntriesByDirectory(entries: Entry[]): DirectoryGroup[] {
-  const groups = new Map<string, DirectoryGroup>();
-  for (const entry of entries) {
-    const directory = parentDirectory(entry.absPath);
-    const group = groups.get(directory);
-    if (group) {
-      group.entries.push(entry);
-      continue;
-    }
-    groups.set(directory, {
-      directory,
-      name: fileName(directory),
-      entries: [entry],
-    });
-  }
-  return [...groups.values()];
-}
-
 export function readFilePanelView(): FilePanelView {
   try {
     return window.localStorage.getItem(FILE_PANEL_VIEW_KEY) === "directories"
@@ -75,13 +51,4 @@ export function storeFilePanelView(filePanelView: FilePanelView): void {
 
 export function fileName(absPath: string): string {
   return absPath.split(/[\\/]/).filter(Boolean).at(-1) ?? absPath;
-}
-
-function parentDirectory(absPath: string): string {
-  const normalizedPath = absPath.replaceAll("\\", "/");
-  const separatorIndex = normalizedPath.lastIndexOf("/");
-  if (separatorIndex < 0) {
-    return ".";
-  }
-  return normalizedPath.slice(0, separatorIndex) || "/";
 }
