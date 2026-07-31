@@ -22,7 +22,7 @@ export function App() {
     entries,
     setEntries,
     selectedId,
-    setSelectedId,
+    selectEntry: selectSessionEntry,
     reloadVersion,
     errorMessage,
     setErrorMessage,
@@ -42,7 +42,7 @@ export function App() {
 
   function selectEntry(id: string): void {
     copyRequestId.current += 1;
-    setSelectedId(id);
+    selectSessionEntry(id);
     setCopyFeedback(null);
   }
 

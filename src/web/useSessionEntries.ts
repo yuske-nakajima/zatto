@@ -2,12 +2,16 @@ import { useEffect, useEffectEvent, useState } from "react";
 import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import { selectAvailableEntry } from "./file-panel-model.js";
+import {
+  readSelectedEntryIdFromUrl,
+  replaceSelectedEntryIdInUrl,
+} from "./selected-entry-url.js";
 
 interface SessionEntries {
   entries: Entry[];
   setEntries: React.Dispatch<React.SetStateAction<Entry[]>>;
   selectedId: string | null;
-  setSelectedId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectEntry: (id: string) => void;
   reloadVersion: number;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
@@ -18,6 +22,11 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function selectEntry(id: string): void {
+    setSelectedId(id);
+    replaceSelectedEntryIdInUrl(id);
+  }
 
   useEffect(() => {
     let active = true;
@@ -31,8 +40,11 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
       .then((session) => {
         if (active) {
           setEntries(session.entries);
-          setSelectedId((current) =>
-            selectAvailableEntry(current, session.entries),
+          setSelectedId(
+            resolveSelectedEntryIdAndUpdateUrl(
+              readSelectedEntryIdFromUrl(),
+              session.entries,
+            ),
           );
         }
       })
@@ -54,8 +66,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     if (message.type === "session:update") {
       onSessionUpdate();
       setEntries(message.entries);
-      setSelectedId((current) =>
-        selectAvailableEntry(current, message.entries),
+      setSelectedId(
+        resolveSelectedEntryIdAndUpdateUrl(selectedId, message.entries),
       );
       return;
     }
@@ -75,11 +87,20 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     entries,
     setEntries,
     selectedId,
-    setSelectedId,
+    selectEntry,
     reloadVersion,
     errorMessage,
     setErrorMessage,
   };
+}
+
+function resolveSelectedEntryIdAndUpdateUrl(
+  requestedId: string | null,
+  availableEntries: Entry[],
+): string | null {
+  const selectedEntryId = selectAvailableEntry(requestedId, availableEntries);
+  replaceSelectedEntryIdInUrl(selectedEntryId);
+  return selectedEntryId;
 }
 
 function parseServerMessage(data: unknown): ServerMessage | null {
