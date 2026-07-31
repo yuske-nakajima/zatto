@@ -27,7 +27,7 @@ describe("npmパッケージ", () => {
 
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
-    expect(manifest.bin).toEqual({ zatto: "./bin/zatto.js" });
+    expect(manifest.bin).toEqual({ zatto: "bin/zatto.js" });
     expect(manifest.license).toBe("MIT");
     expect(manifest.repository).toEqual({
       type: "git",

@@ -28,7 +28,7 @@
     "README.ja.md"
   ],
   "bin": {
-    "zatto": "./bin/zatto.js"
+    "zatto": "bin/zatto.js"
   },
   "publishConfig": {
     "access": "public",
