@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import { spawnDetachedServer } from "../src/cli/index.js";
 
 type PackageManifest = {
+  name?: string;
   private?: boolean;
   files?: string[];
   bin?: Record<string, string>;
@@ -25,6 +26,7 @@ describe("npmパッケージ", () => {
       await readFile(path.join(repositoryRoot, "package.json"), "utf8"),
     ) as PackageManifest;
 
+    expect(manifest.name).toBe("@yuske-nakajima/zatto");
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
     expect(manifest.bin).toEqual({ zatto: "bin/zatto.js" });
@@ -87,6 +89,10 @@ describe("npmパッケージ", () => {
     expect(japaneseReadme).toContain(
       "ローカルのHTMLファイルをまとめて閲覧できます",
     );
+    for (const readme of [englishReadme, japaneseReadme]) {
+      expect(readme).toContain("npx @yuske-nakajima/zatto file.html");
+      expect(readme).not.toMatch(/npx zatto(?:\s|$)/);
+    }
   });
 
   test("GitHub ActionsからOIDCでnpmパッケージを公開する", async () => {
