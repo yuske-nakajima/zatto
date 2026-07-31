@@ -30,6 +30,19 @@ type CliDependencies = {
   stderr: (message: string) => void;
 };
 
+type DetachedProcess = {
+  unref(): void;
+};
+
+type SpawnProcess = (
+  executable: string,
+  args: string[],
+  options: {
+    detached: true;
+    stdio: "ignore";
+  },
+) => DetachedProcess;
+
 const defaultDependencies: CliDependencies = {
   fetch: globalThis.fetch,
   spawnServer: spawnDetachedServer,
@@ -244,17 +257,17 @@ function serverUrl(port: number): string {
   return `http://127.0.0.1:${port}/`;
 }
 
-export function spawnDetachedServer(port: number): void {
+export function spawnDetachedServer(
+  port: number,
+  spawnProcess: SpawnProcess = spawn,
+): void {
   const serverEntry = fileURLToPath(
-    new URL("../server/index.ts", import.meta.url),
+    new URL("../server/index.js", import.meta.url),
   );
-  const child = spawn(
+  const child = spawnProcess(
     process.execPath,
-    ["--import", "tsx/esm", serverEntry, "--port", String(port)],
-    {
-      detached: true,
-      stdio: "ignore",
-    },
+    [serverEntry, "--port", String(port)],
+    { detached: true, stdio: "ignore" },
   );
   child.unref();
 }

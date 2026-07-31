@@ -1,91 +1,163 @@
 # zatto
 
-ローカルの HTML ファイルをセッションにまとめ、ブラウザで切り替えて確認するビューアーです。
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/yuske-nakajima/zatto/main/src/web/assets/zatto-logo-white.png">
+    <img src="https://raw.githubusercontent.com/yuske-nakajima/zatto/main/src/web/assets/zatto-logo-black.png" alt="zatto" width="240">
+  </picture>
+</p>
 
-この README は利用・開発・動作確認に使うコマンドをまとめています。公開パッケージ向けの説明は Issue #5 で整備します。
+[日本語](./README.ja.md)
 
-## セットアップと確認
+Browse local HTML files together without installing anything.
 
 ```bash
-pnpm install
-pnpm build
-pnpm test
-pnpm check
+npx zatto file.html
 ```
 
-フォーマットを適用する場合:
+`zatto` is a local viewer that collects multiple HTML files into one session.
+Use the file panel in the browser to switch between them.
+
+## Usage
+
+Pass multiple paths to add several HTML files at once.
+
+```bash
+npx zatto page.html report.html
+```
+
+Run the same command again to add files to a running `zatto` server.
+
+```bash
+npx zatto another-page.html
+```
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `--port <n>` | Set the starting server port. The default is `6280` |
+| `--no-open` | Start without opening a browser |
+| `--stop` | Stop the background server on the selected port |
+| `-h`, `--help` | Show help |
+| `-v`, `--version` | Show the version |
+
+Set a port when starting the server.
+
+```bash
+npx zatto --port 7000 page.html
+```
+
+Prevent the browser from opening automatically.
+
+```bash
+npx zatto --no-open page.html
+```
+
+## Stop the background server
+
+The `zatto` server continues running in the background after the command exits.
+Later commands add files to the same server.
+
+Stop the server on the default port.
+
+```bash
+npx zatto --stop
+```
+
+Stop the server on a selected port.
+
+```bash
+npx zatto --port 7000 --stop
+```
+
+## Development
+
+mise manages the Node.js and pnpm versions.
+
+```bash
+mise install
+pnpm install
+```
+
+Run the quality checks.
+
+```bash
+pnpm check
+pnpm test
+pnpm build
+```
+
+Format the repository.
 
 ```bash
 pnpm format
 ```
 
-## CLI
-
-HTML ファイルを追加して起動:
+Build and inspect the npm package, then install and exercise it in an isolated directory.
 
 ```bash
-node bin/zatto.js ./page.html
+pnpm verify:package
 ```
 
-複数の HTML ファイルを追加:
+## Release
+
+Publish the package from the `main` branch on an npm-authenticated machine for the first release.
 
 ```bash
-node bin/zatto.js ./page.html ./report.html
+pnpm verify:package
+npm publish --access public
 ```
 
-ブラウザを自動で開かずに起動:
+After the first release, register GitHub Actions as the npm Trusted Publisher.
 
 ```bash
-node bin/zatto.js --no-open ./page.html
+npm trust github zatto \
+  --file release.yml \
+  --repo yuske-nakajima/zatto \
+  --allow-publish
 ```
 
-ポートを指定:
+For later releases, update the version in `package.json` and merge the change into `main`.
+Then run the Release workflow manually.
 
 ```bash
-node bin/zatto.js --port 6281 ./page.html
+gh workflow run release.yml --ref main
 ```
 
-常駐サーバーを停止:
+The workflow runs the quality checks and package verification.
+After they pass, it publishes to npm, creates the version tag, and creates a GitHub Release.
+
+## Debugging
+
+Build the web application and Node.js code.
 
 ```bash
-node bin/zatto.js --stop
-node bin/zatto.js --port 6281 --stop
+pnpm build
 ```
 
-ヘルプとバージョン:
-
-```bash
-node bin/zatto.js --help
-node bin/zatto.js --version
-```
-
-## 開発時の起動
-
-フロントエンドをビルドし、サーバーをフォアグラウンドで起動:
-
-```bash
-pnpm build:web
-ZATTO_SESSION_FILE=/tmp/zatto-session.json \
-  node --import tsx/esm src/server/index.ts --port 6280
-```
-
-別のターミナルから HTML ファイルを追加:
+Start the server in the foreground with a temporary session file.
 
 ```bash
 ZATTO_SESSION_FILE=/tmp/zatto-session.json \
-  node bin/zatto.js --no-open ./page.html
+  node dist/server/index.js --port 6280
 ```
 
-## API の確認
+Add an HTML file from another terminal.
 
-ヘルスチェックとセッション取得:
+```bash
+ZATTO_SESSION_FILE=/tmp/zatto-session.json \
+  node bin/zatto.js --no-open page.html
+```
+
+Check server health and inspect the session.
 
 ```bash
 curl http://127.0.0.1:6280/api/health
 curl http://127.0.0.1:6280/api/session
 ```
 
-HTML ファイルを追加:
+Add an HTML file through the API.
 
 ```bash
 curl -X POST http://127.0.0.1:6280/api/session/add \
@@ -93,7 +165,7 @@ curl -X POST http://127.0.0.1:6280/api/session/add \
   --data "{\"paths\":[\"$PWD/page.html\"]}"
 ```
 
-`GET /api/session` で取得した ID を、表示したい順番ですべて指定して並べ替え:
+Reorder entries by sending every ID from `GET /api/session` in display order.
 
 ```bash
 curl -X PATCH http://127.0.0.1:6280/api/session/order \
@@ -101,8 +173,20 @@ curl -X PATCH http://127.0.0.1:6280/api/session/order \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
 ```
 
-サーバーを停止:
+Stop the server through the API.
 
 ```bash
 curl -X POST http://127.0.0.1:6280/api/shutdown
 ```
+
+## License
+
+[MIT License](LICENSE)
+
+## Acknowledgements
+
+`zatto` was inspired by [k1LoW/mo](https://github.com/k1LoW/mo), a Markdown viewer
+that collects `.md` files for reading in the browser.
+
+`zatto` brings that file-bundling experience to HTML.
+Thank you to the authors of this excellent prior work. `mo` is available under the MIT License.
