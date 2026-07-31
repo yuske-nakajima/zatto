@@ -1,3 +1,5 @@
+import chevronDown from "./assets/icons/chevron-down.svg";
+import chevronRight from "./assets/icons/chevron-right.svg";
 import clipboardCopy from "./assets/icons/clipboard-copy.svg";
 import folder from "./assets/icons/folder.svg";
 import gripDefault from "./assets/icons/grip-default.svg";
@@ -10,6 +12,8 @@ import trash from "./assets/icons/trash.svg";
 import trashAccent from "./assets/icons/trash-accent.svg";
 
 const iconSources = {
+  chevronDown,
+  chevronRight,
   clipboardCopy,
   folder,
   gripAccent,
@@ -33,6 +37,7 @@ export function Icon({ name, size }: IconProps) {
   return (
     <img
       className="icon"
+      data-icon={name}
       src={iconSources[name]}
       alt=""
       aria-hidden="true"

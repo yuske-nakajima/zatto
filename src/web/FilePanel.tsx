@@ -1,12 +1,9 @@
 import type { DragEvent } from "react";
 import type { Entry } from "../server/session.js";
 import zattoLogo from "./assets/zatto-logo-black.png";
+import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
-import {
-  type FilePanelView,
-  groupEntriesByDirectory,
-} from "./file-panel-model.js";
-import { Icon } from "./icons.js";
+import type { FilePanelView } from "./file-panel-model.js";
 
 interface FilePanelProps {
   entries: Entry[];
@@ -100,39 +97,13 @@ export function FilePanel({
           ))}
         </ol>
       ) : (
-        <nav className="entry-list" aria-label="HTML entries by folder">
-          {groupEntriesByDirectory(entries).map((group) => (
-            <section className="directory-group" key={group.directory}>
-              <header className="directory-heading">
-                <span className="directory-title">
-                  <Icon name="folder" size={14} />
-                  <strong>{group.name}</strong>
-                </span>
-                <button
-                  className="directory-path-copy icon-button"
-                  type="button"
-                  aria-label={`Copy directory path ${group.directory}`}
-                  onClick={() => onCopyPath(group.directory)}
-                >
-                  <Icon name="clipboardCopy" size={12} />
-                </button>
-              </header>
-              <ul className="directory-entry-list">
-                {group.entries.map((entry) => (
-                  <EntryRow
-                    grouped
-                    entry={entry}
-                    isSelected={entry.id === selectedId}
-                    key={entry.id}
-                    onSelect={onSelect}
-                    onCopyPath={onCopyPath}
-                    onRemove={onRemove}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </nav>
+        <DirectoryTree
+          entries={entries}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          onCopyPath={onCopyPath}
+          onRemove={onRemove}
+        />
       )}
       {entries.length === 0 && (
         <div className="empty-list">

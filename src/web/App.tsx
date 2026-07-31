@@ -9,8 +9,8 @@ import {
 import { useSessionEntries } from "./useSessionEntries.js";
 import { type CopyFeedback, Viewer } from "./Viewer.js";
 
+export { buildDirectoryTree } from "./directory-tree-model.js";
 export {
-  groupEntriesByDirectory,
   moveEntry,
   selectAvailableEntry,
 } from "./file-panel-model.js";

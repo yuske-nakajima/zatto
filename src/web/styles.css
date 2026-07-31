@@ -195,6 +195,7 @@ button:focus-visible,
 .icon-button,
 .entry-drag,
 .entry-select,
+.directory-toggle,
 .file-panel-toggle,
 .copy-path-button {
   border: 0;
@@ -289,7 +290,8 @@ button:focus-visible,
 
 .entry-row--grouped {
   grid-template-columns: minmax(0, 1fr) 48px;
-  min-height: 54px;
+  min-height: 0;
+  padding: 0 var(--spacing-12);
   border-bottom: 0;
 }
 
@@ -312,7 +314,7 @@ button:focus-visible,
 }
 
 .entry-row--grouped .entry-select {
-  padding-left: var(--spacing-32);
+  padding: var(--spacing-10) 0;
 }
 
 .entry-copy {
@@ -355,6 +357,18 @@ button:focus-visible,
   padding-right: var(--spacing-12);
 }
 
+.entry-row--grouped .entry-actions {
+  padding-right: 0;
+}
+
+.entry-row--grouped .entry-copy strong {
+  font-size: 12px;
+}
+
+.entry-row--grouped .entry-copy small {
+  font-size: 9px;
+}
+
 .icon-button {
   display: grid;
   width: 20px;
@@ -374,44 +388,65 @@ button:focus-visible,
   max-width: none;
 }
 
-.directory-group {
-  padding-bottom: var(--spacing-4);
-}
-
-.directory-entry-list {
+.directory-tree,
+.directory-children {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.directory-children {
+  margin-left: var(--spacing-16);
+  border-left: 1px solid var(--color-border-default);
+}
+
+.directory-branch {
+  min-width: 0;
+}
+
 .directory-heading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  padding: var(--spacing-12) var(--spacing-12) var(--spacing-8)
-    var(--spacing-16);
+  padding: var(--spacing-6) var(--spacing-12) var(--spacing-6) var(--spacing-4);
   background: var(--color-bg-sidebar);
 }
 
-.directory-group + .directory-group .directory-heading {
-  padding-top: var(--spacing-16);
+.directory-tree > .directory-branch--root:first-child > .directory-heading {
+  padding: var(--spacing-10) var(--spacing-12) var(--spacing-6);
 }
 
-.directory-title {
+.directory-branch--collapsed-selection > .directory-heading {
+  box-shadow: inset 2px 0 0 var(--color-border-accent);
+}
+
+.directory-branch--collapsed-selection
+  > .directory-heading
+  > .directory-toggle
+  strong {
+  color: var(--color-text-accent);
+}
+
+.directory-toggle {
   display: flex;
   min-width: 0;
+  flex: 1;
   align-items: center;
-  gap: var(--spacing-6);
+  gap: var(--spacing-4);
+  padding: 0;
+  text-align: left;
 }
 
-.directory-title strong {
+.directory-toggle:hover {
+  background: var(--color-bg-hover);
+}
+
+.directory-toggle strong {
   overflow: hidden;
   font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

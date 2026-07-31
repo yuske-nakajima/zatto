@@ -105,9 +105,7 @@ export function EntryRow({
       >
         <span className="entry-copy">
           <strong data-tooltip={entry.title}>{entry.title}</strong>
-          <small data-tooltip={entry.absPath}>
-            {grouped ? entry.absPath : fileName(entry.absPath)}
-          </small>
+          <small data-tooltip={entry.absPath}>{fileName(entry.absPath)}</small>
           <span className="visually-hidden" id={pathDescriptionId}>
             {entry.absPath}
           </span>
