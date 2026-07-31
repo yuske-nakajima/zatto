@@ -14,4 +14,4 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - List and collapsible directory tree views
 - Entry ordering with drag and drop
 - URL-based entry selection
-- npm package and `npx zatto` command
+- npm package and `npx @yuske-nakajima/zatto` command

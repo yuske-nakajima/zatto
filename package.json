@@ -1,5 +1,5 @@
 {
-  "name": "zatto",
+  "name": "@yuske-nakajima/zatto",
   "version": "0.1.0",
   "description": "A local viewer for browsing HTML files as one session.",
   "type": "module",

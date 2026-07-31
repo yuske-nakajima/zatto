@@ -12,7 +12,7 @@
 Browse local HTML files together without installing anything.
 
 ```bash
-npx zatto file.html
+npx @yuske-nakajima/zatto file.html
 ```
 
 `zatto` is a local viewer that collects multiple HTML files into one session.
@@ -23,13 +23,13 @@ Use the file panel in the browser to switch between them.
 Pass multiple paths to add several HTML files at once.
 
 ```bash
-npx zatto page.html report.html
+npx @yuske-nakajima/zatto page.html report.html
 ```
 
 Run the same command again to add files to a running `zatto` server.
 
 ```bash
-npx zatto another-page.html
+npx @yuske-nakajima/zatto another-page.html
 ```
 
 ## Options
@@ -45,13 +45,13 @@ npx zatto another-page.html
 Set a port when starting the server.
 
 ```bash
-npx zatto --port 7000 page.html
+npx @yuske-nakajima/zatto --port 7000 page.html
 ```
 
 Prevent the browser from opening automatically.
 
 ```bash
-npx zatto --no-open page.html
+npx @yuske-nakajima/zatto --no-open page.html
 ```
 
 ## Stop the background server
@@ -62,13 +62,13 @@ Later commands add files to the same server.
 Stop the server on the default port.
 
 ```bash
-npx zatto --stop
+npx @yuske-nakajima/zatto --stop
 ```
 
 Stop the server on a selected port.
 
 ```bash
-npx zatto --port 7000 --stop
+npx @yuske-nakajima/zatto --port 7000 --stop
 ```
 
 ## Development
@@ -112,7 +112,7 @@ npm publish --access public
 After the first release, register GitHub Actions as the npm Trusted Publisher.
 
 ```bash
-npm trust github zatto \
+npm trust github @yuske-nakajima/zatto \
   --file release.yml \
   --repo yuske-nakajima/zatto \
   --allow-publish

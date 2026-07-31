@@ -12,7 +12,7 @@
 インストールせずに、ローカルのHTMLファイルをまとめて閲覧できます。
 
 ```bash
-npx zatto file.html
+npx @yuske-nakajima/zatto file.html
 ```
 
 `zatto`は複数のHTMLファイルを1つのセッションにまとめるローカルビューアーです。
@@ -23,13 +23,13 @@ npx zatto file.html
 複数のHTMLファイルを追加する場合は、ファイルパスを続けて指定します。
 
 ```bash
-npx zatto page.html report.html
+npx @yuske-nakajima/zatto page.html report.html
 ```
 
 起動済みの`zatto`へファイルを追加する場合も、同じコマンドを実行します。
 
 ```bash
-npx zatto another-page.html
+npx @yuske-nakajima/zatto another-page.html
 ```
 
 ## オプション
@@ -45,13 +45,13 @@ npx zatto another-page.html
 ポートを指定して起動する場合は、次のように実行します。
 
 ```bash
-npx zatto --port 7000 page.html
+npx @yuske-nakajima/zatto --port 7000 page.html
 ```
 
 ブラウザーを自動で開かない場合は、`--no-open`を指定します。
 
 ```bash
-npx zatto --no-open page.html
+npx @yuske-nakajima/zatto --no-open page.html
 ```
 
 ## 常駐サーバーの停止
@@ -62,13 +62,13 @@ npx zatto --no-open page.html
 既定ポートのサーバーを停止する場合:
 
 ```bash
-npx zatto --stop
+npx @yuske-nakajima/zatto --stop
 ```
 
 指定したポートのサーバーを停止する場合:
 
 ```bash
-npx zatto --port 7000 --stop
+npx @yuske-nakajima/zatto --port 7000 --stop
 ```
 
 ## 開発
@@ -112,7 +112,7 @@ npm publish --access public
 初回公開後、GitHub ActionsをnpmのTrusted Publisherとして登録します。
 
 ```bash
-npm trust github zatto \
+npm trust github @yuske-nakajima/zatto \
   --file release.yml \
   --repo yuske-nakajima/zatto \
   --allow-publish
