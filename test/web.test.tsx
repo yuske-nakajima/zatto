@@ -55,6 +55,7 @@ describe("App", () => {
   let writeText: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    window.history.replaceState(null, "", "/");
     window.localStorage.clear();
     FakeWebSocket.instance = null;
     writeText = vi.fn().mockResolvedValue(undefined);
@@ -88,6 +89,83 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Open Bravo" }));
     expect(screen.getByTitle("Bravo preview").getAttribute("src")).toBe(
       "/f/b/",
+    );
+  });
+
+  test("URLのEntry IDから選択を復元する", async () => {
+    window.history.replaceState(null, "", "/?panel=open&entry=b#file-preview");
+
+    render(<App />);
+
+    expect(await screen.findByTitle("Bravo preview")).toBeTruthy();
+    expect(window.location.href).toBe(
+      "http://localhost:3000/?panel=open&entry=b#file-preview",
+    );
+  });
+
+  test("無効なEntry IDを先頭のIDへ置き換える", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?panel=open&entry=missing#file-preview",
+    );
+
+    render(<App />);
+
+    expect(await screen.findByTitle("Alpha preview")).toBeTruthy();
+    expect(window.location.href).toBe(
+      "http://localhost:3000/?panel=open&entry=a#file-preview",
+    );
+  });
+
+  test("Entry選択時に他のURL情報を保ったままIDを置き換える", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/?panel=open#file-preview");
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    replaceState.mockClear();
+
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
+
+    expect(window.location.href).toBe(
+      "http://localhost:3000/?panel=open&entry=b#file-preview",
+    );
+    expect(replaceState).toHaveBeenCalledTimes(1);
+  });
+
+  test("選択中のEntryが削除された場合は先頭を選択してURLを更新する", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
+
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: [entry("c", "Charlie"), entry("a", "Alpha")],
+      });
+    });
+
+    expect(screen.getByTitle("Charlie preview")).toBeTruthy();
+    expect(window.location.search).toBe("?entry=c");
+  });
+
+  test("Entryがなくなった場合は選択とURLのIDを削除する", async () => {
+    window.history.replaceState(null, "", "/?panel=open&entry=b#file-preview");
+    render(<App />);
+    await screen.findByTitle("Bravo preview");
+
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: [],
+      });
+    });
+
+    expect(screen.queryByTitle("Bravo preview")).toBeNull();
+    expect(window.location.href).toBe(
+      "http://localhost:3000/?panel=open#file-preview",
     );
   });
 
