@@ -1,6 +1,4 @@
 #!/usr/bin/env node
 
-import "tsx/esm";
-
-const { main } = await import("../src/cli/index.ts");
+const { main } = await import("../dist/cli/index.js");
 process.exitCode = await main(process.argv.slice(2));
