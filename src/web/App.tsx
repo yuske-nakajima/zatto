@@ -6,6 +6,7 @@ import {
   readFilePanelView,
   storeFilePanelView,
 } from "./file-panel-model.js";
+import { useNativeFilePicker } from "./useNativeFilePicker.js";
 import { useSessionEntries } from "./useSessionEntries.js";
 import { type CopyFeedback, Viewer } from "./Viewer.js";
 
@@ -26,6 +27,7 @@ export function App() {
     reloadVersion,
     errorMessage,
     setErrorMessage,
+    filePicker,
   } = useSessionEntries(() => {
     copyRequestId.current += 1;
     setCopyFeedback(null);
@@ -35,6 +37,11 @@ export function App() {
   const [isFilePanelVisible, setIsFilePanelVisible] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const filePickerControl = useNativeFilePicker({
+    capability: filePicker,
+    selectEntry,
+    setErrorMessage,
+  });
   useEffect(() => storeFilePanelView(filePanelView), [filePanelView]);
 
   const selectedEntry =
@@ -141,6 +148,8 @@ export function App() {
           view={filePanelView}
           draggedId={draggedId}
           dropTargetId={dropTargetId}
+          canPickFiles={filePicker.available}
+          isFilePickerOpen={filePickerControl.isOpen}
           onViewChange={setFilePanelView}
           onClear={() => void clearEntries()}
           onSelect={selectEntry}
@@ -150,6 +159,7 @@ export function App() {
           onDragEnter={setDropTargetId}
           onDragEnd={resetDragState}
           onDrop={(id) => void reorderEntries(id)}
+          onPickFiles={() => void filePickerControl.open()}
         />
       )}
       <Viewer
@@ -158,10 +168,13 @@ export function App() {
         isFilePanelVisible={isFilePanelVisible}
         errorMessage={errorMessage}
         copyFeedback={copyFeedback}
+        canPickFiles={filePicker.available}
+        isFilePickerOpen={filePickerControl.isOpen}
         onToggleFilePanel={() =>
           setIsFilePanelVisible((isVisible) => !isVisible)
         }
         onCopyPath={(path) => void copyPath(path)}
+        onPickFiles={() => void filePickerControl.open()}
       />
     </main>
   );

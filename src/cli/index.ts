@@ -39,9 +39,9 @@ const defaultDependencies: CliDependencies = {
   createInstanceId: randomUUID,
 };
 
-export const HELP_TEXT = `Usage: zatto [options] <file...>
+export const HELP_TEXT = `Usage: zatto [options] [file...]
 
-ローカル HTML ファイルを zatto セッションへ追加します。
+ローカル HTML ファイルを zatto セッションへ追加します。ファイルを省略するとビューアーを開きます。
 
 Options:
   --port <n>    初回起動時のサーバーポート (default: ${DEFAULT_PORT})
@@ -106,17 +106,14 @@ export async function runCli(
   if (options.stop) {
     return stopServer(options.port, dependencies);
   }
-  if (options.files.length === 0) {
-    dependencies.stderr("HTML ファイルを1つ以上指定してください");
-    return 1;
-  }
-
   try {
     const connection = await connectOrStartServer(options.port, dependencies);
     const url = serverUrl(connection.record.port);
-    await addFiles(connection.record, options.files, dependencies.fetch);
+    if (options.files.length > 0) {
+      await addFiles(connection.record, options.files, dependencies.fetch);
+    }
     dependencies.stdout(url);
-    if (connection.started && options.open) {
+    if (options.open && (connection.started || options.files.length === 0)) {
       dependencies.openBrowser(url);
     }
     return 0;

@@ -9,6 +9,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -94,6 +95,91 @@ describe("App", () => {
     expect(screen.getByTitle("Bravo preview").getAttribute("src")).toBe(
       "/f/b/",
     );
+  });
+
+  test("AddボタンからHTMLを追加して最初の追加項目を表示する", async () => {
+    const pickedEntry = entry("picked", "Picked", "/tmp/picked.html");
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      if (input === "/api/session") {
+        return Response.json({
+          entries: initialEntries,
+          filePicker: {
+            available: true,
+            instanceId: "managed-instance",
+          },
+        });
+      }
+      if (input === "/api/session/pick") {
+        return Response.json(
+          { cancelled: false, added: [pickedEntry] },
+          { status: 201 },
+        );
+      }
+      return Response.json({});
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    await user.click(screen.getByRole("button", { name: "Add HTML files" }));
+    act(() => {
+      FakeWebSocket.instance?.emitMessage({
+        type: "session:update",
+        entries: [...initialEntries, pickedEntry],
+      });
+    });
+
+    expect(fetch).toHaveBeenCalledWith("/api/session/pick", {
+      method: "POST",
+      headers: { "x-zatto-instance-id": "managed-instance" },
+    });
+    expect(screen.getByTitle("Picked preview")).toBeTruthy();
+    expect(window.location.search).toBe("?entry=picked");
+  });
+
+  test("空のセッションでファイル選択を主操作として表示する", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({
+        entries: [],
+        filePicker: {
+          available: true,
+          instanceId: "managed-instance",
+        },
+      }),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: "Select HTML files" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Open local HTML files")).toBeTruthy();
+  });
+
+  test("Command+Oでファイル選択を開く", async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      if (input === "/api/session") {
+        return Response.json({
+          entries: initialEntries,
+          filePicker: {
+            available: true,
+            instanceId: "managed-instance",
+          },
+        });
+      }
+      return Response.json({ cancelled: true, added: [] });
+    });
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    fireEvent.keyDown(window, { key: "o", metaKey: true });
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith("/api/session/pick", {
+        method: "POST",
+        headers: { "x-zatto-instance-id": "managed-instance" },
+      });
+    });
   });
 
   test("URLのEntry IDから選択を復元する", async () => {

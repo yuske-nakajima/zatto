@@ -13,8 +13,11 @@ interface ViewerProps {
   isFilePanelVisible: boolean;
   errorMessage: string | null;
   copyFeedback: CopyFeedback | null;
+  canPickFiles: boolean;
+  isFilePickerOpen: boolean;
   onToggleFilePanel: () => void;
   onCopyPath: (path: string) => void;
+  onPickFiles: () => void;
 }
 
 export function Viewer({
@@ -23,8 +26,11 @@ export function Viewer({
   isFilePanelVisible,
   errorMessage,
   copyFeedback,
+  canPickFiles,
+  isFilePickerOpen,
   onToggleFilePanel,
   onCopyPath,
+  onPickFiles,
 }: ViewerProps) {
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
   const pathTooltipId = useId();
@@ -110,11 +116,33 @@ export function Viewer({
             <span className="empty-viewer-icon">
               <Icon name="monitorPlay" size={24} />
             </span>
-            <strong>Select a file to preview</strong>
-            <p>
-              Select any compiled HTML file from the folders on the left to
-              render the local live preview inside this frame.
-            </p>
+            <strong>
+              {canPickFiles
+                ? "Open local HTML files"
+                : "Select a file to preview"}
+            </strong>
+            {canPickFiles ? (
+              <>
+                <p>
+                  Choose one or more HTML files to add them to this session.
+                </p>
+                <button
+                  className="empty-viewer-action"
+                  type="button"
+                  aria-label="Select HTML files"
+                  disabled={isFilePickerOpen}
+                  onClick={onPickFiles}
+                >
+                  {isFilePickerOpen ? "Opening…" : "Select HTML files"}
+                </button>
+                <small>Command+O</small>
+              </>
+            ) : (
+              <p>
+                Select any compiled HTML file from the folders on the left to
+                render the local live preview inside this frame.
+              </p>
+            )}
           </div>
         )}
       </div>

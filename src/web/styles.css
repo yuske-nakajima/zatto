@@ -191,6 +191,7 @@ button:focus-visible,
 }
 
 .clear-button,
+.add-button,
 .view-switcher button,
 .icon-button,
 .entry-drag,
@@ -201,6 +202,29 @@ button:focus-visible,
   border: 0;
   background: transparent;
   cursor: pointer;
+}
+
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.add-button {
+  padding: var(--spacing-4) var(--spacing-8);
+  color: var(--color-text-accent);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.add-button:hover:not(:disabled) {
+  background: var(--color-bg-selected);
+}
+
+.add-button:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .clear-button {
@@ -681,6 +705,34 @@ button:focus-visible,
   color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.empty-viewer-action {
+  margin-top: var(--spacing-16);
+  padding: var(--spacing-8) var(--spacing-16);
+  color: var(--color-text-inverse);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-viewer-action:hover:not(:disabled) {
+  background: var(--color-indigo-700);
+}
+
+.empty-viewer-action:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.empty-viewer small {
+  margin-top: var(--spacing-8);
+  color: var(--color-text-tertiary);
+  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
 }
 
 @media (max-width: 720px) {

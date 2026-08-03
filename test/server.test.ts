@@ -225,6 +225,124 @@ describe("zatto server", () => {
     await app.close();
   });
 
+  test("ファイル選択でHTMLを追加し、server identityを検証する", async () => {
+    const firstPath = path.join(tempDir, "picked.html");
+    const ignoredPath = path.join(tempDir, "ignored.txt");
+    await writeFile(firstPath, "<title>Picked</title>", "utf8");
+    await writeFile(ignoredPath, "ignored", "utf8");
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const pickFiles = vi.fn().mockResolvedValue({
+      kind: "selected",
+      paths: [firstPath, ignoredPath],
+    });
+    const onSessionChanged = vi.fn();
+    const app = await createApp({
+      sessionStore: store,
+      pickFiles,
+      onSessionChanged,
+      serverIdentity: {
+        instanceId: "managed-instance",
+        protocolVersion: 1,
+      },
+    });
+
+    const sessionResponse = await app.inject({
+      method: "GET",
+      url: "/api/session",
+    });
+    expect(sessionResponse.json()).toMatchObject({
+      entries: [],
+      filePicker: {
+        available: true,
+        instanceId: "managed-instance",
+      },
+    });
+
+    const rejectedResponse = await app.inject({
+      method: "POST",
+      url: "/api/session/pick",
+      headers: { "x-zatto-instance-id": "other-instance" },
+    });
+    expect(rejectedResponse.statusCode).toBe(409);
+    expect(pickFiles).not.toHaveBeenCalled();
+
+    const acceptedResponse = await app.inject({
+      method: "POST",
+      url: "/api/session/pick",
+      headers: { "x-zatto-instance-id": "managed-instance" },
+    });
+    expect(acceptedResponse.statusCode).toBe(201);
+    expect(acceptedResponse.json()).toMatchObject({
+      cancelled: false,
+      added: [{ absPath: firstPath, title: "Picked" }],
+    });
+    expect(store.getSession().entries).toHaveLength(1);
+    expect(onSessionChanged).toHaveBeenCalledOnce();
+
+    await app.close();
+  });
+
+  test("ファイル選択のキャンセルではセッションを変更しない", async () => {
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    const onSessionChanged = vi.fn();
+    const app = await createApp({
+      sessionStore: store,
+      pickFiles: vi.fn().mockResolvedValue({ kind: "cancelled" }),
+      onSessionChanged,
+      serverIdentity: {
+        instanceId: "managed-instance",
+        protocolVersion: 1,
+      },
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/session/pick",
+      headers: { "x-zatto-instance-id": "managed-instance" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ cancelled: true, added: [] });
+    expect(onSessionChanged).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  test("ファイル選択ダイアログの多重起動を拒否する", async () => {
+    const store = new SessionStore(sessionFilePath);
+    await store.load();
+    let finishPicking: (() => void) | undefined;
+    const pendingPick = new Promise<{ kind: "cancelled" }>((resolve) => {
+      finishPicking = () => resolve({ kind: "cancelled" });
+    });
+    const pickFiles = vi.fn(() => pendingPick);
+    const app = await createApp({
+      sessionStore: store,
+      pickFiles,
+      serverIdentity: {
+        instanceId: "managed-instance",
+        protocolVersion: 1,
+      },
+    });
+    const request = {
+      method: "POST" as const,
+      url: "/api/session/pick",
+      headers: { "x-zatto-instance-id": "managed-instance" },
+    };
+
+    const firstResponsePromise = app.inject(request);
+    await vi.waitFor(() => {
+      expect(pickFiles).toHaveBeenCalledOnce();
+    });
+    const secondResponse = await app.inject(request);
+
+    expect(secondResponse.statusCode).toBe(409);
+    finishPicking?.();
+    expect((await firstResponsePromise).statusCode).toBe(200);
+    await app.close();
+  });
+
   test("API で並べ替えて WebSocket に配信する", async () => {
     const firstPath = path.join(tempDir, "first.html");
     const secondPath = path.join(tempDir, "second.html");
