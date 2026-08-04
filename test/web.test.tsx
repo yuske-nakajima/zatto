@@ -344,6 +344,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Hide file panel" }));
 
     expect(screen.queryByRole("complementary")).toBeNull();
+    expect(
+      screen.queryByRole("separator", { name: "Resize file panel" }),
+    ).toBeNull();
     const appShell = container.querySelector(".app-shell--panel-hidden");
     expect(appShell).not.toBeNull();
     expect(getComputedStyle(appShell as Element).gridTemplateColumns).toBe(
@@ -359,6 +362,79 @@ describe("App", () => {
     expect(
       screen.getByRole("button", { name: "Hide file panel" }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("separator", { name: "Resize file panel" }),
+    ).toBeTruthy();
+  });
+
+  test("リサイズハンドルのドラッグでファイルパネル幅を変更して保存する", async () => {
+    const { container } = render(<App />);
+    await screen.findByTitle("Alpha preview");
+    const handle = screen.getByRole("separator", {
+      name: "Resize file panel",
+    });
+    const setPointerCapture = vi.fn();
+    const releasePointerCapture = vi.fn();
+    Object.defineProperty(handle, "setPointerCapture", {
+      configurable: true,
+      value: setPointerCapture,
+    });
+    Object.defineProperty(handle, "hasPointerCapture", {
+      configurable: true,
+      value: () => true,
+    });
+    Object.defineProperty(handle, "releasePointerCapture", {
+      configurable: true,
+      value: releasePointerCapture,
+    });
+
+    fireEvent.pointerDown(handle, { clientX: 260, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 420, pointerId: 1 });
+
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+    expect(
+      (container.firstElementChild as HTMLElement).style.getPropertyValue(
+        "--sidebar-width",
+      ),
+    ).toBe("420px");
+    expect(window.localStorage.getItem("zatto:sidebar-width")).toBe("420");
+
+    fireEvent.pointerMove(handle, { clientX: 800, pointerId: 1 });
+    expect(handle.getAttribute("aria-valuenow")).toBe("480");
+
+    fireEvent.pointerUp(handle, { clientX: 800, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 300, pointerId: 1 });
+    expect(releasePointerCapture).toHaveBeenCalledWith(1);
+    expect(handle.getAttribute("aria-valuenow")).toBe("480");
+  });
+
+  test("キーボード操作とダブルクリックでファイルパネル幅を調整する", async () => {
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    const handle = screen.getByRole("separator", {
+      name: "Resize file panel",
+    });
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(handle.getAttribute("aria-valuenow")).toBe("268");
+
+    fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
+    expect(handle.getAttribute("aria-valuenow")).toBe("300");
+
+    fireEvent.doubleClick(handle);
+    expect(handle.getAttribute("aria-valuenow")).toBe("260");
+  });
+
+  test("保存したファイルパネル幅を再読み込み時に復元する", async () => {
+    window.localStorage.setItem("zatto:sidebar-width", "376");
+    const { container } = render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    expect(
+      (container.firstElementChild as HTMLElement).style.getPropertyValue(
+        "--sidebar-width",
+      ),
+    ).toBe("376px");
   });
 
   test("狭い画面のパネル非表示時に単一のビューアー行を定義する", () => {
@@ -376,7 +452,10 @@ describe("App", () => {
     expect(webStyles).toContain("--spacing-40: 40px");
     expect(webStyles).toContain("--radius-full: 9999px");
     expect(webStyles).toMatch(
-      /grid-template-columns:\s*260px minmax\(0,\s*1fr\)/,
+      /grid-template-columns:\s*var\(--sidebar-width\) 8px minmax\(0,\s*1fr\)/,
+    );
+    expect(webStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.sidebar-resize-handle\s*{[^}]*display:\s*none/,
     );
     expect(webStyles).toMatch(
       /\.viewer\s*{[\s\S]*?grid-template-rows:\s*64px 1fr/,

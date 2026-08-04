@@ -6,6 +6,7 @@ import {
   readFilePanelView,
   storeFilePanelView,
 } from "./file-panel-model.js";
+import { ResizableLayout } from "./ResizableLayout.js";
 import { useNativeFilePicker } from "./useNativeFilePicker.js";
 import { useSessionEntries } from "./useSessionEntries.js";
 import { type CopyFeedback, Viewer } from "./Viewer.js";
@@ -138,45 +139,48 @@ export function App() {
   }
 
   return (
-    <main
-      className={`app-shell${isFilePanelVisible ? "" : " app-shell--panel-hidden"}`}
-    >
-      {isFilePanelVisible && (
-        <FilePanel
-          entries={entries}
-          selectedId={selectedId}
-          view={filePanelView}
-          draggedId={draggedId}
-          dropTargetId={dropTargetId}
+    <ResizableLayout
+      isFilePanelVisible={isFilePanelVisible}
+      filePanel={
+        isFilePanelVisible ? (
+          <FilePanel
+            entries={entries}
+            selectedId={selectedId}
+            view={filePanelView}
+            draggedId={draggedId}
+            dropTargetId={dropTargetId}
+            canPickFiles={filePicker.available}
+            isFilePickerOpen={filePickerControl.isOpen}
+            onViewChange={setFilePanelView}
+            onClear={() => void clearEntries()}
+            onSelect={selectEntry}
+            onCopyPath={(path) => void copyPath(path)}
+            onRemove={(id) => void removeEntry(id)}
+            onDragStart={handleDragStart}
+            onDragEnter={setDropTargetId}
+            onDragEnd={resetDragState}
+            onDrop={(id) => void reorderEntries(id)}
+            onPickFiles={() => void filePickerControl.open()}
+          />
+        ) : null
+      }
+      viewer={
+        <Viewer
+          selectedEntry={selectedEntry}
+          reloadVersion={reloadVersion}
+          isFilePanelVisible={isFilePanelVisible}
+          errorMessage={errorMessage}
+          copyFeedback={copyFeedback}
           canPickFiles={filePicker.available}
           isFilePickerOpen={filePickerControl.isOpen}
-          onViewChange={setFilePanelView}
-          onClear={() => void clearEntries()}
-          onSelect={selectEntry}
+          onToggleFilePanel={() =>
+            setIsFilePanelVisible((isVisible) => !isVisible)
+          }
           onCopyPath={(path) => void copyPath(path)}
-          onRemove={(id) => void removeEntry(id)}
-          onDragStart={handleDragStart}
-          onDragEnter={setDropTargetId}
-          onDragEnd={resetDragState}
-          onDrop={(id) => void reorderEntries(id)}
           onPickFiles={() => void filePickerControl.open()}
         />
-      )}
-      <Viewer
-        selectedEntry={selectedEntry}
-        reloadVersion={reloadVersion}
-        isFilePanelVisible={isFilePanelVisible}
-        errorMessage={errorMessage}
-        copyFeedback={copyFeedback}
-        canPickFiles={filePicker.available}
-        isFilePickerOpen={filePickerControl.isOpen}
-        onToggleFilePanel={() =>
-          setIsFilePanelVisible((isVisible) => !isVisible)
-        }
-        onCopyPath={(path) => void copyPath(path)}
-        onPickFiles={() => void filePickerControl.open()}
-      />
-    </main>
+      }
+    />
   );
 }
 

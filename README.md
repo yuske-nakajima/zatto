@@ -17,6 +17,8 @@ npx @yuske-nakajima/zatto file.html
 
 `zatto` is a local viewer that collects multiple HTML files into one session.
 Use the file panel in the browser to switch between them.
+On desktop, drag the divider beside the file panel to adjust its width.
+Double-click the divider to restore the default width.
 
 ## Usage
 
