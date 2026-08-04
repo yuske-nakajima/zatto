@@ -5,7 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.1.1";
+const expectedVersion = "0.1.2";
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const packageDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-pack-"));
 const consumerDirectory = await mkdtemp(

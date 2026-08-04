@@ -112,7 +112,7 @@ button:focus-visible,
 
 .app-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -130,8 +130,35 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   height: 100vh;
-  border-right: 1px solid var(--color-border-default);
   background: var(--color-bg-sidebar);
+}
+
+.sidebar-resize-handle {
+  position: relative;
+  z-index: 2;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent 3px,
+    var(--color-border-default) 3px 4px,
+    transparent 4px
+  );
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:focus-visible {
+  background: linear-gradient(
+    to right,
+    transparent 3px,
+    var(--color-border-accent) 3px 4px,
+    transparent 4px
+  );
 }
 
 .sidebar-header {
@@ -754,6 +781,10 @@ button:focus-visible,
     height: 42vh;
     border-right: 0;
     border-bottom: 1px solid var(--color-border-default);
+  }
+
+  .sidebar-resize-handle {
+    display: none;
   }
 
   .viewer {

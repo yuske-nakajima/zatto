@@ -16,3 +16,5 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - URL-based entry selection
 - npm package and `npx @yuske-nakajima/zatto` command
 - Per-user server discovery with a single background process
+- Native macOS file selection from the browser viewer
+- Resizable file panel with persisted width
