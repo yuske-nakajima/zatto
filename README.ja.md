@@ -20,6 +20,17 @@ npx @yuske-nakajima/zatto file.html
 
 ## 使い方
 
+コマンドラインでファイルを指定せず、ビューアーだけを開くこともできます。
+
+```bash
+npx @yuske-nakajima/zatto
+```
+
+macOSでは、ビューアーの**+ Add**、**Select HTML files**、または
+<kbd>Command</kbd>+<kbd>O</kbd>から、複数の`.html`または`.htm`ファイルを選択できます。
+ネイティブのファイルダイアログから絶対パスをローカルの`zatto`サーバーへ渡すため、
+相対アセットの表示とライブリロードも維持されます。
+
 複数のHTMLファイルを追加する場合は、ファイルパスを続けて指定します。
 
 ```bash

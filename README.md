@@ -20,6 +20,17 @@ Use the file panel in the browser to switch between them.
 
 ## Usage
 
+Open the viewer without adding a file from the command line.
+
+```bash
+npx @yuske-nakajima/zatto
+```
+
+On macOS, use **+ Add**, **Select HTML files**, or <kbd>Command</kbd>+<kbd>O</kbd>
+in the viewer to select one or more `.html` or `.htm` files. The native file
+dialog passes their absolute paths to the local `zatto` server, so relative
+assets and live reload continue to work.
+
 Pass multiple paths to add several HTML files at once.
 
 ```bash

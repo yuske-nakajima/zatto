@@ -11,6 +11,8 @@ interface FilePanelProps {
   view: FilePanelView;
   draggedId: string | null;
   dropTargetId: string | null;
+  canPickFiles: boolean;
+  isFilePickerOpen: boolean;
   onViewChange: (view: FilePanelView) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
@@ -20,6 +22,7 @@ interface FilePanelProps {
   onDragEnter: (id: string) => void;
   onDragEnd: () => void;
   onDrop: (id: string) => void;
+  onPickFiles: () => void;
 }
 
 export function FilePanel({
@@ -28,6 +31,8 @@ export function FilePanel({
   view,
   draggedId,
   dropTargetId,
+  canPickFiles,
+  isFilePickerOpen,
   onViewChange,
   onClear,
   onSelect,
@@ -37,6 +42,7 @@ export function FilePanel({
   onDragEnter,
   onDragEnd,
   onDrop,
+  onPickFiles,
 }: FilePanelProps) {
   return (
     <aside className="sidebar">
@@ -50,15 +56,28 @@ export function FilePanel({
         <span className="entry-count">
           ENTRIES <strong>{entries.length}</strong>
         </span>
-        <button
-          className="clear-button"
-          type="button"
-          aria-label="Clear all"
-          disabled={entries.length === 0}
-          onClick={onClear}
-        >
-          Clear All
-        </button>
+        <span className="list-actions">
+          {canPickFiles && (
+            <button
+              className="add-button"
+              type="button"
+              aria-label="Add HTML files"
+              disabled={isFilePickerOpen}
+              onClick={onPickFiles}
+            >
+              {isFilePickerOpen ? "Opening…" : "+ Add"}
+            </button>
+          )}
+          <button
+            className="clear-button"
+            type="button"
+            aria-label="Clear all"
+            disabled={entries.length === 0}
+            onClick={onClear}
+          >
+            Clear All
+          </button>
+        </span>
       </div>
       <fieldset className="view-switcher">
         <legend className="visually-hidden">File panel view</legend>

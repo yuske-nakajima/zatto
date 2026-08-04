@@ -361,14 +361,40 @@ describe("zatto CLI", () => {
     );
   });
 
-  test("ファイルなしの通常起動と不正なポートを拒否する", async () => {
+  test("ファイルなしで既存サーバーのビューアーを開く", async () => {
+    await writeServerRecord(runtimeFilePath, {
+      instanceId: "running-instance",
+      pid: process.pid,
+      port: 7010,
+      protocolVersion: SERVER_PROTOCOL_VERSION,
+    });
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        name: "zatto",
+        instanceId: "running-instance",
+        protocolVersion: SERVER_PROTOCOL_VERSION,
+      }),
+    );
+    const openBrowser = vi.fn();
+    const stdout = vi.fn();
+
+    expect(
+      await runCli([], {
+        fetch,
+        openBrowser,
+        stdout,
+        runtimeFilePath,
+      }),
+    ).toBe(0);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(openBrowser).toHaveBeenCalledWith("http://127.0.0.1:7010/");
+    expect(stdout).toHaveBeenCalledWith("http://127.0.0.1:7010/");
+  });
+
+  test("不正なポートを拒否する", async () => {
     const stderr = vi.fn();
 
-    expect(await runCli([], { stderr })).toBe(1);
     expect(await runCli(["--port", "0", "a.html"], { stderr })).toBe(1);
-    expect(stderr).toHaveBeenCalledWith(
-      "HTML ファイルを1つ以上指定してください",
-    );
     expect(stderr).toHaveBeenCalledWith(
       "`--port` には 1〜65535 の整数を指定してください",
     );

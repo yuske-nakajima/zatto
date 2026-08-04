@@ -15,6 +15,19 @@ interface SessionEntries {
   reloadVersion: number;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  filePicker: FilePickerCapability;
+}
+
+export interface FilePickerCapability {
+  available: boolean;
+  instanceId: string | null;
+}
+
+interface SessionResponse extends Session {
+  filePicker?: {
+    available?: boolean;
+    instanceId?: string;
+  };
 }
 
 export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
@@ -22,6 +35,10 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filePicker, setFilePicker] = useState<FilePickerCapability>({
+    available: false,
+    instanceId: null,
+  });
 
   function selectEntry(id: string): void {
     setSelectedId(id);
@@ -35,11 +52,15 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        return (await response.json()) as Session;
+        return (await response.json()) as SessionResponse;
       })
       .then((session) => {
         if (active) {
           setEntries(session.entries);
+          setFilePicker({
+            available: session.filePicker?.available === true,
+            instanceId: session.filePicker?.instanceId ?? null,
+          });
           setSelectedId(
             resolveSelectedEntryIdAndUpdateUrl(
               readSelectedEntryIdFromUrl(),
@@ -91,6 +112,7 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     reloadVersion,
     errorMessage,
     setErrorMessage,
+    filePicker,
   };
 }
 
