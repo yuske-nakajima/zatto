@@ -10,6 +10,10 @@ type PackageManifest = {
   private?: boolean;
   files?: string[];
   bin?: Record<string, string>;
+  exports?: {
+    "./server"?: { types?: string; import?: string; default?: string };
+    "./package.json"?: string;
+  };
   license?: string;
   repository?: {
     type?: string;
@@ -29,11 +33,19 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("0.1.2");
+    expect(manifest.version).toBe("0.1.3");
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
     expect(manifest.bin).toEqual({ zatto: "bin/zatto.js" });
+    expect(manifest.exports).toEqual({
+      "./server": {
+        types: "./dist/server/index.d.ts",
+        import: "./dist/server/index.js",
+        default: "./dist/server/index.js",
+      },
+      "./package.json": "./package.json",
+    });
     expect(manifest.license).toBe("MIT");
     expect(manifest.repository).toEqual({
       type: "git",
@@ -103,6 +115,7 @@ describe("npmパッケージ", () => {
     );
     for (const readme of [englishReadme, japaneseReadme]) {
       expect(readme).toContain("npx @yuske-nakajima/zatto file.html");
+      expect(readme).toContain("@yuske-nakajima/zatto/server");
       expect(readme).not.toMatch(/npx zatto(?:\s|$)/);
     }
   });

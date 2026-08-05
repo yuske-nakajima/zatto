@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { parseArgs } from "node:util";
 import { createApp, defaultFrontendDistPath } from "./app.js";
+import { runServerCommand } from "./command.js";
+import { isDirectExecution } from "./direct-execution.js";
 import { createNativeFilePicker } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
 import {
@@ -15,10 +16,12 @@ import {
 import { SessionStore } from "./session.js";
 import { EntryWatcher } from "./watch.js";
 
+/** CLIから指定されない場合にサーバーが使用するポート。 */
 export const DEFAULT_PORT = 6280;
 const HEARTBEAT_INTERVAL_MS = 2_000;
 
-interface StartServerOptions {
+/** サーバーの起動方法とruntime保存先を指定するオプション。 */
+export interface StartServerOptions {
   exit?: (code: number) => void;
   instanceId?: string;
   runtimeFilePath?: string;
@@ -29,6 +32,14 @@ interface StartServerOptions {
   ) => Promise<void>;
 }
 
+/**
+ * runtime lockを取得し、zattoサーバーを起動する。
+ *
+ * @param preferredPort - 最初に使用を試みるポート。0の場合はOSが割り当てる
+ * @param options - runtimeとセッションの起動設定
+ * @returns 起動したサーバー。runtime lockを取得できない場合はnull
+ * @throws サーバーの初期化またはruntime recordの保存に失敗した場合
+ */
 export async function startServer(
   preferredPort = DEFAULT_PORT,
   options: StartServerOptions = {},
@@ -181,22 +192,6 @@ async function listenWithFallback(
   return address.port;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const { values } = parseArgs({
-    args: process.argv.slice(2),
-    options: {
-      port: { type: "string", default: String(DEFAULT_PORT) },
-      "instance-id": { type: "string" },
-      "runtime-file": { type: "string" },
-    },
-  });
-  const port = Number(values.port);
-
-  startServer(port, {
-    instanceId: values["instance-id"],
-    runtimeFilePath: values["runtime-file"],
-  }).catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+if (isDirectExecution(import.meta.url, process.argv[1])) {
+  runServerCommand(startServer, DEFAULT_PORT, process.argv.slice(2));
 }

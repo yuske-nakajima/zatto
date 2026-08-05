@@ -3,13 +3,15 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { createServerEnvironment } from "./create-server-environment.mjs";
+import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.1.2";
+const expectedVersion = "0.1.3";
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const packageDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-pack-"));
 const consumerDirectory = await mkdtemp(
-  path.join(os.tmpdir(), "zatto-consumer-"),
+  path.join(os.tmpdir(), "zatto consumer #%-"),
 );
 const npxDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-npx-"));
 const port = 40_000 + Math.floor(Math.random() * 20_000);
@@ -23,13 +25,14 @@ let serverStarted = false;
 let installedBin;
 const sessionPath = path.join(consumerDirectory, "session.json");
 const runtimePath = path.join(consumerDirectory, "server.json");
-const serverEnvironment = {
-  ...process.env,
-  ZATTO_RUNTIME_FILE: runtimePath,
-  ZATTO_SESSION_FILE: sessionPath,
-};
+let serverEnvironment = process.env;
 
 try {
+  serverEnvironment = await createServerEnvironment({
+    consumerDirectory,
+    runtimePath,
+    sessionPath,
+  });
   console.log("npm tarballを作成します");
   const { stdout: packOutput } = await execFileAsync(
     "npm",
@@ -57,6 +60,7 @@ try {
     "README.ja.md",
     "bin/zatto.js",
     "dist/cli/index.js",
+    "dist/server/index.d.ts",
     "dist/server/index.js",
     "dist/web/index.html",
     "package.json",
@@ -67,7 +71,7 @@ try {
     }
   }
 
-  const forbiddenPrefixes = ["design/", "docs/", "src/", "test/"];
+  const forbiddenPrefixes = ["design/", "docs/", "scripts/", "src/", "test/"];
   const forbiddenPath = packedPaths.find((packedPath) =>
     forbiddenPrefixes.some((prefix) => packedPath.startsWith(prefix)),
   );
@@ -146,6 +150,13 @@ try {
     timeout: 10_000,
   });
   serverStarted = false;
+
+  console.log("公開サーバーエントリーを検証します");
+  await verifyPublicServer({
+    consumerDirectory,
+    environment: serverEnvironment,
+    expectedVersion,
+  });
 
   console.log("npm tarballをnpxで実行します");
   const { stdout: npxOutput } = await execFileAsync(

@@ -81,6 +81,21 @@ npx @yuske-nakajima/zatto --no-open page.html
 npx @yuske-nakajima/zatto --stop
 ```
 
+## サーバーの組み込み
+
+アプリケーションは、パッケージ内部の`dist`構成に依存せず、公開サーバーを解決できます。
+
+```js
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const serverEntry = require.resolve("@yuske-nakajima/zatto/server");
+```
+
+ESMからは同じサブパスの`startServer`と`DEFAULT_PORT`も利用できます。
+実行可能なエントリーは`--port`、`--instance-id`、`--runtime-file`を受け取ります。
+`SIGTERM`を送ると、サーバーを停止してruntime recordとlockを削除します。
+
 ## 開発
 
 Node.jsとpnpmのバージョンはmiseで管理しています。

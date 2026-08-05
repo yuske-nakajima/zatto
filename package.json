@@ -1,6 +1,6 @@
 {
   "name": "@yuske-nakajima/zatto",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A local viewer for browsing HTML files as one session.",
   "type": "module",
   "license": "MIT",
@@ -29,6 +29,14 @@
   ],
   "bin": {
     "zatto": "bin/zatto.js"
+  },
+  "exports": {
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public",

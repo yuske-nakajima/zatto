@@ -82,6 +82,22 @@ Stop the server.
 npx @yuske-nakajima/zatto --stop
 ```
 
+## Embed the server
+
+Applications can resolve the supported server entry without depending on the
+package's internal `dist` layout.
+
+```js
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const serverEntry = require.resolve("@yuske-nakajima/zatto/server");
+```
+
+The subpath also exports `startServer` and `DEFAULT_PORT` for ESM consumers.
+The executable entry accepts `--port`, `--instance-id`, and `--runtime-file`.
+Sending `SIGTERM` stops the server and removes its runtime record and lock.
+
 ## Development
 
 mise manages the Node.js and pnpm versions.
