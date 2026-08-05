@@ -74,6 +74,7 @@ docs/
 | サーバーの多重起動 | OSユーザーごとに1プロセスとする。サーバーが保持するlockとruntime recordで合流先を決める |
 | ポート競合 | 初回起動時の希望ポートが使用中なら、OSが割り当てたポートをruntime recordへ保存する |
 | CLI互換性 | health APIの`protocolVersion`と`instanceId`で接続対象を検証する |
+| サーバーの公開契約 | Node.jsアプリケーションは`@yuske-nakajima/zatto/server`から実行ファイルと起動APIを解決する |
 | セッションの永続化 | v1 に含め、追加・削除のたびに `~/.config/zatto/session.json` へ保存する。開発時は `ZATTO_SESSION_FILE` で保存先を上書きできる |
 | エントリの削除 | ユーザーの明示操作のみ。個別削除と全削除の両方を用意する |
 | ブラウザーからのファイル追加 | macOS のローカルサーバーがネイティブのファイルダイアログを開き、選択した HTML の絶対パスを既存のセッション追加処理へ渡す。ブラウザーへ公開される API はサーバー識別子を検証する |
