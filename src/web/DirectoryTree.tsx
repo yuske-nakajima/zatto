@@ -133,6 +133,7 @@ function DirectoryBranch({
       <div className="directory-heading">
         <button
           className="directory-toggle"
+          data-status-description="Expand or collapse this folder."
           type="button"
           aria-label={toggleLabel}
           aria-expanded={isExpanded}
@@ -144,6 +145,7 @@ function DirectoryBranch({
         </button>
         <button
           className="directory-path-copy icon-button"
+          data-status-description="Copy this folder path."
           type="button"
           aria-label={`Copy directory path ${node.directory}`}
           onClick={() => onCopyPath(node.directory)}

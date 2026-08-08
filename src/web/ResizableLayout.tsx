@@ -50,7 +50,7 @@ export function ResizableLayout({
   };
 
   return (
-    <main
+    <div
       className={`app-shell${isFilePanelVisible ? "" : " app-shell--panel-hidden"}`}
       style={style}
     >
@@ -64,7 +64,7 @@ export function ResizableLayout({
         </>
       )}
       {viewer}
-    </main>
+    </div>
   );
 }
 
@@ -109,6 +109,7 @@ function SidebarResizeHandle({
   return (
     <hr
       className="sidebar-resize-handle"
+      data-status-description="Resize the file panel."
       aria-label="Resize file panel"
       aria-orientation="vertical"
       aria-valuemin={MIN_SIDEBAR_WIDTH}

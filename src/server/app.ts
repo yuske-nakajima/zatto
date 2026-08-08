@@ -70,6 +70,23 @@ export async function createApp(
 </html>`);
   });
 
+  app.get("/manifest.webmanifest", async (_request, reply) => {
+    if (!options.frontendDistPath) {
+      return reply.code(404).send({ message: "ファイルが見つかりません" });
+    }
+
+    const manifestPath = path.join(
+      path.dirname(options.frontendDistPath),
+      "manifest.webmanifest",
+    );
+    if (!(await fileExists(manifestPath))) {
+      return reply.code(404).send({ message: "ファイルが見つかりません" });
+    }
+
+    const manifest = await readFile(manifestPath, "utf8");
+    return reply.type(contentTypeForPath(manifestPath)).send(manifest);
+  });
+
   app.get<{ Params: { "*": string } }>("/assets/*", async (request, reply) => {
     if (!options.frontendDistPath) {
       return reply.code(404).send({ message: "ファイルが見つかりません" });

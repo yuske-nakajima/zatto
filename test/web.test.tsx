@@ -393,9 +393,9 @@ describe("App", () => {
 
     expect(setPointerCapture).toHaveBeenCalledWith(1);
     expect(
-      (container.firstElementChild as HTMLElement).style.getPropertyValue(
-        "--sidebar-width",
-      ),
+      (
+        container.querySelector(".app-shell") as HTMLElement
+      ).style.getPropertyValue("--sidebar-width"),
     ).toBe("420px");
     expect(window.localStorage.getItem("zatto:sidebar-width")).toBe("420");
 
@@ -431,15 +431,15 @@ describe("App", () => {
     await screen.findByTitle("Alpha preview");
 
     expect(
-      (container.firstElementChild as HTMLElement).style.getPropertyValue(
-        "--sidebar-width",
-      ),
+      (
+        container.querySelector(".app-shell") as HTMLElement
+      ).style.getPropertyValue("--sidebar-width"),
     ).toBe("376px");
   });
 
   test("狭い画面のパネル非表示時に単一のビューアー行を定義する", () => {
     expect(webStyles).toMatch(
-      /@media \(max-width: 720px\)[\s\S]*?\.app-shell--panel-hidden\s*{[^}]*grid-template-rows:\s*minmax\(420px,\s*calc\(100vh - 24px\)\)/,
+      /@media \(max-width: 720px\)[\s\S]*?\.app-shell--panel-hidden\s*{[^}]*grid-template-rows:\s*minmax\(420px,\s*1fr\)/,
     );
   });
 

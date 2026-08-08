@@ -5,6 +5,7 @@ import "./styles.css";
 import "./search.css";
 import "./search-results.css";
 import "./preview-page-search.css";
+import "./status-bar.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

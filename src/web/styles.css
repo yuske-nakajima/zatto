@@ -112,8 +112,8 @@ button:focus-visible,
 
 .app-shell {
   display: grid;
+  min-height: 0;
   grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
-  min-height: 100vh;
 }
 
 .app-shell--panel-hidden {
@@ -129,14 +129,14 @@ button:focus-visible,
 .sidebar {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: var(--color-bg-sidebar);
 }
 
 .sidebar-resize-handle {
   position: relative;
   z-index: 2;
-  height: 100vh;
+  height: 100%;
   margin: 0;
   padding: 0;
   border: 0;
@@ -549,7 +549,7 @@ button:focus-visible,
   position: relative;
   display: grid;
   grid-template-rows: 64px 1fr;
-  height: 100vh;
+  height: 100%;
   background: var(--color-bg-app);
 }
 
@@ -770,10 +770,11 @@ button:focus-visible,
   .app-shell {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(260px, 42vh) minmax(420px, 58vh);
+    overflow-y: auto;
   }
 
   .app-shell--panel-hidden {
-    grid-template-rows: minmax(420px, calc(100vh - 24px));
+    grid-template-rows: minmax(420px, 1fr);
   }
 
   .sidebar {
@@ -792,7 +793,7 @@ button:focus-visible,
   }
 
   .app-shell--panel-hidden .viewer {
-    height: 100vh;
+    height: 100%;
   }
 
   .viewer-header {

@@ -1,8 +1,9 @@
 import type { Entry } from "../server/session.js";
+import type { CopyFeedback } from "./copy-feedback.js";
 import { SearchWorkspace } from "./SearchWorkspace.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import type { SearchNavigation } from "./useSearchNavigation.js";
-import { type CopyFeedback, Viewer } from "./Viewer.js";
+import { Viewer } from "./Viewer.js";
 
 interface AppViewerProps {
   search: SearchNavigation;

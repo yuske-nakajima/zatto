@@ -76,6 +76,7 @@ export function EntryRow({
       {draggable && (
         <button
           className="entry-drag"
+          data-status-description="Drag to reorder this file."
           type="button"
           draggable
           aria-label={`Reorder ${entry.title}`}
@@ -87,6 +88,7 @@ export function EntryRow({
       )}
       <button
         className="entry-select"
+        data-status-description="Open this file in the preview."
         type="button"
         aria-label={`Open ${entry.title}`}
         aria-describedby={`${pathDescriptionId}${tooltip ? ` ${tooltipId}` : ""}`}
@@ -124,6 +126,7 @@ export function EntryRow({
       <span className="entry-actions">
         <button
           className="entry-path-copy icon-button"
+          data-status-description="Copy this file path."
           type="button"
           aria-label={`Copy file path ${entry.absPath}`}
           onClick={() => onCopyPath(entry.absPath)}
@@ -132,6 +135,7 @@ export function EntryRow({
         </button>
         <button
           className="entry-remove icon-button"
+          data-status-description="Remove this file from the session."
           type="button"
           aria-label={`Remove ${entry.title}`}
           onClick={() => onRemove(entry.id)}
