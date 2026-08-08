@@ -1,0 +1,199 @@
+.view-switcher {
+  grid-template-columns: 1fr 1fr 40px;
+}
+
+.viewer[hidden] {
+  display: none;
+}
+
+.search-mode-button,
+.search-close,
+.search-state button,
+.search-result-file,
+.search-match-list button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.search-mode-button {
+  position: relative;
+  display: grid;
+  border-left: 1px solid var(--color-border-default);
+  place-items: center;
+}
+
+.search-mode-button[aria-pressed="true"] {
+  color: var(--color-text-accent);
+  background: var(--color-bg-selected);
+}
+
+.search-glyph {
+  position: relative;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  color: var(--color-icon-default);
+}
+
+.search-glyph::after {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  width: 5px;
+  height: 1.5px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  content: "";
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.search-mode-button[aria-pressed="true"] .search-glyph {
+  color: var(--color-icon-accent);
+}
+
+.search-state-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--color-bg-sidebar);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-accent);
+}
+
+.search-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--spacing-12);
+  padding: 0 var(--spacing-24);
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-bg-sidebar);
+}
+
+.search-input-wrap {
+  display: flex;
+  min-width: 160px;
+  max-width: 680px;
+  flex: 1;
+  align-items: center;
+  gap: var(--spacing-10);
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.search-input-wrap:focus-within {
+  border-color: var(--color-border-accent);
+  box-shadow: 0 0 0 2px var(--color-indigo-100);
+}
+
+.search-input-wrap input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+.search-total {
+  min-width: 132px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: right;
+}
+
+.search-close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  place-items: center;
+}
+
+.search-close:hover,
+.search-state button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.search-body {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--spacing-24);
+}
+
+.search-limit-message {
+  margin: 0 0 var(--spacing-12);
+  padding: var(--spacing-8) var(--spacing-12);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-indigo-100);
+  border-radius: var(--radius-md);
+  background: var(--color-indigo-50);
+  font-size: 11px;
+}
+
+.search-state {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.search-state strong {
+  font-size: 14px;
+}
+
+.search-state p {
+  margin: var(--spacing-6) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.search-state button {
+  margin-top: var(--spacing-16);
+  padding: var(--spacing-8) var(--spacing-16);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.search-error-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--spacing-12);
+  color: var(--color-red-500);
+  border: 1px solid color-mix(in srgb, var(--color-red-500) 25%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-red-500) 8%, transparent);
+  font-weight: 700;
+  place-items: center;
+}
+
+@media (max-width: 720px) {
+  .search-header {
+    padding: 0 var(--spacing-12);
+  }
+  .search-total {
+    display: none;
+  }
+  .search-body {
+    padding: var(--spacing-12);
+  }
+}
