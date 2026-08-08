@@ -1,16 +1,17 @@
 import { type DragEvent, useRef, useState } from "react";
 import { AppViewer } from "./AppViewer.js";
+import type { CopyFeedback } from "./copy-feedback.js";
 import { prepareEntryDrag } from "./entry-drag.js";
 import { FilePanel } from "./FilePanel.js";
 import { moveEntry } from "./file-panel-model.js";
 import { ResizableLayout } from "./ResizableLayout.js";
+import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { requestSessionChange } from "./session-change.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
 import { useNativeFilePicker } from "./useNativeFilePicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
-import type { CopyFeedback } from "./Viewer.js";
 
 export { buildDirectoryTree } from "./directory-tree-model.js";
 export { moveEntry, selectAvailableEntry } from "./file-panel-model.js";
@@ -142,51 +143,53 @@ export function App() {
   }
 
   return (
-    <ResizableLayout
-      isFilePanelVisible={filePanel.isVisible}
-      filePanel={
-        filePanel.isVisible ? (
-          <FilePanel
-            entries={entries}
-            selectedId={selectedId}
-            view={filePanel.view}
-            draggedId={draggedId}
-            dropTargetId={dropTargetId}
+    <StatusBarFrame>
+      <ResizableLayout
+        isFilePanelVisible={filePanel.isVisible}
+        filePanel={
+          filePanel.isVisible ? (
+            <FilePanel
+              entries={entries}
+              selectedId={selectedId}
+              view={filePanel.view}
+              draggedId={draggedId}
+              dropTargetId={dropTargetId}
+              canPickFiles={filePicker.available}
+              isFilePickerOpen={filePickerControl.isOpen}
+              isSearchVisible={search.isVisible}
+              hasSearchState={search.hasState}
+              searchButtonRef={search.triggerRef}
+              onViewChange={filePanel.setView}
+              onClear={clearEntries}
+              onSelect={selectEntry}
+              onCopyPath={copyPath}
+              onRemove={removeEntry}
+              onDragStart={handleDragStart}
+              onDragEnter={setDropTargetId}
+              onDragEnd={resetDragState}
+              onDrop={reorderEntries}
+              onPickFiles={filePickerControl.open}
+              onOpenSearch={search.open}
+            />
+          ) : null
+        }
+        viewer={
+          <AppViewer
+            search={search}
+            selectedEntry={selectedEntry}
+            reloadVersion={reloadVersion}
+            isFilePanelVisible={filePanel.isVisible}
+            errorMessage={errorMessage}
+            copyFeedback={copyFeedback}
             canPickFiles={filePicker.available}
             isFilePickerOpen={filePickerControl.isOpen}
-            isSearchVisible={search.isVisible}
-            hasSearchState={search.hasState}
-            searchButtonRef={search.triggerRef}
-            onViewChange={filePanel.setView}
-            onClear={clearEntries}
-            onSelect={selectEntry}
+            onSelect={selectSearchResult}
+            onToggleFilePanel={filePanel.toggleVisibility}
             onCopyPath={copyPath}
-            onRemove={removeEntry}
-            onDragStart={handleDragStart}
-            onDragEnter={setDropTargetId}
-            onDragEnd={resetDragState}
-            onDrop={reorderEntries}
             onPickFiles={filePickerControl.open}
-            onOpenSearch={search.open}
           />
-        ) : null
-      }
-      viewer={
-        <AppViewer
-          search={search}
-          selectedEntry={selectedEntry}
-          reloadVersion={reloadVersion}
-          isFilePanelVisible={filePanel.isVisible}
-          errorMessage={errorMessage}
-          copyFeedback={copyFeedback}
-          canPickFiles={filePicker.available}
-          isFilePickerOpen={filePickerControl.isOpen}
-          onSelect={selectSearchResult}
-          onToggleFilePanel={filePanel.toggleVisibility}
-          onCopyPath={copyPath}
-          onPickFiles={filePickerControl.open}
-        />
-      }
-    />
+        }
+      />
+    </StatusBarFrame>
   );
 }

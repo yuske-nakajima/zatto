@@ -29,7 +29,11 @@ export function SearchContent({
         </span>
         <strong>Search failed</strong>
         <p>The HTML files could not be searched.</p>
-        <button type="button" onClick={onRetry}>
+        <button
+          type="button"
+          data-status-description="Retry the HTML search."
+          onClick={onRetry}
+        >
           Retry
         </button>
       </div>

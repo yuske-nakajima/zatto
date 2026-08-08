@@ -68,6 +68,7 @@ export function FilePanel({
           {canPickFiles && (
             <button
               className="add-button"
+              data-status-description="Add HTML files to this session."
               type="button"
               aria-label="Add HTML files"
               disabled={isFilePickerOpen}
@@ -78,6 +79,7 @@ export function FilePanel({
           )}
           <button
             className="clear-button"
+            data-status-description="Remove all files from this session."
             type="button"
             aria-label="Clear all"
             disabled={entries.length === 0}
@@ -91,6 +93,7 @@ export function FilePanel({
         <legend className="visually-hidden">File panel view</legend>
         <button
           type="button"
+          data-status-description="Show files in list order."
           aria-pressed={view === "list"}
           onClick={() => onViewChange("list")}
         >
@@ -98,6 +101,7 @@ export function FilePanel({
         </button>
         <button
           type="button"
+          data-status-description="Group files by folder."
           aria-pressed={view === "directories"}
           onClick={() => onViewChange("directories")}
         >
@@ -106,6 +110,7 @@ export function FilePanel({
         <button
           ref={searchButtonRef}
           className="search-mode-button"
+          data-status-description="Search HTML files in this session."
           type="button"
           aria-label={
             !isSearchVisible && hasSearchState

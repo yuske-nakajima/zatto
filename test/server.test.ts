@@ -533,6 +533,11 @@ describe("zatto server", () => {
       "window.zatto = true;",
       "utf8",
     );
+    await writeFile(
+      path.join(frontendRoot, "manifest.webmanifest"),
+      JSON.stringify({ name: "zatto" }),
+      "utf8",
+    );
 
     const store = new SessionStore(sessionFilePath);
     await store.load();
@@ -550,6 +555,14 @@ describe("zatto server", () => {
       method: "GET",
       url: "/assets/..%2Findex.html",
     });
+    const manifestResponse = await app.inject({
+      method: "GET",
+      url: "/manifest.webmanifest",
+    });
+    const unknownResponse = await app.inject({
+      method: "GET",
+      url: "/unknown.webmanifest",
+    });
 
     expect(indexResponse.statusCode).toBe(200);
     expect(indexResponse.body).toContain('id="root"');
@@ -559,6 +572,12 @@ describe("zatto server", () => {
     );
     expect(assetResponse.body).toContain("window.zatto");
     expect(traversalResponse.statusCode).toBe(403);
+    expect(manifestResponse.statusCode).toBe(200);
+    expect(manifestResponse.headers["content-type"]).toContain(
+      "application/manifest+json",
+    );
+    expect(manifestResponse.json()).toEqual({ name: "zatto" });
+    expect(unknownResponse.statusCode).toBe(404);
 
     await app.close();
   });

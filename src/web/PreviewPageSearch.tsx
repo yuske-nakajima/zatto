@@ -61,6 +61,7 @@ export function PreviewPageSearch({
       <input
         ref={inputRef}
         type="search"
+        data-status-description="Find text in the preview."
         aria-label="Find in preview"
         placeholder="Find in page..."
         maxLength={SEARCH_QUERY_MAX_LENGTH}
@@ -92,6 +93,7 @@ export function PreviewPageSearch({
       <button
         type="button"
         className="page-search-button"
+        data-status-description="Go to the previous preview match."
         aria-label="Previous match"
         disabled={!hasMatches}
         onClick={onPrevious}
@@ -101,6 +103,7 @@ export function PreviewPageSearch({
       <button
         type="button"
         className="page-search-button"
+        data-status-description="Go to the next preview match."
         aria-label="Next match"
         disabled={!hasMatches}
         onClick={onNext}
@@ -111,6 +114,7 @@ export function PreviewPageSearch({
       <button
         type="button"
         className="page-search-button"
+        data-status-description="Close preview search."
         aria-label="Close page search"
         onClick={onClose}
       >

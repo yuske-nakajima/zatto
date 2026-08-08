@@ -79,6 +79,9 @@ export function SearchView({
       <header className="search-header">
         <button
           className="file-panel-toggle"
+          data-status-description={
+            isFilePanelVisible ? "Hide the file panel." : "Show the file panel."
+          }
           type="button"
           aria-label={
             isFilePanelVisible ? "Hide file panel" : "Show file panel"
@@ -97,6 +100,7 @@ export function SearchView({
           <input
             ref={inputRef}
             type="search"
+            data-status-description="Enter text to search every HTML file."
             aria-label="Search HTML files"
             maxLength={SEARCH_QUERY_MAX_LENGTH}
             value={query}
@@ -116,6 +120,7 @@ export function SearchView({
         </span>
         <button
           className="search-close"
+          data-status-description="Close the search view."
           type="button"
           aria-label="Close search"
           onClick={onClose}

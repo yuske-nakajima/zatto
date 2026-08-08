@@ -1,15 +1,11 @@
 import { type RefObject, useId, useState } from "react";
 import type { Entry } from "../server/session.js";
+import type { CopyFeedback } from "./copy-feedback.js";
 import { Icon } from "./icons.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { usePreviewPageSearch } from "./usePreviewPageSearch.js";
 import { usePreviewSearchTarget } from "./usePreviewSearchTarget.js";
-
-interface CopyFeedback {
-  kind: "success" | "error";
-  message: string;
-}
 
 interface ViewerProps {
   isHidden?: boolean;
@@ -68,6 +64,11 @@ export function Viewer({
           <button
             ref={filePanelButtonRef}
             className="file-panel-toggle"
+            data-status-description={
+              isFilePanelVisible
+                ? "Hide the file panel."
+                : "Show the file panel."
+            }
             type="button"
             aria-label={
               isFilePanelVisible ? "Hide file panel" : "Show file panel"
@@ -82,6 +83,7 @@ export function Viewer({
           </button>
           <p
             id="selected-file-path"
+            data-status-description="Review the selected file path."
             tabIndex={selectedEntry ? 0 : undefined}
             aria-describedby={selectedEntry ? pathTooltipId : undefined}
             onMouseEnter={() => setShowsPathTooltip(Boolean(selectedEntry))}
@@ -115,6 +117,7 @@ export function Viewer({
           )}
           <button
             className="copy-path-button"
+            data-status-description="Copy the selected file path."
             type="button"
             aria-label="Copy file path"
             aria-describedby={selectedEntry ? "selected-file-path" : undefined}
@@ -172,6 +175,7 @@ export function Viewer({
                 </p>
                 <button
                   className="empty-viewer-action"
+                  data-status-description="Select HTML files to preview."
                   type="button"
                   aria-label="Select HTML files"
                   disabled={isFilePickerOpen}
@@ -193,5 +197,3 @@ export function Viewer({
     </section>
   );
 }
-
-export type { CopyFeedback };

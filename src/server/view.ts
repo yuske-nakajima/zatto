@@ -15,6 +15,7 @@ const CONTENT_TYPES = new Map<string, string>([
   [".svg", "image/svg+xml"],
   [".txt", "text/plain; charset=utf-8"],
   [".webp", "image/webp"],
+  [".webmanifest", "application/manifest+json; charset=utf-8"],
 ]);
 
 export function contentTypeForPath(filePath: string): string {

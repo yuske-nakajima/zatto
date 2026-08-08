@@ -55,6 +55,7 @@ function SearchResultGroup({
     <section className="search-result-group">
       <button
         className="search-result-file"
+        data-status-description="Expand or collapse matches for this file."
         type="button"
         aria-expanded={!isCollapsed}
         aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${file.fileName}`}
@@ -92,6 +93,7 @@ function SearchResultGroup({
               <li key={`${line.lineNumber}:${line.startOffset}`}>
                 <button
                   type="button"
+                  data-status-description="Open this match in the preview."
                   aria-label={`Open ${file.fileName} at line ${line.lineNumber}`}
                   onClick={() => onSelect(locator)}
                 >
