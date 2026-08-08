@@ -1,4 +1,4 @@
-import type { DragEvent } from "react";
+import type { DragEvent, RefObject } from "react";
 import type { Entry } from "../server/session.js";
 import zattoLogo from "./assets/zatto-logo-black.png";
 import { DirectoryTree } from "./DirectoryTree.js";
@@ -13,6 +13,9 @@ interface FilePanelProps {
   dropTargetId: string | null;
   canPickFiles: boolean;
   isFilePickerOpen: boolean;
+  isSearchVisible: boolean;
+  hasSearchState: boolean;
+  searchButtonRef: RefObject<HTMLButtonElement | null>;
   onViewChange: (view: FilePanelView) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
@@ -23,6 +26,7 @@ interface FilePanelProps {
   onDragEnd: () => void;
   onDrop: (id: string) => void;
   onPickFiles: () => void;
+  onOpenSearch: () => void;
 }
 
 export function FilePanel({
@@ -33,6 +37,9 @@ export function FilePanel({
   dropTargetId,
   canPickFiles,
   isFilePickerOpen,
+  isSearchVisible,
+  hasSearchState,
+  searchButtonRef,
   onViewChange,
   onClear,
   onSelect,
@@ -43,6 +50,7 @@ export function FilePanel({
   onDragEnd,
   onDrop,
   onPickFiles,
+  onOpenSearch,
 }: FilePanelProps) {
   return (
     <aside className="sidebar">
@@ -94,6 +102,23 @@ export function FilePanel({
           onClick={() => onViewChange("directories")}
         >
           Folders
+        </button>
+        <button
+          ref={searchButtonRef}
+          className="search-mode-button"
+          type="button"
+          aria-label={
+            !isSearchVisible && hasSearchState
+              ? "Back to search results"
+              : "Search"
+          }
+          aria-pressed={isSearchVisible}
+          onClick={onOpenSearch}
+        >
+          <span className="search-glyph" aria-hidden="true" />
+          {!isSearchVisible && hasSearchState && (
+            <span className="search-state-dot" aria-hidden="true" />
+          )}
         </button>
       </fieldset>
       {view === "list" ? (

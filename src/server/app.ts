@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { APP_NAME, APP_VERSION } from "../meta.js";
 import type { PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
+import { registerSearchRoute } from "./search.js";
 import { fileExists, type Session, type SessionStore } from "./session.js";
 import { contentTypeForPath, readAsset, renderEntryHtml } from "./view.js";
 
@@ -112,6 +113,8 @@ export async function createApp(
           : { available: false },
     };
   });
+
+  registerSearchRoute(app, options.sessionStore);
 
   app.post<{ Body: AddSessionBody }>(
     "/api/session/add",

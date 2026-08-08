@@ -1,0 +1,114 @@
+.preview-page-search {
+  position: absolute;
+  z-index: 4;
+  top: 36px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  width: min(340px, calc(100% - 72px));
+  max-width: 340px;
+  min-width: 0;
+  height: 38px;
+  padding: 5px 6px 5px 10px;
+  gap: 3px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  box-shadow:
+    0 2px 4px rgb(15 23 42 / 8%),
+    0 8px 20px rgb(15 23 42 / 12%);
+}
+
+.page-search-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin-right: 3px;
+  border: 1.5px solid var(--color-icon-default);
+  border-radius: 50%;
+}
+
+.page-search-icon::after {
+  display: block;
+  width: 6px;
+  height: 1.5px;
+  margin: 10px 0 0 9px;
+  background: var(--color-icon-default);
+  content: "";
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.preview-page-search input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  outline: 0;
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.preview-page-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.page-search-count {
+  flex: none;
+  min-width: 38px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.page-search-count--empty {
+  color: var(--color-red-500);
+}
+
+.page-search-button {
+  display: grid;
+  flex: none;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.page-search-button:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.page-search-button:disabled {
+  color: var(--color-text-tertiary);
+  cursor: default;
+  opacity: 0.45;
+}
+
+.page-search-divider {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--color-border-default);
+}
+
+@media (max-width: 600px) {
+  .preview-page-search {
+    top: 24px;
+    right: 24px;
+    width: calc(100% - 48px);
+  }
+}

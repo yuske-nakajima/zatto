@@ -1,6 +1,10 @@
-import { useId, useState } from "react";
+import { type RefObject, useId, useState } from "react";
 import type { Entry } from "../server/session.js";
 import { Icon } from "./icons.js";
+import { PreviewPageSearch } from "./PreviewPageSearch.js";
+import type { SearchResultLocator } from "./search-navigation-url.js";
+import { usePreviewPageSearch } from "./usePreviewPageSearch.js";
+import { usePreviewSearchTarget } from "./usePreviewSearchTarget.js";
 
 interface CopyFeedback {
   kind: "success" | "error";
@@ -8,6 +12,10 @@ interface CopyFeedback {
 }
 
 interface ViewerProps {
+  isHidden?: boolean;
+  filePanelButtonRef?: RefObject<HTMLButtonElement | null>;
+  previewTarget?: SearchResultLocator | null;
+  searchQuery?: string;
   selectedEntry: Entry | null;
   reloadVersion: number;
   isFilePanelVisible: boolean;
@@ -21,6 +29,10 @@ interface ViewerProps {
 }
 
 export function Viewer({
+  isHidden = false,
+  filePanelButtonRef,
+  previewTarget = null,
+  searchQuery = "",
   selectedEntry,
   reloadVersion,
   isFilePanelVisible,
@@ -34,12 +46,27 @@ export function Viewer({
 }: ViewerProps) {
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
   const pathTooltipId = useId();
+  const { iframeRef, revealTarget, clearRevealedTarget } =
+    usePreviewSearchTarget({
+      isHidden,
+      previewTarget,
+      searchQuery,
+      selectedEntryId: selectedEntry?.id,
+    });
+  const pageSearch = usePreviewPageSearch({
+    iframeRef,
+    isHidden,
+    reloadVersion,
+    selectedEntryId: selectedEntry?.id,
+    onOpen: clearRevealedTarget,
+  });
 
   return (
-    <section className="viewer">
+    <section className="viewer" hidden={isHidden}>
       <header className="viewer-header">
         <div className="selected-path">
           <button
+            ref={filePanelButtonRef}
             className="file-panel-toggle"
             type="button"
             aria-label={
@@ -105,11 +132,28 @@ export function Viewer({
         </p>
       )}
       <div className="viewer-canvas">
+        <PreviewPageSearch
+          currentIndex={pageSearch.currentIndex}
+          focusVersion={pageSearch.focusVersion}
+          isOpen={pageSearch.isOpen}
+          isUnavailable={pageSearch.isUnavailable}
+          query={pageSearch.query}
+          total={pageSearch.total}
+          onClose={pageSearch.close}
+          onNext={pageSearch.next}
+          onPrevious={pageSearch.previous}
+          onQueryChange={pageSearch.search}
+        />
         {selectedEntry ? (
           <iframe
+            ref={iframeRef}
             key={`${selectedEntry.id}:${reloadVersion}`}
             title={`${selectedEntry.title} preview`}
             src={`/f/${encodeURIComponent(selectedEntry.id)}/`}
+            onLoad={() => {
+              if (!pageSearch.isOpen) revealTarget();
+              pageSearch.handleFrameLoad();
+            }}
           />
         ) : (
           <div className="empty-viewer">

@@ -3,6 +3,7 @@ import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import { selectAvailableEntry } from "./file-panel-model.js";
 import {
+  pushSelectedEntryIdInUrl,
   readSelectedEntryIdFromUrl,
   replaceSelectedEntryIdInUrl,
 } from "./selected-entry-url.js";
@@ -11,8 +12,9 @@ interface SessionEntries {
   entries: Entry[];
   setEntries: React.Dispatch<React.SetStateAction<Entry[]>>;
   selectedId: string | null;
-  selectEntry: (id: string) => void;
+  selectEntry: (id: string, historyMode?: "push" | "none") => void;
   reloadVersion: number;
+  searchVersion: number;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
   filePicker: FilePickerCapability;
@@ -34,15 +36,21 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [searchVersion, setSearchVersion] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [filePicker, setFilePicker] = useState<FilePickerCapability>({
     available: false,
     instanceId: null,
   });
 
-  function selectEntry(id: string): void {
+  function selectEntry(
+    id: string,
+    historyMode: "push" | "none" = "push",
+  ): void {
     setSelectedId(id);
-    replaceSelectedEntryIdInUrl(id);
+    if (historyMode === "push") {
+      pushSelectedEntryIdInUrl(id);
+    }
   }
 
   useEffect(() => {
@@ -79,6 +87,18 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     };
   }, []);
 
+  const restoreSelectedEntryFromUrl = useEffectEvent(() => {
+    setSelectedId(
+      resolveSelectedEntryIdAndUpdateUrl(readSelectedEntryIdFromUrl(), entries),
+    );
+  });
+
+  useEffect(() => {
+    window.addEventListener("popstate", restoreSelectedEntryFromUrl);
+    return () =>
+      window.removeEventListener("popstate", restoreSelectedEntryFromUrl);
+  }, []);
+
   const handleSocketMessage = useEffectEvent((event: MessageEvent) => {
     const message = parseServerMessage(event.data);
     if (!message) {
@@ -86,14 +106,18 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     }
     if (message.type === "session:update") {
       onSessionUpdate();
+      setSearchVersion((current) => current + 1);
       setEntries(message.entries);
       setSelectedId(
         resolveSelectedEntryIdAndUpdateUrl(selectedId, message.entries),
       );
       return;
     }
-    if (message.type === "file:changed" && message.id === selectedId) {
-      setReloadVersion((current) => current + 1);
+    if (message.type === "file:changed") {
+      setSearchVersion((current) => current + 1);
+      if (message.id === selectedId) {
+        setReloadVersion((current) => current + 1);
+      }
     }
   });
 
@@ -110,6 +134,7 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     selectedId,
     selectEntry,
     reloadVersion,
+    searchVersion,
     errorMessage,
     setErrorMessage,
     filePicker,

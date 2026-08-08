@@ -1,21 +1,19 @@
-import { type DragEvent, useEffect, useRef, useState } from "react";
+import { type DragEvent, useRef, useState } from "react";
+import { AppViewer } from "./AppViewer.js";
+import { prepareEntryDrag } from "./entry-drag.js";
 import { FilePanel } from "./FilePanel.js";
-import {
-  type FilePanelView,
-  moveEntry,
-  readFilePanelView,
-  storeFilePanelView,
-} from "./file-panel-model.js";
+import { moveEntry } from "./file-panel-model.js";
 import { ResizableLayout } from "./ResizableLayout.js";
+import type { SearchResultLocator } from "./search-navigation-url.js";
+import { requestSessionChange } from "./session-change.js";
+import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
 import { useNativeFilePicker } from "./useNativeFilePicker.js";
+import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
-import { type CopyFeedback, Viewer } from "./Viewer.js";
+import type { CopyFeedback } from "./Viewer.js";
 
 export { buildDirectoryTree } from "./directory-tree-model.js";
-export {
-  moveEntry,
-  selectAvailableEntry,
-} from "./file-panel-model.js";
+export { moveEntry, selectAvailableEntry } from "./file-panel-model.js";
 
 export function App() {
   const copyRequestId = useRef(0);
@@ -26,6 +24,7 @@ export function App() {
     selectedId,
     selectEntry: selectSessionEntry,
     reloadVersion,
+    searchVersion,
     errorMessage,
     setErrorMessage,
     filePicker,
@@ -33,9 +32,6 @@ export function App() {
     copyRequestId.current += 1;
     setCopyFeedback(null);
   });
-  const [filePanelView, setFilePanelView] =
-    useState<FilePanelView>(readFilePanelView);
-  const [isFilePanelVisible, setIsFilePanelVisible] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const filePickerControl = useNativeFilePicker({
@@ -43,15 +39,32 @@ export function App() {
     selectEntry,
     setErrorMessage,
   });
-  useEffect(() => storeFilePanelView(filePanelView), [filePanelView]);
+  const search = useSearchNavigation(searchVersion);
+  const filePanel = useFilePanelNavigation(search.flushHistory);
 
-  const selectedEntry =
-    entries.find((entry) => entry.id === selectedId) ?? null;
+  const selectedEntry = entries.find(({ id }) => id === selectedId) ?? null;
 
   function selectEntry(id: string): void {
     copyRequestId.current += 1;
-    selectSessionEntry(id);
     setCopyFeedback(null);
+    search.flushHistory();
+    selectSessionEntry(id);
+    search.showPreview();
+  }
+
+  function selectSearchResult(
+    id: string,
+    locator: SearchResultLocator | null,
+  ): void {
+    if (!entries.some((entry) => entry.id === id)) return;
+    if (!locator) {
+      selectEntry(id);
+      return;
+    }
+    copyRequestId.current += 1;
+    selectSessionEntry(id, "none");
+    setCopyFeedback(null);
+    search.openResult(id, locator);
   }
 
   async function copyPath(path: string): Promise<void> {
@@ -124,73 +137,56 @@ export function App() {
     event: DragEvent<HTMLButtonElement>,
     id: string,
   ): void {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", id);
-    const row = event.currentTarget.closest<HTMLElement>(".entry-row");
-    if (row && typeof event.dataTransfer.setDragImage === "function") {
-      const bounds = row.getBoundingClientRect();
-      event.dataTransfer.setDragImage(
-        row,
-        event.clientX - bounds.left,
-        event.clientY - bounds.top,
-      );
-    }
+    prepareEntryDrag(event, id);
     setDraggedId(id);
   }
 
   return (
     <ResizableLayout
-      isFilePanelVisible={isFilePanelVisible}
+      isFilePanelVisible={filePanel.isVisible}
       filePanel={
-        isFilePanelVisible ? (
+        filePanel.isVisible ? (
           <FilePanel
             entries={entries}
             selectedId={selectedId}
-            view={filePanelView}
+            view={filePanel.view}
             draggedId={draggedId}
             dropTargetId={dropTargetId}
             canPickFiles={filePicker.available}
             isFilePickerOpen={filePickerControl.isOpen}
-            onViewChange={setFilePanelView}
-            onClear={() => void clearEntries()}
+            isSearchVisible={search.isVisible}
+            hasSearchState={search.hasState}
+            searchButtonRef={search.triggerRef}
+            onViewChange={filePanel.setView}
+            onClear={clearEntries}
             onSelect={selectEntry}
-            onCopyPath={(path) => void copyPath(path)}
-            onRemove={(id) => void removeEntry(id)}
+            onCopyPath={copyPath}
+            onRemove={removeEntry}
             onDragStart={handleDragStart}
             onDragEnter={setDropTargetId}
             onDragEnd={resetDragState}
-            onDrop={(id) => void reorderEntries(id)}
-            onPickFiles={() => void filePickerControl.open()}
+            onDrop={reorderEntries}
+            onPickFiles={filePickerControl.open}
+            onOpenSearch={search.open}
           />
         ) : null
       }
       viewer={
-        <Viewer
+        <AppViewer
+          search={search}
           selectedEntry={selectedEntry}
           reloadVersion={reloadVersion}
-          isFilePanelVisible={isFilePanelVisible}
+          isFilePanelVisible={filePanel.isVisible}
           errorMessage={errorMessage}
           copyFeedback={copyFeedback}
           canPickFiles={filePicker.available}
           isFilePickerOpen={filePickerControl.isOpen}
-          onToggleFilePanel={() =>
-            setIsFilePanelVisible((isVisible) => !isVisible)
-          }
-          onCopyPath={(path) => void copyPath(path)}
-          onPickFiles={() => void filePickerControl.open()}
+          onSelect={selectSearchResult}
+          onToggleFilePanel={filePanel.toggleVisibility}
+          onCopyPath={copyPath}
+          onPickFiles={filePickerControl.open}
         />
       }
     />
   );
-}
-
-async function requestSessionChange(
-  path: string,
-  init: RequestInit,
-): Promise<boolean> {
-  try {
-    return (await fetch(path, init)).ok;
-  } catch {
-    return false;
-  }
 }

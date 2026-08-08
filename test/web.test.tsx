@@ -211,17 +211,17 @@ describe("App", () => {
   test("Entry選択時に他のURL情報を保ったままIDを置き換える", async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, "", "/?panel=open#file-preview");
-    const replaceState = vi.spyOn(window.history, "replaceState");
+    const pushState = vi.spyOn(window.history, "pushState");
     render(<App />);
     await screen.findByTitle("Alpha preview");
-    replaceState.mockClear();
+    pushState.mockClear();
 
     await user.click(screen.getByRole("button", { name: "Open Bravo" }));
 
     expect(window.location.href).toBe(
       "http://localhost:3000/?panel=open&entry=b#file-preview",
     );
-    expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(pushState).toHaveBeenCalledTimes(1);
   });
 
   test("選択中のEntryが削除された場合は先頭を選択してURLを更新する", async () => {
@@ -443,7 +443,7 @@ describe("App", () => {
     );
   });
 
-  test("Figma Variableと主要レイアウト寸法をCSSへ反映する", () => {
+  test("デザイントークンと主要レイアウト寸法をCSSへ反映する", () => {
     expect(webStyles).toContain("--color-bg-app: var(--color-gray-50)");
     expect(webStyles).toContain("--color-bg-success: var(--color-emerald-500)");
     expect(webStyles).toContain(
