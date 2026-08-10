@@ -7,6 +7,7 @@ import {
   readSearchHistorySnapshot,
 } from "./search-history-state.js";
 import {
+  createSearchLocation,
   pushSearchLocation,
   readSearchLocation,
   replaceSearchLocation,
@@ -36,20 +37,24 @@ export function useSearchNavigation(refreshVersion: number) {
     previewTarget: initialPreviewTarget,
   });
   const [historyWriter] = useState(createSearchHistoryWriter);
-
+  const sessionGenerationRef = useRef(initialSnapshot.sessionGeneration);
   useEffect(() => replaceSearchLocation(initialLocation), [initialLocation]);
-
   useEffect(() => {
     if (wasVisibleRef.current && !isVisible) {
       (triggerRef.current ?? viewerPanelButtonRef.current)?.focus();
     }
     wasVisibleRef.current = isVisible;
   }, [isVisible]);
-
   const restoreFromHistory = useEffectEvent(() => {
     historyWriter.cancel();
     const location = readSearchLocation();
     const snapshot = readSearchHistorySnapshot();
+    if (snapshot.sessionGeneration !== sessionGenerationRef.current) {
+      clearSearchState();
+      replaceSearchLocation(createSearchLocation("", false, null));
+      persistSnapshot(0, new Set(), null);
+      return;
+    }
     search.setQuery(location.query);
     setIsVisible(location.isSearchVisible);
     const restoredPreviewTarget = mergeSearchHistoryLocator(
@@ -65,7 +70,6 @@ export function useSearchNavigation(refreshVersion: number) {
     };
     replaceSearchLocation(location);
   });
-
   useEffect(() => {
     window.addEventListener("popstate", restoreFromHistory);
     return () => {
@@ -73,7 +77,6 @@ export function useSearchNavigation(refreshVersion: number) {
       historyWriter.flush();
     };
   }, [historyWriter]);
-
   function setQuery(query: string): void {
     const normalizedQuery = truncateUnicode(query, SEARCH_QUERY_MAX_LENGTH);
     search.setQuery(normalizedQuery);
@@ -85,40 +88,49 @@ export function useSearchNavigation(refreshVersion: number) {
       locator: null,
     });
   }
-
   function open(): void {
     if (isVisible) return;
     historyWriter.flush();
-    const location = currentLocation(search.query, true, null);
+    const location = createSearchLocation(search.query, true, null);
     pushSearchLocation(location);
     setPreviewTarget(null);
     persistPreviewTarget(null);
     setIsVisible(true);
   }
-
   function close(): void {
     historyWriter.flush();
-    const location = currentLocation(search.query, false, null);
+    const location = createSearchLocation(search.query, false, null);
     pushSearchLocation(location);
     setPreviewTarget(null);
     setIsVisible(false);
   }
-
   function openResult(entryId: string, locator: SearchResultLocator): void {
     historyWriter.flush();
-    const location = currentLocation(search.query, false, locator);
+    const location = createSearchLocation(search.query, false, locator);
     pushSearchLocation(location, entryId);
     setPreviewTarget(locator);
     persistPreviewTarget(locator);
     setIsVisible(false);
   }
-
   function showPreview(): void {
     setPreviewTarget(null);
     setIsVisible(false);
     persistPreviewTarget(null);
   }
-
+  function reset(): void {
+    historyWriter.cancel();
+    sessionGenerationRef.current += 1;
+    clearSearchState();
+    persistSnapshot(0, new Set(), null);
+    replaceSearchLocation(createSearchLocation("", false, null));
+  }
+  function clearSearchState(): void {
+    search.setQuery("");
+    setIsVisible(false);
+    setPreviewTarget(null);
+    setCollapsedEntryIds(new Set());
+    setScrollTopState(0);
+  }
   function persistPreviewTarget(target: SearchResultLocator | null): void {
     persistSnapshot(
       snapshotRef.current.scrollTop,
@@ -126,7 +138,6 @@ export function useSearchNavigation(refreshVersion: number) {
       target,
     );
   }
-
   function toggleEntry(entryId: string): void {
     setCollapsedEntryIds((collapsedEntries) => {
       const nextEntries = new Set(collapsedEntries);
@@ -139,7 +150,6 @@ export function useSearchNavigation(refreshVersion: number) {
       return nextEntries;
     });
   }
-
   function setScrollTop(nextScrollTop: number): void {
     setScrollTopState(nextScrollTop);
     persistSnapshot(
@@ -149,7 +159,6 @@ export function useSearchNavigation(refreshVersion: number) {
       true,
     );
   }
-
   function persistSnapshot(
     nextScrollTop: number,
     nextCollapsedEntryIds: ReadonlySet<string>,
@@ -160,6 +169,7 @@ export function useSearchNavigation(refreshVersion: number) {
       scrollTop: nextScrollTop,
       collapsedEntryIds: [...nextCollapsedEntryIds],
       previewTarget: nextPreviewTarget,
+      sessionGeneration: sessionGenerationRef.current,
     };
     snapshotRef.current = snapshot;
     if (deferred) {
@@ -168,7 +178,6 @@ export function useSearchNavigation(refreshVersion: number) {
       historyWriter.replace(snapshot);
     }
   }
-
   return {
     ...search,
     setQuery,
@@ -182,18 +191,10 @@ export function useSearchNavigation(refreshVersion: number) {
     close,
     openResult,
     showPreview,
+    reset,
     toggleEntry,
     setScrollTop,
     flushHistory: historyWriter.flush,
   };
 }
-
-function currentLocation(
-  query: string,
-  isSearchVisible: boolean,
-  locator: SearchResultLocator | null,
-) {
-  return { query, isSearchVisible, locator };
-}
-
 export type SearchNavigation = ReturnType<typeof useSearchNavigation>;

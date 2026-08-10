@@ -46,6 +46,25 @@ npx @yuske-nakajima/zatto page.html report.html
 npx @yuske-nakajima/zatto another-page.html
 ```
 
+開いているファイルと表示順をセッションJSONへ保存します。
+
+```bash
+npx @yuske-nakajima/zatto --export saved-session.json
+```
+
+保存したセッションで、開いているファイルを全置換します。
+
+```bash
+npx @yuske-nakajima/zatto --import saved-session.json
+```
+
+ファイルパネルの**Import session…**と**Export session…**も利用できます。
+インポート後は先頭のファイルを選択し、検索状態を解除します。
+ファイルパネルの表示方式と開閉状態は変わりません。
+
+セッションJSONには絶対パスが入り、ユーザー名などのローカル情報を含む場合があります。
+同じコンピューターでの復元を目的とした形式であり、共有には適しません。
+
 ## オプション
 
 | オプション | 説明 |
@@ -53,6 +72,8 @@ npx @yuske-nakajima/zatto another-page.html
 | `--port <n>` | 初回起動時の希望ポートを指定。既定値は`6280` |
 | `--no-open` | ブラウザーを自動で開かずに起動 |
 | `--stop` | OSユーザーの常駐サーバーを停止 |
+| `--import <file>` | セッションJSONを読み込み、セッションを全置換 |
+| `--export <file>` | セッションをセッションJSONへ保存 |
 | `-h`, `--help` | ヘルプを表示 |
 | `-v`, `--version` | バージョンを表示 |
 
@@ -183,6 +204,7 @@ ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
 curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
+curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
 ```
 
 HTMLファイルをAPIから追加:
@@ -199,6 +221,17 @@ curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
 curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
+```
+
+検証済みのセッションJSONをインポートします。
+サーバー識別子により、接続先が変わったブラウザーやCLIからの置き換えを防ぎます。
+
+```bash
+ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
+curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data "$(cat saved-session.json)"
 ```
 
 管理対象のサーバーを停止:

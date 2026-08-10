@@ -18,6 +18,9 @@ interface SessionEntries {
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
   filePicker: FilePickerCapability;
+  serverInstanceId: string | null;
+  isLoaded: boolean;
+  applyImportedEntries: (entries: Entry[]) => void;
 }
 
 export interface FilePickerCapability {
@@ -30,6 +33,7 @@ interface SessionResponse extends Session {
     available?: boolean;
     instanceId?: string;
   };
+  serverIdentity?: { instanceId?: string };
 }
 
 export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
@@ -42,6 +46,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     available: false,
     instanceId: null,
   });
+  const [serverInstanceId, setServerInstanceId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   function selectEntry(
     id: string,
@@ -69,6 +75,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
             available: session.filePicker?.available === true,
             instanceId: session.filePicker?.instanceId ?? null,
           });
+          setServerInstanceId(session.serverIdentity?.instanceId ?? null);
+          setIsLoaded(true);
           setSelectedId(
             resolveSelectedEntryIdAndUpdateUrl(
               readSelectedEntryIdFromUrl(),
@@ -98,6 +106,13 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     return () =>
       window.removeEventListener("popstate", restoreSelectedEntryFromUrl);
   }, []);
+
+  function applyImportedEntries(importedEntries: Entry[]): void {
+    onSessionUpdate();
+    setSearchVersion((current) => current + 1);
+    setEntries(importedEntries);
+    setSelectedId(resolveSelectedEntryIdAndUpdateUrl(null, importedEntries));
+  }
 
   const handleSocketMessage = useEffectEvent((event: MessageEvent) => {
     const message = parseServerMessage(event.data);
@@ -138,6 +153,9 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     errorMessage,
     setErrorMessage,
     filePicker,
+    serverInstanceId,
+    isLoaded,
+    applyImportedEntries,
   };
 }
 

@@ -8,6 +8,7 @@ import type { PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
 import { registerSearchRoute } from "./search.js";
 import { fileExists, type Session, type SessionStore } from "./session.js";
+import { registerSessionExchangeRoutes } from "./session-exchange-routes.js";
 import { contentTypeForPath, readAsset, renderEntryHtml } from "./view.js";
 
 type CreateAppOptions = {
@@ -121,6 +122,9 @@ export async function createApp(
   app.get("/api/session", async () => {
     return {
       ...options.sessionStore.getSession(),
+      serverIdentity: options.serverIdentity
+        ? { instanceId: options.serverIdentity.instanceId }
+        : undefined,
       filePicker:
         options.pickFiles && options.serverIdentity
           ? {
@@ -129,6 +133,12 @@ export async function createApp(
             }
           : { available: false },
     };
+  });
+
+  registerSessionExchangeRoutes(app, {
+    sessionStore: options.sessionStore,
+    serverIdentity: options.serverIdentity,
+    publishSessionUpdate,
   });
 
   registerSearchRoute(app, options.sessionStore);
@@ -288,6 +298,11 @@ export async function createApp(
   );
 
   app.setErrorHandler((error, _request, reply) => {
+    if (
+      (error as { code?: unknown }).code === "FST_ERR_CTP_INVALID_JSON_BODY"
+    ) {
+      return reply.code(400).send({ message: "JSON が不正です" });
+    }
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return reply.code(404).send({ message: "ファイルが見つかりません" });
     }
@@ -297,11 +312,19 @@ export async function createApp(
 
   async function publishSessionUpdate(): Promise<void> {
     const session = options.sessionStore.getSession();
-    await options.onSessionChanged?.(session);
-    realtimeHub.broadcast({
-      type: "session:update",
-      entries: session.entries,
-    });
+    try {
+      await options.onSessionChanged?.(session);
+    } catch (error) {
+      app.log.error(error, "セッション更新observerの実行に失敗しました");
+    }
+    try {
+      realtimeHub.broadcast({
+        type: "session:update",
+        entries: session.entries,
+      });
+    } catch (error) {
+      app.log.error(error, "セッション更新のWebSocket配信に失敗しました");
+    }
   }
 
   return app;

@@ -4,6 +4,7 @@ import zattoLogo from "./assets/zatto-logo-black.png";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import type { FilePanelView } from "./file-panel-model.js";
+import { SessionActions } from "./SessionActions.js";
 
 interface FilePanelProps {
   entries: Entry[];
@@ -13,6 +14,8 @@ interface FilePanelProps {
   dropTargetId: string | null;
   canPickFiles: boolean;
   isFilePickerOpen: boolean;
+  isSessionTransferPending: boolean;
+  isSessionLoaded: boolean;
   isSearchVisible: boolean;
   hasSearchState: boolean;
   searchButtonRef: RefObject<HTMLButtonElement | null>;
@@ -27,6 +30,8 @@ interface FilePanelProps {
   onDrop: (id: string) => void;
   onPickFiles: () => void;
   onOpenSearch: () => void;
+  onImportSession: (file: File) => Promise<void>;
+  onExportSession: () => void;
 }
 
 export function FilePanel({
@@ -37,6 +42,8 @@ export function FilePanel({
   dropTargetId,
   canPickFiles,
   isFilePickerOpen,
+  isSessionTransferPending,
+  isSessionLoaded,
   isSearchVisible,
   hasSearchState,
   searchButtonRef,
@@ -51,6 +58,8 @@ export function FilePanel({
   onDrop,
   onPickFiles,
   onOpenSearch,
+  onImportSession,
+  onExportSession,
 }: FilePanelProps) {
   return (
     <aside className="sidebar">
@@ -126,6 +135,12 @@ export function FilePanel({
           )}
         </button>
       </fieldset>
+      <SessionActions
+        isAvailable={isSessionLoaded}
+        isPending={isSessionTransferPending}
+        onImport={onImportSession}
+        onExport={onExportSession}
+      />
       {view === "list" ? (
         <ol className="entry-list" aria-label="HTML entries">
           {entries.map((entry) => (

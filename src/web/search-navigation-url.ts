@@ -23,6 +23,22 @@ export interface SearchLocation {
   locator: SearchResultLocator | null;
 }
 
+/**
+ * Creates a search location value for history navigation.
+ *
+ * @param query - Current search query
+ * @param isSearchVisible - Whether the search workspace is visible
+ * @param locator - Selected search result location
+ * @returns Search location with the supplied values
+ */
+export function createSearchLocation(
+  query: string,
+  isSearchVisible: boolean,
+  locator: SearchResultLocator | null,
+): SearchLocation {
+  return { query, isSearchVisible, locator };
+}
+
 export function readSearchLocation(): SearchLocation {
   try {
     const url = new URL(window.location.href);

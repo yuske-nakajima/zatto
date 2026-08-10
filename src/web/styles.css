@@ -219,6 +219,7 @@ button:focus-visible,
 
 .clear-button,
 .add-button,
+.session-action-button,
 .view-switcher button,
 .icon-button,
 .entry-drag,
@@ -302,6 +303,41 @@ button:focus-visible,
   height: 2px;
   background: var(--color-border-accent);
   content: "";
+}
+
+.session-actions {
+  flex: none;
+  padding: var(--spacing-8) var(--spacing-16);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.session-action-buttons {
+  display: flex;
+  gap: var(--spacing-8);
+}
+
+.session-action-button {
+  padding: var(--spacing-4) 0;
+  color: var(--color-text-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.session-action-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.session-action-button--disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.session-actions p {
+  margin: var(--spacing-4) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+  line-height: 1.35;
 }
 
 .entry-list {

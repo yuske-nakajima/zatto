@@ -12,10 +12,10 @@ import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
 import { useNativeFilePicker } from "./useNativeFilePicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
+import { useSessionTransfer } from "./useSessionTransfer.js";
 
 export { buildDirectoryTree } from "./directory-tree-model.js";
 export { moveEntry, selectAvailableEntry } from "./file-panel-model.js";
-
 export function App() {
   const copyRequestId = useRef(0);
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
@@ -29,6 +29,9 @@ export function App() {
     errorMessage,
     setErrorMessage,
     filePicker,
+    serverInstanceId,
+    isLoaded: isSessionLoaded,
+    applyImportedEntries,
   } = useSessionEntries(() => {
     copyRequestId.current += 1;
     setCopyFeedback(null);
@@ -42,9 +45,13 @@ export function App() {
   });
   const search = useSearchNavigation(searchVersion);
   const filePanel = useFilePanelNavigation(search.flushHistory);
-
+  const sessionTransfer = useSessionTransfer({
+    instanceId: serverInstanceId,
+    applyImportedEntries,
+    resetSearch: search.reset,
+    setErrorMessage,
+  });
   const selectedEntry = entries.find(({ id }) => id === selectedId) ?? null;
-
   function selectEntry(id: string): void {
     copyRequestId.current += 1;
     setCopyFeedback(null);
@@ -52,7 +59,6 @@ export function App() {
     selectSessionEntry(id);
     search.showPreview();
   }
-
   function selectSearchResult(
     id: string,
     locator: SearchResultLocator | null,
@@ -67,7 +73,6 @@ export function App() {
     setCopyFeedback(null);
     search.openResult(id, locator);
   }
-
   async function copyPath(path: string): Promise<void> {
     const requestId = copyRequestId.current + 1;
     copyRequestId.current = requestId;
@@ -86,7 +91,6 @@ export function App() {
       }
     }
   }
-
   async function removeEntry(id: string): Promise<void> {
     const removed = await requestSessionChange(
       `/api/session/${encodeURIComponent(id)}`,
@@ -96,7 +100,6 @@ export function App() {
       setErrorMessage("Could not remove the entry.");
     }
   }
-
   async function clearEntries(): Promise<void> {
     if (entries.length === 0 || !window.confirm("Remove all entries?")) {
       return;
@@ -108,7 +111,6 @@ export function App() {
       setErrorMessage("Could not remove all entries.");
     }
   }
-
   async function reorderEntries(targetId: string): Promise<void> {
     if (!draggedId || draggedId === targetId) {
       resetDragState();
@@ -156,6 +158,8 @@ export function App() {
               dropTargetId={dropTargetId}
               canPickFiles={filePicker.available}
               isFilePickerOpen={filePickerControl.isOpen}
+              isSessionTransferPending={sessionTransfer.isPending}
+              isSessionLoaded={isSessionLoaded}
               isSearchVisible={search.isVisible}
               hasSearchState={search.hasState}
               searchButtonRef={search.triggerRef}
@@ -170,6 +174,8 @@ export function App() {
               onDrop={reorderEntries}
               onPickFiles={filePickerControl.open}
               onOpenSearch={search.open}
+              onImportSession={sessionTransfer.importFile}
+              onExportSession={sessionTransfer.exportFile}
             />
           ) : null
         }
