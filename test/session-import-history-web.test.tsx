@@ -39,7 +39,7 @@ describe("session import search history", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn<typeof globalThis.fetch>(async (input, init) => {
-        if (input === "/api/session" && init?.method === "PUT") {
+        if (input === "/api/session?mode=replace" && init?.method === "PUT") {
           return Response.json({ entries: importedEntries });
         }
         if (input === "/api/session") {
@@ -102,6 +102,7 @@ describe("session import search history", () => {
     });
 
     await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.click(screen.getByRole("button", { name: "Import" }));
     await screen.findByTitle("Imported preview");
     const importedUrl = relativeUrl();
     const importedState = window.history.state;

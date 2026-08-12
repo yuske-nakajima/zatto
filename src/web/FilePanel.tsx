@@ -5,6 +5,11 @@ import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import type { FilePanelView } from "./file-panel-model.js";
 import { SessionActions } from "./SessionActions.js";
+import type {
+  SessionExportOrder,
+  SessionImportMode,
+  SessionTransferPending,
+} from "./useSessionTransfer.js";
 
 interface FilePanelProps {
   entries: Entry[];
@@ -14,7 +19,7 @@ interface FilePanelProps {
   dropTargetId: string | null;
   canPickFiles: boolean;
   isFilePickerOpen: boolean;
-  isSessionTransferPending: boolean;
+  sessionTransferPending: SessionTransferPending;
   isSessionLoaded: boolean;
   isSearchVisible: boolean;
   hasSearchState: boolean;
@@ -30,8 +35,8 @@ interface FilePanelProps {
   onDrop: (id: string) => void;
   onPickFiles: () => void;
   onOpenSearch: () => void;
-  onImportSession: (file: File) => Promise<void>;
-  onExportSession: () => void;
+  onImportSession: (file: File, mode: SessionImportMode) => Promise<void>;
+  onExportSession: (order: SessionExportOrder) => void;
 }
 
 export function FilePanel({
@@ -42,7 +47,7 @@ export function FilePanel({
   dropTargetId,
   canPickFiles,
   isFilePickerOpen,
-  isSessionTransferPending,
+  sessionTransferPending,
   isSessionLoaded,
   isSearchVisible,
   hasSearchState,
@@ -135,46 +140,48 @@ export function FilePanel({
           )}
         </button>
       </fieldset>
+      <div className="sidebar-scroll-region">
+        {view === "list" ? (
+          <ol className="entry-list" aria-label="HTML entries">
+            {entries.map((entry) => (
+              <EntryRow
+                entry={entry}
+                isSelected={entry.id === selectedId}
+                isDragging={entry.id === draggedId}
+                isDropTarget={entry.id === dropTargetId}
+                key={entry.id}
+                onSelect={onSelect}
+                onCopyPath={onCopyPath}
+                onRemove={onRemove}
+                onDragStart={onDragStart}
+                onDragEnter={onDragEnter}
+                onDragEnd={onDragEnd}
+                onDrop={onDrop}
+              />
+            ))}
+          </ol>
+        ) : (
+          <DirectoryTree
+            entries={entries}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onCopyPath={onCopyPath}
+            onRemove={onRemove}
+          />
+        )}
+        {entries.length === 0 && (
+          <div className="empty-list">
+            <p>Add HTML files from the CLI</p>
+            <code>zatto page.html</code>
+          </div>
+        )}
+      </div>
       <SessionActions
         isAvailable={isSessionLoaded}
-        isPending={isSessionTransferPending}
+        pending={sessionTransferPending}
         onImport={onImportSession}
         onExport={onExportSession}
       />
-      {view === "list" ? (
-        <ol className="entry-list" aria-label="HTML entries">
-          {entries.map((entry) => (
-            <EntryRow
-              entry={entry}
-              isSelected={entry.id === selectedId}
-              isDragging={entry.id === draggedId}
-              isDropTarget={entry.id === dropTargetId}
-              key={entry.id}
-              onSelect={onSelect}
-              onCopyPath={onCopyPath}
-              onRemove={onRemove}
-              onDragStart={onDragStart}
-              onDragEnter={onDragEnter}
-              onDragEnd={onDragEnd}
-              onDrop={onDrop}
-            />
-          ))}
-        </ol>
-      ) : (
-        <DirectoryTree
-          entries={entries}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onCopyPath={onCopyPath}
-          onRemove={onRemove}
-        />
-      )}
-      {entries.length === 0 && (
-        <div className="empty-list">
-          <p>Add HTML files from the CLI</p>
-          <code>zatto page.html</code>
-        </div>
-      )}
     </aside>
   );
 }

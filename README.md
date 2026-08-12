@@ -60,8 +60,11 @@ npx @yuske-nakajima/zatto --import saved-session.json
 ```
 
 The file panel also provides **Import session…** and **Export session…**.
-An import replaces the whole session, selects its first file, and clears the
-search state. The file panel view and open or closed state remain unchanged.
+For imports, choose whether to replace the file list or merge unregistered
+paths at the end. A replacement selects the first imported file and clears the
+search state. A merge preserves existing entries, selection, and search state.
+For exports, choose the current display order or a path-sorted order. Exporting
+does not change the file panel order.
 
 Session JSON contains absolute paths and may reveal usernames or other local
 information. It is intended for restoring files on the same computer, not for
@@ -228,6 +231,8 @@ curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
 
 Import a validated session document. The server identity prevents a browser or
 CLI connected to a stale server from replacing another server's session.
+Add `?mode=merge` to preserve existing entries and append unregistered paths.
+Omitting `mode` replaces the session for CLI compatibility.
 
 ```bash
 ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")

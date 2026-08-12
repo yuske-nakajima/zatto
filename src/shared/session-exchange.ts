@@ -47,6 +47,27 @@ export function createSessionExchange<T extends SessionEntryPath>(
 }
 
 /**
+ * Sorts exchange entries by normalized directory and file name.
+ *
+ * @param entries - Exchange entries to sort without mutation
+ * @returns Entries in locale-independent path order
+ */
+export function sortSessionExchangeEntriesByPath<
+  T extends SessionExchangeEntry,
+>(entries: readonly T[]): T[] {
+  return entries
+    .map((entry, index) => ({ entry, index, key: pathSortKey(entry.path) }))
+    .sort(
+      (left, right) =>
+        compareCodePoints(left.key.directory, right.key.directory) ||
+        compareCodePoints(left.key.fileName, right.key.fileName) ||
+        compareCodePoints(left.key.exact, right.key.exact) ||
+        left.index - right.index,
+    )
+    .map(({ entry }) => entry);
+}
+
+/**
  * Parses and validates a session exchange document.
  *
  * @param input - Untrusted JSON-compatible input
@@ -99,6 +120,22 @@ export function parseSessionExchange(input: unknown): SessionExchange {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pathSortKey(inputPath: string) {
+  const exact = inputPath.replaceAll("\\", "/");
+  const separatorIndex = exact.lastIndexOf("/");
+  return {
+    directory: exact.slice(0, Math.max(0, separatorIndex)),
+    fileName: exact.slice(separatorIndex + 1),
+    exact,
+  };
+}
+
+function compareCodePoints(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 function hasOnlyKeys(

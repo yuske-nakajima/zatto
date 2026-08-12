@@ -83,6 +83,9 @@ describe("session exchange web UI", () => {
     );
     await user.click(exportButton);
 
+    expect(fetch).not.toHaveBeenCalledWith("/api/session/export");
+    await user.click(screen.getByRole("button", { name: "Export" }));
+
     expect(fetch).toHaveBeenCalledWith("/api/session/export");
     expect(createObjectUrl).toHaveBeenCalledOnce();
     expect(anchorClick).toHaveBeenCalledOnce();
@@ -98,7 +101,7 @@ describe("session exchange web UI", () => {
       resolveImport = resolve;
     });
     const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
-      if (input === "/api/session" && init?.method === "PUT") {
+      if (input === "/api/session?mode=replace" && init?.method === "PUT") {
         return pendingImport;
       }
       if (input === "/api/session") {
@@ -133,9 +136,10 @@ describe("session exchange web UI", () => {
     });
 
     await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        "/api/session",
+        "/api/session?mode=replace",
         expect.objectContaining({ method: "PUT" }),
       );
     });
@@ -160,7 +164,7 @@ describe("session exchange web UI", () => {
     ).toBe("true");
     expect(window.location.search).not.toContain("needle");
     expect(fetch).toHaveBeenCalledWith(
-      "/api/session",
+      "/api/session?mode=replace",
       expect.objectContaining({
         method: "PUT",
         headers: {
@@ -186,11 +190,65 @@ describe("session exchange web UI", () => {
     Object.defineProperty(file, "text", { value: async () => "{broken" });
 
     await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.click(screen.getByRole("button", { name: "Import" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not import the session.",
     );
     expect(screen.getByTitle("Alpha preview")).toBeTruthy();
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  });
+
+  test("merge後も存在する選択entryと検索状態と履歴を維持する", async () => {
+    const mergedEntries = [
+      ...initialEntries,
+      entry("c", "Charlie", "/work/c.html"),
+    ];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      if (input === "/api/session?mode=merge" && init?.method === "PUT") {
+        return Response.json({ entries: mergedEntries });
+      }
+      if (input === "/api/session") {
+        return Response.json({
+          entries: initialEntries,
+          serverIdentity: { instanceId: "managed" },
+        });
+      }
+      return Response.json({ files: [], totalMatches: 0, truncated: false });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    await user.click(screen.getByRole("button", { name: "Open Bravo" }));
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      "needle",
+    );
+    const historyBefore = window.history.state;
+    const exchange = {
+      format: "zatto-session",
+      version: 1,
+      entries: [{ path: "/work/c.html" }],
+    };
+    const file = new File([JSON.stringify(exchange)], "session.json");
+    Object.defineProperty(file, "text", {
+      value: async () => JSON.stringify(exchange),
+    });
+
+    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.click(
+      screen.getByRole("radio", { name: "Merge with current list" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Import" }));
+
+    await screen.findByRole("button", { name: "Open Charlie" });
+    expect(screen.getByRole<HTMLInputElement>("searchbox").value).toBe(
+      "needle",
+    );
+    expect(window.location.search).toContain("entry=b");
+    expect(window.location.search).toContain("search=needle");
+    expect(window.history.state).toMatchObject(historyBefore);
   });
 });

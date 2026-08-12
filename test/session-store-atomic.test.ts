@@ -53,4 +53,34 @@ describe("SessionStore atomic persistence", () => {
       "session.json",
     ]);
   });
+
+  test("merge永続化失敗時は既存sessionとファイルを維持する", async () => {
+    const initialStore = new SessionStore(sessionFilePath);
+    await initialStore.load();
+    const [previous] = await initialStore.addEntries([firstPath]);
+    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    let writeCount = 0;
+    const store = new SessionStore(sessionFilePath, async (target, content) => {
+      writeCount += 1;
+      await writeFileAtomically(target, content, {
+        beforeRename:
+          writeCount === 2
+            ? () => {
+                throw new Error("rename failed");
+              }
+            : undefined,
+      });
+    });
+    await store.load();
+
+    await expect(store.mergeEntries([secondPath])).rejects.toThrow(
+      "rename failed",
+    );
+
+    expect(store.getSession()).toEqual({ entries: [previous] });
+    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect((await readdir(path.dirname(sessionFilePath))).sort()).toEqual([
+      "session.json",
+    ]);
+  });
 });

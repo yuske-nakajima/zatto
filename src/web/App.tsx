@@ -158,7 +158,7 @@ export function App() {
               dropTargetId={dropTargetId}
               canPickFiles={filePicker.available}
               isFilePickerOpen={filePickerControl.isOpen}
-              isSessionTransferPending={sessionTransfer.isPending}
+              sessionTransferPending={sessionTransfer.pending}
               isSessionLoaded={isSessionLoaded}
               isSearchVisible={search.isVisible}
               hasSearchState={search.hasState}

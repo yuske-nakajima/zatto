@@ -34,11 +34,21 @@ describe("session transfer availability", () => {
       ),
     );
     render(<App />);
-    const input = screen.getByLabelText("Import session file");
 
-    expect(input.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("status").textContent).toContain("loading…");
+    expect(screen.queryByLabelText("Import session file")).toBeNull();
     resolveSession?.(Response.json({ entries: [], ...capability }));
 
-    await waitFor(() => expect(input.hasAttribute("disabled")).toBe(false));
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText("Import session file").hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    const actions = screen.getByRole("region", {
+      name: "Session file management",
+    });
+    expect(
+      actions.previousElementSibling?.querySelector(".empty-list"),
+    ).toBeTruthy();
   });
 });

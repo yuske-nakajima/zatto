@@ -7,6 +7,7 @@ import {
   readSelectedEntryIdFromUrl,
   replaceSelectedEntryIdInUrl,
 } from "./selected-entry-url.js";
+import type { SessionImportMode } from "./useSessionTransfer.js";
 
 interface SessionEntries {
   entries: Entry[];
@@ -20,7 +21,7 @@ interface SessionEntries {
   filePicker: FilePickerCapability;
   serverInstanceId: string | null;
   isLoaded: boolean;
-  applyImportedEntries: (entries: Entry[]) => void;
+  applyImportedEntries: (entries: Entry[], mode: SessionImportMode) => void;
 }
 
 export interface FilePickerCapability {
@@ -107,10 +108,20 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
       window.removeEventListener("popstate", restoreSelectedEntryFromUrl);
   }, []);
 
-  function applyImportedEntries(importedEntries: Entry[]): void {
+  function applyImportedEntries(
+    importedEntries: Entry[],
+    mode: SessionImportMode,
+  ): void {
     onSessionUpdate();
-    setSearchVersion((current) => current + 1);
     setEntries(importedEntries);
+    setSearchVersion((current) => current + 1);
+    if (
+      mode === "merge" &&
+      selectedId !== null &&
+      importedEntries.some(({ id }) => id === selectedId)
+    ) {
+      return;
+    }
     setSelectedId(resolveSelectedEntryIdAndUpdateUrl(null, importedEntries));
   }
 

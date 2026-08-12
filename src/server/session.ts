@@ -56,18 +56,15 @@ export class SessionStore {
       this.session = { entries: [] };
       return this.getSession();
     }
-
     const fileContent = await readFile(this.sessionFilePath, "utf8");
     const parsed = JSON.parse(fileContent) as PersistedSession;
     const entries = parsed.entries ?? [];
     const existingEntries: Entry[] = [];
-
     for (const entry of entries) {
       if (await fileExists(entry.absPath)) {
         existingEntries.push(entry);
       }
     }
-
     const nextSession = { entries: existingEntries };
     await this.persistSession(nextSession);
     this.session = nextSession;
@@ -89,13 +86,11 @@ export class SessionStore {
     const knownPaths = new Set(
       this.session.entries.map((entry) => entry.absPath),
     );
-
     for (const absPath of inputPaths) {
       if (knownPaths.has(absPath)) continue;
       if (!(await fileExists(absPath))) {
         continue;
       }
-
       const entry: Entry = {
         id: nanoid(),
         absPath,
@@ -105,7 +100,6 @@ export class SessionStore {
       addedEntries.push(entry);
       knownPaths.add(absPath);
     }
-
     if (addedEntries.length > 0) {
       const nextSession = {
         entries: [...this.session.entries, ...addedEntries],
@@ -113,7 +107,6 @@ export class SessionStore {
       await this.persistSession(nextSession);
       this.session = nextSession;
     }
-
     return addedEntries;
   }
 
@@ -125,12 +118,38 @@ export class SessionStore {
     return this.getSession();
   }
 
+  /**
+   * Adds validated unregistered paths while preserving existing entries.
+   *
+   * @param inputPaths - Absolute HTML paths in import order
+   * @returns The complete merged session
+   * @throws {SessionImportValidationError} When any path cannot be imported
+   */
+  async mergeEntries(inputPaths: string[]): Promise<Session> {
+    const importedEntries = await createImportedEntries(
+      inputPaths,
+      extractTitle,
+    );
+    const knownPaths = new Set(
+      this.session.entries.map((entry) => path.resolve(entry.absPath)),
+    );
+    const newEntries = importedEntries.filter(
+      (entry) => !knownPaths.has(entry.absPath),
+    );
+    if (newEntries.length === 0) return this.getSession();
+    const nextSession = {
+      entries: [...this.session.entries, ...newEntries],
+    };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
+    return this.getSession();
+  }
+
   async removeEntry(id: string): Promise<boolean> {
     const nextEntries = this.session.entries.filter((entry) => entry.id !== id);
     if (nextEntries.length === this.session.entries.length) {
       return false;
     }
-
     const nextSession = { entries: nextEntries };
     await this.persistSession(nextSession);
     this.session = nextSession;
@@ -144,7 +163,6 @@ export class SessionStore {
     ) {
       return false;
     }
-
     const entriesById = new Map(
       this.session.entries.map((entry) => [entry.id, entry]),
     );
@@ -156,7 +174,6 @@ export class SessionStore {
       }
       reorderedEntries.push(entry);
     }
-
     const nextSession = { entries: reorderedEntries };
     await this.persistSession(nextSession);
     this.session = nextSession;
@@ -167,7 +184,6 @@ export class SessionStore {
     if (this.session.entries.length === 0) {
       return;
     }
-
     const nextSession: Session = { entries: [] };
     await this.persistSession(nextSession);
     this.session = nextSession;
