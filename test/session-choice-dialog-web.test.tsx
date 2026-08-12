@@ -73,4 +73,44 @@ describe("choice dialog", () => {
     await user.click(screen.getByRole("button", { name: "Export" }));
     expect(onConfirm).toHaveBeenCalledWith("sort");
   });
+
+  test("backdrop自身のclickでcancelを1回呼ぶ", async () => {
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChoiceDialog
+        title="Export session"
+        description="Choose the entry order for the exported file."
+        options={options}
+        confirmLabel="Export"
+        onConfirm={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Cancel dialog" }));
+
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  test("dialog内部のclickがbubbleしてもcancelしない", async () => {
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChoiceDialog
+        title="Export session"
+        description="Choose the entry order for the exported file."
+        options={options}
+        confirmLabel="Export"
+        onConfirm={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+
+    await user.click(screen.getByRole("dialog", { name: "Export session" }));
+    await user.click(screen.getByRole("radio", { name: "Sort by path" }));
+    await user.click(screen.getByRole("button", { name: "Export" }));
+
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 });

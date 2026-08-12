@@ -54,7 +54,14 @@ export function ChoiceDialog<Value extends string>({
   }
 
   return (
-    <div className="choice-dialog-backdrop">
+    <div className="choice-dialog-overlay">
+      <button
+        className="choice-dialog-backdrop"
+        type="button"
+        aria-label="Cancel dialog"
+        tabIndex={-1}
+        onClick={onCancel}
+      />
       <div
         ref={dialogRef}
         className="choice-dialog"

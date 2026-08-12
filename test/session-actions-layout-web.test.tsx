@@ -88,7 +88,10 @@ describe("session action shelf layout", () => {
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.session-action-spinner\s*{[\s\S]*?animation:\s*none/,
     );
     expect(styles).toMatch(
-      /\.choice-dialog-backdrop\s*{[\s\S]*?position:\s*fixed[\s\S]*?z-index:\s*20[\s\S]*?inset:\s*0/,
+      /\.choice-dialog-overlay\s*{[\s\S]*?position:\s*fixed[\s\S]*?z-index:\s*20[\s\S]*?inset:\s*0/,
+    );
+    expect(styles).toMatch(
+      /\.choice-dialog-backdrop\s*{[\s\S]*?position:\s*absolute[\s\S]*?inset:\s*0/,
     );
   });
 });
