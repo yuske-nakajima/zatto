@@ -166,8 +166,9 @@ npm trust github @yuske-nakajima/zatto \
   --allow-publish
 ```
 
-以降のリリースでは`package.json`のバージョンを更新し、変更を`main`へマージします。
-その後、Release workflowを手動で実行します。
+以降のリリースでは[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
+`package.json`を正本としてバージョンを更新し、テストとスクリプトの固定値も同期します。
+変更を`main`へマージした後、Release workflowを手動で実行します。
 
 ```bash
 gh workflow run release.yml --ref main

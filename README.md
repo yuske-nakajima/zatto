@@ -170,7 +170,11 @@ npm trust github @yuske-nakajima/zatto \
   --allow-publish
 ```
 
-For later releases, update the version in `package.json` and merge the change into `main`.
+For later releases, select the version using the
+[versioning policy](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md),
+update `package.json`, and merge the change into `main`. The manifest is the
+version source of truth, and fixed version expectations in tests and scripts
+must stay synchronized with it.
 Then run the Release workflow manually.
 
 ```bash
