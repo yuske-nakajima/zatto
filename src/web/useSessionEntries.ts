@@ -7,6 +7,7 @@ import {
   readSelectedEntryIdFromUrl,
   replaceSelectedEntryIdInUrl,
 } from "./selected-entry-url.js";
+import type { SessionImportMode } from "./useSessionTransfer.js";
 
 interface SessionEntries {
   entries: Entry[];
@@ -18,6 +19,9 @@ interface SessionEntries {
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
   filePicker: FilePickerCapability;
+  serverInstanceId: string | null;
+  isLoaded: boolean;
+  applyImportedEntries: (entries: Entry[], mode: SessionImportMode) => void;
 }
 
 export interface FilePickerCapability {
@@ -30,6 +34,7 @@ interface SessionResponse extends Session {
     available?: boolean;
     instanceId?: string;
   };
+  serverIdentity?: { instanceId?: string };
 }
 
 export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
@@ -42,6 +47,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     available: false,
     instanceId: null,
   });
+  const [serverInstanceId, setServerInstanceId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   function selectEntry(
     id: string,
@@ -69,6 +76,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
             available: session.filePicker?.available === true,
             instanceId: session.filePicker?.instanceId ?? null,
           });
+          setServerInstanceId(session.serverIdentity?.instanceId ?? null);
+          setIsLoaded(true);
           setSelectedId(
             resolveSelectedEntryIdAndUpdateUrl(
               readSelectedEntryIdFromUrl(),
@@ -98,6 +107,23 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     return () =>
       window.removeEventListener("popstate", restoreSelectedEntryFromUrl);
   }, []);
+
+  function applyImportedEntries(
+    importedEntries: Entry[],
+    mode: SessionImportMode,
+  ): void {
+    onSessionUpdate();
+    setEntries(importedEntries);
+    setSearchVersion((current) => current + 1);
+    if (
+      mode === "merge" &&
+      selectedId !== null &&
+      importedEntries.some(({ id }) => id === selectedId)
+    ) {
+      return;
+    }
+    setSelectedId(resolveSelectedEntryIdAndUpdateUrl(null, importedEntries));
+  }
 
   const handleSocketMessage = useEffectEvent((event: MessageEvent) => {
     const message = parseServerMessage(event.data);
@@ -138,6 +164,9 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     errorMessage,
     setErrorMessage,
     filePicker,
+    serverInstanceId,
+    isLoaded,
+    applyImportedEntries,
   };
 }
 

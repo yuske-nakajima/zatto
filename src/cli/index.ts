@@ -4,19 +4,31 @@ import { parseArgs } from "node:util";
 import { APP_VERSION } from "../meta.js";
 import { DEFAULT_PORT } from "../server/index.js";
 import { resolveRuntimeFilePath } from "../server/runtime.js";
+import { HELP_TEXT } from "./help.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
-import { addFiles, serverUrl } from "./server-api.js";
+import {
+  addFiles,
+  exportSession,
+  importSession,
+  serverUrl,
+} from "./server-api.js";
 import {
   connectOrStartServer,
   type ServerClientDependencies,
 } from "./server-client.js";
 import { stopRecordedServer } from "./server-stop.js";
+import {
+  readSessionExchangeFile,
+  writeSessionExchangeFile,
+} from "./session-file.js";
 
 interface CliOptions {
   files: string[];
   port: number;
   open: boolean;
   stop: boolean;
+  importFile: string | null;
+  exportFile: string | null;
   help: boolean;
   version: boolean;
 }
@@ -39,17 +51,6 @@ const defaultDependencies: CliDependencies = {
   createInstanceId: randomUUID,
 };
 
-export const HELP_TEXT = `Usage: zatto [options] [file...]
-
-ローカル HTML ファイルを zatto セッションへ追加します。ファイルを省略するとビューアーを開きます。
-
-Options:
-  --port <n>    初回起動時のサーバーポート (default: ${DEFAULT_PORT})
-  --no-open     ブラウザを自動で開かない
-  --stop        常駐サーバーを停止する
-  -h, --help    ヘルプを表示する
-  -v, --version バージョンを表示する`;
-
 export function parseCliArgs(args: string[]): CliOptions {
   const { values, positionals } = parseArgs({
     args,
@@ -57,6 +58,8 @@ export function parseCliArgs(args: string[]): CliOptions {
       port: { type: "string", default: String(DEFAULT_PORT) },
       open: { type: "boolean", default: true },
       stop: { type: "boolean", default: false },
+      import: { type: "string" },
+      export: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", short: "v", default: false },
     },
@@ -70,11 +73,30 @@ export function parseCliArgs(args: string[]): CliOptions {
     throw new Error("`--port` には 1〜65535 の整数を指定してください");
   }
 
+  if (values.import === "" || values.export === "") {
+    throw new Error("セッションファイルには空でないパスを指定してください");
+  }
+  const importFile = values.import ? path.resolve(values.import) : null;
+  const exportFile = values.export ? path.resolve(values.export) : null;
+  const operationCount = [
+    values.stop,
+    importFile,
+    exportFile,
+    positionals.length > 0,
+  ].filter(Boolean).length;
+  if (operationCount > 1) {
+    throw new Error(
+      "`--import`、`--export`、`--stop`、HTML ファイルは同時に指定できません",
+    );
+  }
+
   return {
     files: positionals.map((file) => path.resolve(file)),
     port,
     open: values.open ?? true,
     stop: values.stop ?? false,
+    importFile,
+    exportFile,
     help: values.help ?? false,
     version: values.version ?? false,
   };
@@ -107,7 +129,32 @@ export async function runCli(
     return stopServer(options.port, dependencies);
   }
   try {
+    const importedExchange = options.importFile
+      ? await readSessionExchangeFile(options.importFile)
+      : null;
     const connection = await connectOrStartServer(options.port, dependencies);
+    if (options.importFile && importedExchange) {
+      await importSession(
+        connection.record,
+        importedExchange,
+        dependencies.fetch,
+      );
+      dependencies.stdout(
+        `セッションをインポートしました: ${options.importFile}`,
+      );
+      return 0;
+    }
+    if (options.exportFile) {
+      const exchange = await exportSession(
+        connection.record,
+        dependencies.fetch,
+      );
+      await writeSessionExchangeFile(options.exportFile, exchange);
+      dependencies.stdout(
+        `セッションをエクスポートしました: ${options.exportFile}`,
+      );
+      return 0;
+    }
     const url = serverUrl(connection.record.port);
     if (options.files.length > 0) {
       await addFiles(connection.record, options.files, dependencies.fetch);
@@ -149,4 +196,5 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export { HELP_TEXT } from "./help.js";
 export { openBrowser, spawnDetachedServer } from "./platform.js";

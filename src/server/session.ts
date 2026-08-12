@@ -1,7 +1,9 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { nanoid } from "nanoid";
+import { writeFileAtomically } from "../shared/atomic-file.js";
+import { createImportedEntries } from "./session-import.js";
 
 export type Entry = {
   id: string;
@@ -44,27 +46,28 @@ export async function extractTitle(absPath: string): Promise<string> {
 export class SessionStore {
   private session: Session = { entries: [] };
 
-  constructor(private readonly sessionFilePath = DEFAULT_SESSION_FILE) {}
+  constructor(
+    private readonly sessionFilePath = DEFAULT_SESSION_FILE,
+    private readonly writeSessionFile = writeFileAtomically,
+  ) {}
 
   async load(): Promise<Session> {
     if (!(await fileExists(this.sessionFilePath))) {
       this.session = { entries: [] };
       return this.getSession();
     }
-
     const fileContent = await readFile(this.sessionFilePath, "utf8");
     const parsed = JSON.parse(fileContent) as PersistedSession;
     const entries = parsed.entries ?? [];
     const existingEntries: Entry[] = [];
-
     for (const entry of entries) {
       if (await fileExists(entry.absPath)) {
         existingEntries.push(entry);
       }
     }
-
-    this.session = { entries: existingEntries };
-    await this.persist();
+    const nextSession = { entries: existingEntries };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
     return this.getSession();
   }
 
@@ -80,30 +83,66 @@ export class SessionStore {
 
   async addEntries(inputPaths: string[]): Promise<Entry[]> {
     const addedEntries: Entry[] = [];
-
+    const knownPaths = new Set(
+      this.session.entries.map((entry) => entry.absPath),
+    );
     for (const absPath of inputPaths) {
-      if (this.session.entries.some((entry) => entry.absPath === absPath)) {
-        continue;
-      }
+      if (knownPaths.has(absPath)) continue;
       if (!(await fileExists(absPath))) {
         continue;
       }
-
       const entry: Entry = {
         id: nanoid(),
         absPath,
         title: await extractTitle(absPath),
         addedAt: Date.now(),
       };
-      this.session.entries.push(entry);
       addedEntries.push(entry);
+      knownPaths.add(absPath);
     }
-
     if (addedEntries.length > 0) {
-      await this.persist();
+      const nextSession = {
+        entries: [...this.session.entries, ...addedEntries],
+      };
+      await this.persistSession(nextSession);
+      this.session = nextSession;
     }
-
     return addedEntries;
+  }
+
+  async replaceEntries(inputPaths: string[]): Promise<Session> {
+    const entries = await createImportedEntries(inputPaths, extractTitle);
+    const nextSession = { entries };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
+    return this.getSession();
+  }
+
+  /**
+   * Adds validated unregistered paths while preserving existing entries.
+   *
+   * @param inputPaths - Absolute HTML paths in import order
+   * @returns The complete merged session
+   * @throws {SessionImportValidationError} When any path cannot be imported
+   */
+  async mergeEntries(inputPaths: string[]): Promise<Session> {
+    const importedEntries = await createImportedEntries(
+      inputPaths,
+      extractTitle,
+    );
+    const knownPaths = new Set(
+      this.session.entries.map((entry) => path.resolve(entry.absPath)),
+    );
+    const newEntries = importedEntries.filter(
+      (entry) => !knownPaths.has(entry.absPath),
+    );
+    if (newEntries.length === 0) return this.getSession();
+    const nextSession = {
+      entries: [...this.session.entries, ...newEntries],
+    };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
+    return this.getSession();
   }
 
   async removeEntry(id: string): Promise<boolean> {
@@ -111,9 +150,9 @@ export class SessionStore {
     if (nextEntries.length === this.session.entries.length) {
       return false;
     }
-
-    this.session = { entries: nextEntries };
-    await this.persist();
+    const nextSession = { entries: nextEntries };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
     return true;
   }
 
@@ -124,7 +163,6 @@ export class SessionStore {
     ) {
       return false;
     }
-
     const entriesById = new Map(
       this.session.entries.map((entry) => [entry.id, entry]),
     );
@@ -136,9 +174,9 @@ export class SessionStore {
       }
       reorderedEntries.push(entry);
     }
-
-    this.session = { entries: reorderedEntries };
-    await this.persist();
+    const nextSession = { entries: reorderedEntries };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
     return true;
   }
 
@@ -146,17 +184,15 @@ export class SessionStore {
     if (this.session.entries.length === 0) {
       return;
     }
-
-    this.session = { entries: [] };
-    await this.persist();
+    const nextSession: Session = { entries: [] };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
   }
 
-  private async persist(): Promise<void> {
-    await mkdir(path.dirname(this.sessionFilePath), { recursive: true });
-    await writeFile(
+  private async persistSession(session: Session): Promise<void> {
+    await this.writeSessionFile(
       this.sessionFilePath,
-      `${JSON.stringify(this.session, null, 2)}\n`,
-      "utf8",
+      `${JSON.stringify(session, null, 2)}\n`,
     );
   }
 }

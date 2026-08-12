@@ -47,6 +47,29 @@ server for the current OS user.
 npx @yuske-nakajima/zatto another-page.html
 ```
 
+Save the open files and their display order to a session JSON file.
+
+```bash
+npx @yuske-nakajima/zatto --export saved-session.json
+```
+
+Replace the open files from a saved session.
+
+```bash
+npx @yuske-nakajima/zatto --import saved-session.json
+```
+
+The file panel also provides **Import session…** and **Export session…**.
+For imports, choose whether to replace the file list or merge unregistered
+paths at the end. A replacement selects the first imported file and clears the
+search state. A merge preserves existing entries, selection, and search state.
+For exports, choose the current display order or a path-sorted order. Exporting
+does not change the file panel order.
+
+Session JSON contains absolute paths and may reveal usernames or other local
+information. It is intended for restoring files on the same computer, not for
+sharing.
+
 ## Options
 
 | Option | Description |
@@ -54,6 +77,8 @@ npx @yuske-nakajima/zatto another-page.html
 | `--port <n>` | Set the port used for the first server start. The default is `6280` |
 | `--no-open` | Start without opening a browser |
 | `--stop` | Stop the background server for the current OS user |
+| `--import <file>` | Replace the session from a session JSON file |
+| `--export <file>` | Save the session to a session JSON file |
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show the version |
 
@@ -185,6 +210,7 @@ Check server health and inspect the session.
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
 curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
+curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
 ```
 
 Add an HTML file through the API.
@@ -201,6 +227,19 @@ Reorder entries by sending every ID from `GET /api/session` in display order.
 curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
+```
+
+Import a validated session document. The server identity prevents a browser or
+CLI connected to a stale server from replacing another server's session.
+Add `?mode=merge` to preserve existing entries and append unregistered paths.
+Omitting `mode` replaces the session for CLI compatibility.
+
+```bash
+ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
+curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data "$(cat saved-session.json)"
 ```
 
 Stop the managed server.

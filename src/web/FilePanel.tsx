@@ -4,6 +4,12 @@ import zattoLogo from "./assets/zatto-logo-black.png";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import type { FilePanelView } from "./file-panel-model.js";
+import { SessionActions } from "./SessionActions.js";
+import type {
+  SessionExportOrder,
+  SessionImportMode,
+  SessionTransferPending,
+} from "./useSessionTransfer.js";
 
 interface FilePanelProps {
   entries: Entry[];
@@ -13,6 +19,8 @@ interface FilePanelProps {
   dropTargetId: string | null;
   canPickFiles: boolean;
   isFilePickerOpen: boolean;
+  sessionTransferPending: SessionTransferPending;
+  isSessionLoaded: boolean;
   isSearchVisible: boolean;
   hasSearchState: boolean;
   searchButtonRef: RefObject<HTMLButtonElement | null>;
@@ -27,6 +35,8 @@ interface FilePanelProps {
   onDrop: (id: string) => void;
   onPickFiles: () => void;
   onOpenSearch: () => void;
+  onImportSession: (file: File, mode: SessionImportMode) => Promise<void>;
+  onExportSession: (order: SessionExportOrder) => void;
 }
 
 export function FilePanel({
@@ -37,6 +47,8 @@ export function FilePanel({
   dropTargetId,
   canPickFiles,
   isFilePickerOpen,
+  sessionTransferPending,
+  isSessionLoaded,
   isSearchVisible,
   hasSearchState,
   searchButtonRef,
@@ -51,6 +63,8 @@ export function FilePanel({
   onDrop,
   onPickFiles,
   onOpenSearch,
+  onImportSession,
+  onExportSession,
 }: FilePanelProps) {
   return (
     <aside className="sidebar">
@@ -126,40 +140,48 @@ export function FilePanel({
           )}
         </button>
       </fieldset>
-      {view === "list" ? (
-        <ol className="entry-list" aria-label="HTML entries">
-          {entries.map((entry) => (
-            <EntryRow
-              entry={entry}
-              isSelected={entry.id === selectedId}
-              isDragging={entry.id === draggedId}
-              isDropTarget={entry.id === dropTargetId}
-              key={entry.id}
-              onSelect={onSelect}
-              onCopyPath={onCopyPath}
-              onRemove={onRemove}
-              onDragStart={onDragStart}
-              onDragEnter={onDragEnter}
-              onDragEnd={onDragEnd}
-              onDrop={onDrop}
-            />
-          ))}
-        </ol>
-      ) : (
-        <DirectoryTree
-          entries={entries}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onCopyPath={onCopyPath}
-          onRemove={onRemove}
-        />
-      )}
-      {entries.length === 0 && (
-        <div className="empty-list">
-          <p>Add HTML files from the CLI</p>
-          <code>zatto page.html</code>
-        </div>
-      )}
+      <div className="sidebar-scroll-region">
+        {view === "list" ? (
+          <ol className="entry-list" aria-label="HTML entries">
+            {entries.map((entry) => (
+              <EntryRow
+                entry={entry}
+                isSelected={entry.id === selectedId}
+                isDragging={entry.id === draggedId}
+                isDropTarget={entry.id === dropTargetId}
+                key={entry.id}
+                onSelect={onSelect}
+                onCopyPath={onCopyPath}
+                onRemove={onRemove}
+                onDragStart={onDragStart}
+                onDragEnter={onDragEnter}
+                onDragEnd={onDragEnd}
+                onDrop={onDrop}
+              />
+            ))}
+          </ol>
+        ) : (
+          <DirectoryTree
+            entries={entries}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onCopyPath={onCopyPath}
+            onRemove={onRemove}
+          />
+        )}
+        {entries.length === 0 && (
+          <div className="empty-list">
+            <p>Add HTML files from the CLI</p>
+            <code>zatto page.html</code>
+          </div>
+        )}
+      </div>
+      <SessionActions
+        isAvailable={isSessionLoaded}
+        pending={sessionTransferPending}
+        onImport={onImportSession}
+        onExport={onExportSession}
+      />
     </aside>
   );
 }

@@ -466,7 +466,9 @@ describe("App", () => {
     expect(webStyles).toMatch(
       /\.copy-feedback--success\s*{[\s\S]*?var\(--color-bg-success\) 8%/,
     );
-    expect(webStyles).toMatch(/\.entry-list\s*{[\s\S]*?overflow-x:\s*hidden/);
+    expect(webStyles).toMatch(
+      /\.sidebar-scroll-region\s*{[\s\S]*?min-height:\s*0[\s\S]*?flex:\s*1[\s\S]*?overflow-x:\s*hidden[\s\S]*?overflow-y:\s*auto/,
+    );
     expect(webStyles).toMatch(/\.entry-tooltip\s*{[\s\S]*?position:\s*fixed/);
   });
 

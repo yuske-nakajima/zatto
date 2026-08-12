@@ -8,15 +8,22 @@ export interface SearchHistorySnapshot {
   scrollTop: number;
   collapsedEntryIds: string[];
   previewTarget: SearchResultLocator | null;
+  sessionGeneration: number;
 }
 
 export function readSearchHistorySnapshot(): SearchHistorySnapshot {
   const state = window.history.state;
   if (!isRecord(state) || !isRecord(state.zattoSearch)) {
-    return { scrollTop: 0, collapsedEntryIds: [], previewTarget: null };
+    return {
+      scrollTop: 0,
+      collapsedEntryIds: [],
+      previewTarget: null,
+      sessionGeneration: 0,
+    };
   }
   const scrollTop = state.zattoSearch.scrollTop;
   const collapsedEntryIds = state.zattoSearch.collapsedEntryIds;
+  const sessionGeneration = state.zattoSearch.sessionGeneration;
   return {
     scrollTop:
       typeof scrollTop === "number" && Number.isFinite(scrollTop)
@@ -28,6 +35,9 @@ export function readSearchHistorySnapshot(): SearchHistorySnapshot {
         )
       : [],
     previewTarget: readPreviewTarget(state.zattoSearch.previewTarget),
+    sessionGeneration: isIntegerAtLeast(sessionGeneration, 0)
+      ? sessionGeneration
+      : 0,
   };
 }
 

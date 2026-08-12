@@ -7,7 +7,7 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.1.5";
+const expectedVersion = "0.1.6";
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const packageDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-pack-"));
 const consumerDirectory = await mkdtemp(
