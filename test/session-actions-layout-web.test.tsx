@@ -14,7 +14,8 @@ const baseProps = {
   draggedId: null,
   dropTargetId: null,
   canPickFiles: false,
-  isFilePickerOpen: false,
+  canPickDirectory: false,
+  nativePickerPending: null,
   sessionTransferPending: null,
   isSessionLoaded: true,
   isSearchVisible: false,
@@ -31,6 +32,7 @@ const baseProps = {
   onDragEnd: vi.fn(),
   onDrop: vi.fn(),
   onPickFiles: vi.fn(),
+  onPickDirectory: vi.fn(),
   onOpenSearch: vi.fn(),
   onImportSession: vi.fn(),
   onExportSession: vi.fn(),
@@ -76,9 +78,21 @@ describe("session action shelf layout", () => {
     ).toBeTruthy();
   });
 
+  test("追加操作とdialogを通常のflow contentコンテナに配置する", () => {
+    const { container } = render(
+      <FilePanel {...baseProps} canPickFiles canPickDirectory />,
+    );
+
+    expect(container.querySelector(".list-actions")?.tagName).toBe("DIV");
+  });
+
   test("220px幅で操作とwarningを折り返し、motion軽減時はspinnerを停止する", () => {
     const styles = readFileSync(resolve("src/web/styles.css"), "utf8");
 
+    expect(styles).toMatch(
+      /\.list-heading\s*{[\s\S]*?flex-wrap:\s*wrap[\s\S]*?min-height:\s*42px/,
+    );
+    expect(styles).toMatch(/\.list-actions\s*{[\s\S]*?flex-wrap:\s*wrap/);
     expect(styles).toMatch(
       /\.session-action-buttons\s*{[\s\S]*?flex-wrap:\s*wrap/,
     );

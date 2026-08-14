@@ -30,9 +30,18 @@ Open the viewer without adding a file from the command line.
 npx @yuske-nakajima/zatto
 ```
 
-On macOS, use **+ Add**, **Select HTML files**, or <kbd>Command</kbd>+<kbd>O</kbd>
-in the viewer to select one or more `.html` or `.htm` files. The native file
-dialog passes their absolute paths to the local `zatto` server, so relative
+On macOS, add individual `.html` or `.htm` files with **+ Add**,
+**Select HTML files**, or <kbd>Command</kbd>+<kbd>O</kbd>. These existing file
+picker controls keep the same behavior.
+
+Use the separate **Add folder…** button to add HTML files from a folder. Choose
+the selected folder only or the selected folder and its subfolders, then select
+a folder in the native macOS dialog. File extensions are matched without
+regard to case, and new entries are added in deterministic relative-path order.
+Already-open paths are skipped. Symbolic links are ignored. Files and folders
+remain unchanged on disk.
+
+Both native dialogs pass absolute paths to the local `zatto` server, so relative
 assets and live reload continue to work.
 
 Pass multiple paths to add several HTML files at once.

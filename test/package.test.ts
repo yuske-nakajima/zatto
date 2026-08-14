@@ -33,7 +33,7 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
@@ -113,6 +113,18 @@ describe("npmパッケージ", () => {
     expect(japaneseReadme).toContain(
       "ローカルのHTMLファイルをまとめて閲覧できます",
     );
+    expect(englishReadme).toContain(
+      "add individual `.html` or `.htm` files with **+ Add**",
+    );
+    expect(englishReadme).toContain("separate **Add folder…** button");
+    expect(englishReadme).toContain("selected folder only");
+    expect(englishReadme).toContain("selected folder and its subfolders");
+    expect(englishReadme).toContain("Symbolic links are ignored");
+    expect(japaneseReadme).toContain("ファイルを追加する場合は、**+ Add**");
+    expect(japaneseReadme).toContain("独立した**Add folder…**ボタン");
+    expect(japaneseReadme).toContain("選択したフォルダー直下のみ");
+    expect(japaneseReadme).toContain("子孫フォルダーを含む");
+    expect(japaneseReadme).toContain("シンボリックリンクは対象外です");
     for (const readme of [englishReadme, japaneseReadme]) {
       expect(readme).toContain("npx @yuske-nakajima/zatto file.html");
       expect(readme).toContain("@yuske-nakajima/zatto/server");

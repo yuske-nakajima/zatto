@@ -3,6 +3,10 @@ import type { Entry, Session } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import { selectAvailableEntry } from "./file-panel-model.js";
 import {
+  type NativePickerCapabilities,
+  readNativePickerCapabilities,
+} from "./native-picker-capability.js";
+import {
   pushSelectedEntryIdInUrl,
   readSelectedEntryIdFromUrl,
   replaceSelectedEntryIdInUrl,
@@ -18,22 +22,16 @@ interface SessionEntries {
   searchVersion: number;
   errorMessage: string | null;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
-  filePicker: FilePickerCapability;
+  filePicker: NativePickerCapabilities["files"];
+  directoryPicker: NativePickerCapabilities["directory"];
   serverInstanceId: string | null;
   isLoaded: boolean;
   applyImportedEntries: (entries: Entry[], mode: SessionImportMode) => void;
 }
 
-export interface FilePickerCapability {
-  available: boolean;
-  instanceId: string | null;
-}
-
 interface SessionResponse extends Session {
-  filePicker?: {
-    available?: boolean;
-    instanceId?: string;
-  };
+  filePicker?: { available?: boolean; instanceId?: string };
+  directoryPicker?: { available?: boolean; instanceId?: string };
   serverIdentity?: { instanceId?: string };
 }
 
@@ -43,10 +41,11 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
   const [reloadVersion, setReloadVersion] = useState(0);
   const [searchVersion, setSearchVersion] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [filePicker, setFilePicker] = useState<FilePickerCapability>({
-    available: false,
-    instanceId: null,
-  });
+  const [pickerCapabilities, setPickerCapabilities] =
+    useState<NativePickerCapabilities>({
+      files: { available: false, instanceId: null },
+      directory: { available: false, instanceId: null },
+    });
   const [serverInstanceId, setServerInstanceId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -72,10 +71,7 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
       .then((session) => {
         if (active) {
           setEntries(session.entries);
-          setFilePicker({
-            available: session.filePicker?.available === true,
-            instanceId: session.filePicker?.instanceId ?? null,
-          });
+          setPickerCapabilities(readNativePickerCapabilities(session));
           setServerInstanceId(session.serverIdentity?.instanceId ?? null);
           setIsLoaded(true);
           setSelectedId(
@@ -163,7 +159,8 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     searchVersion,
     errorMessage,
     setErrorMessage,
-    filePicker,
+    filePicker: pickerCapabilities.files,
+    directoryPicker: pickerCapabilities.directory,
     serverInstanceId,
     isLoaded,
     applyImportedEntries,
