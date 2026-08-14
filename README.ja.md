@@ -216,6 +216,7 @@ ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
 
 ```bash
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
+ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
 curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
@@ -227,6 +228,24 @@ HTMLファイルをAPIから追加:
 curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
   -H 'content-type: application/json' \
   --data "{\"paths\":[\"$PWD/page.html\"]}"
+```
+
+ネイティブフォルダーピッカーを開き、選択したフォルダーからHTMLを追加します。
+`direct`は直下のみ、`recursive`はツリー配下すべてを対象にします。
+このAPIは、管理対象サーバーがmacOSのフォルダーピッカーを提供する場合に利用できます。
+
+```bash
+# 直下のみ
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data '{"mode":"direct"}'
+
+# ツリー配下すべて
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data '{"mode":"recursive"}'
 ```
 
 `GET /api/session`で取得したIDを、表示順ですべて指定して並べ替え:
@@ -243,7 +262,6 @@ curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
 `mode`を省略すると、CLI互換のためセッションを全置換します。
 
 ```bash
-ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
 curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
   -H 'content-type: application/json' \
   -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \

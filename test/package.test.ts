@@ -120,11 +120,17 @@ describe("npmパッケージ", () => {
     expect(englishReadme).toContain("selected folder only");
     expect(englishReadme).toContain("selected folder and its subfolders");
     expect(englishReadme).toContain("Symbolic links are ignored");
+    expect(englishReadme).toContain("/api/session/pick-directory");
+    expect(englishReadme).toContain('\'{"mode":"direct"}\'');
+    expect(englishReadme).toContain('\'{"mode":"recursive"}\'');
     expect(japaneseReadme).toContain("ファイルを追加する場合は、**+ Add**");
     expect(japaneseReadme).toContain("独立した**Add folder…**ボタン");
     expect(japaneseReadme).toContain("選択したフォルダー直下のみ");
     expect(japaneseReadme).toContain("子孫フォルダーを含む");
     expect(japaneseReadme).toContain("シンボリックリンクは対象外です");
+    expect(japaneseReadme).toContain("/api/session/pick-directory");
+    expect(japaneseReadme).toContain('\'{"mode":"direct"}\'');
+    expect(japaneseReadme).toContain('\'{"mode":"recursive"}\'');
     for (const readme of [englishReadme, japaneseReadme]) {
       expect(readme).toContain("npx @yuske-nakajima/zatto file.html");
       expect(readme).toContain("@yuske-nakajima/zatto/server");

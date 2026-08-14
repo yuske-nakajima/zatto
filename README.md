@@ -223,6 +223,7 @@ Check server health and inspect the session.
 
 ```bash
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
+ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
 curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
 curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
@@ -234,6 +235,25 @@ Add an HTML file through the API.
 curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
   -H 'content-type: application/json' \
   --data "{\"paths\":[\"$PWD/page.html\"]}"
+```
+
+Open the native folder picker and add HTML files from the selected folder.
+Use `direct` for direct children only or `recursive` for the complete folder
+tree. This endpoint is available when the managed server provides the macOS
+folder picker.
+
+```bash
+# Direct children only
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data '{"mode":"direct"}'
+
+# Complete folder tree
+curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  -H 'content-type: application/json' \
+  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
+  --data '{"mode":"recursive"}'
 ```
 
 Reorder entries by sending every ID from `GET /api/session` in display order.
@@ -250,7 +270,6 @@ Add `?mode=merge` to preserve existing entries and append unregistered paths.
 Omitting `mode` replaces the session for CLI compatibility.
 
 ```bash
-ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
 curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
   -H 'content-type: application/json' \
   -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
