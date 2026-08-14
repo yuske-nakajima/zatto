@@ -1,14 +1,14 @@
-import { type DragEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AppViewer } from "./AppViewer.js";
 import type { CopyFeedback } from "./copy-feedback.js";
-import { prepareEntryDrag } from "./entry-drag.js";
 import { FilePanel } from "./FilePanel.js";
-import { moveEntry } from "./file-panel-model.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { requestSessionChange } from "./session-change.js";
+import { useDocsNavigation } from "./useDocsNavigation.js";
+import { useEntryReordering } from "./useEntryReordering.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
 import { useNativeEntryPicker } from "./useNativeEntryPicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
@@ -38,8 +38,6 @@ export function App() {
     copyRequestId.current += 1;
     setCopyFeedback(null);
   });
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const pickerControl = useNativeEntryPicker({
     fileCapability: filePicker,
     directoryCapability: directoryPicker,
@@ -47,7 +45,13 @@ export function App() {
     setErrorMessage,
   });
   const search = useSearchNavigation(searchVersion);
+  const docs = useDocsNavigation();
   const filePanel = useFilePanelNavigation(search.flushHistory);
+  const entryReordering = useEntryReordering({
+    entries,
+    setEntries,
+    setErrorMessage,
+  });
   const sessionTransfer = useSessionTransfer({
     instanceId: serverInstanceId,
     applyImportedEntries,
@@ -59,6 +63,7 @@ export function App() {
     copyRequestId.current += 1;
     setCopyFeedback(null);
     search.flushHistory();
+    docs.hide();
     selectSessionEntry(id);
     search.showPreview();
   }
@@ -110,38 +115,25 @@ export function App() {
     });
     if (!cleared) setErrorMessage("Could not remove all entries.");
   }
-  async function reorderEntries(targetId: string): Promise<void> {
-    if (!draggedId || draggedId === targetId) {
-      resetDragState();
+  function openSearch(): void {
+    docs.hide();
+    search.open();
+  }
+  function toggleDocs(): void {
+    if (docs.isVisible) {
+      docs.close();
       return;
     }
-    const previousEntries = entries;
-    const reorderedEntries = moveEntry(entries, draggedId, targetId);
-    setEntries(reorderedEntries);
-    resetDragState();
-    const reordered = await requestSessionChange("/api/session/order", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids: reorderedEntries.map((entry) => entry.id) }),
-    });
-    if (!reordered) {
-      setEntries(previousEntries);
-      setErrorMessage("Could not reorder the entries.");
-    }
-  }
-  function resetDragState(): void {
-    setDraggedId(null);
-    setDropTargetId(null);
-  }
-  function handleDragStart(
-    event: DragEvent<HTMLButtonElement>,
-    id: string,
-  ): void {
-    prepareEntryDrag(event, id);
-    setDraggedId(id);
+    search.flushHistory();
+    search.showPreview();
+    docs.open();
   }
   return (
-    <StatusBarFrame>
+    <StatusBarFrame
+      isDocsVisible={docs.isVisible}
+      docsButtonRef={docs.triggerRef}
+      onToggleDocs={toggleDocs}
+    >
       <ResizableLayout
         isFilePanelVisible={filePanel.isVisible}
         filePanel={
@@ -150,8 +142,8 @@ export function App() {
               entries={entries}
               selectedId={selectedId}
               view={filePanel.view}
-              draggedId={draggedId}
-              dropTargetId={dropTargetId}
+              draggedId={entryReordering.draggedId}
+              dropTargetId={entryReordering.dropTargetId}
               canPickFiles={filePicker.available}
               canPickDirectory={directoryPicker.available}
               nativePickerPending={pickerControl.pending}
@@ -166,13 +158,13 @@ export function App() {
               onCopyPath={copyPath}
               onRemove={removeEntry}
               onRemoveEntries={createFolderSessionRemover(setErrorMessage)}
-              onDragStart={handleDragStart}
-              onDragEnter={setDropTargetId}
-              onDragEnd={resetDragState}
-              onDrop={reorderEntries}
+              onDragStart={entryReordering.handleDragStart}
+              onDragEnter={entryReordering.setDropTargetId}
+              onDragEnd={entryReordering.resetDragState}
+              onDrop={entryReordering.reorderEntries}
               onPickFiles={pickerControl.openFiles}
               onPickDirectory={pickerControl.openDirectory}
-              onOpenSearch={search.open}
+              onOpenSearch={openSearch}
               onImportSession={sessionTransfer.importFile}
               onExportSession={sessionTransfer.exportFile}
             />
@@ -181,6 +173,7 @@ export function App() {
         viewer={
           <AppViewer
             search={search}
+            docs={docs}
             selectedEntry={selectedEntry}
             reloadVersion={reloadVersion}
             isFilePanelVisible={filePanel.isVisible}

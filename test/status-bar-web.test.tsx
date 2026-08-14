@@ -45,9 +45,11 @@ describe("操作説明ステータスバー", () => {
     await screen.findByTitle("Alpha preview");
 
     const statusBar = screen.getByRole("region", {
-      name: "Action descriptions",
+      name: "Status bar",
     });
-    expect(statusBar.querySelector(".status-bar-left")?.textContent).toBe("");
+    expect(statusBar.querySelector(".status-bar-left")?.textContent).toBe(
+      "Docs",
+    );
     expect(
       statusBar.querySelector(".status-bar-description")?.textContent,
     ).toBe("");
@@ -87,6 +89,7 @@ describe("操作説明ステータスバー", () => {
       screen.getByRole("separator", { name: "Resize file panel" }),
       screen.getByRole("button", { name: "Hide file panel" }),
       screen.getByRole("button", { name: "Copy file path" }),
+      screen.getByRole("button", { name: "Docs" }),
     ];
 
     for (const target of targets) {

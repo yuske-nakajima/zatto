@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLI | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 16px/1.65 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 820px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      th { font-weight: 650; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; }
+      pre code { padding: 0; background: transparent; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      @media (max-width: 620px) { main { padding: 24px 18px 48px; } table, tbody, tr, th, td { display: block; } th { padding-bottom: 2px; border: 0; } td { padding-top: 2px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Command-line interface</h1>
+      <p class="lead"><code>zatto [options] [file...]</code></p>
+
+      <h2>Open or add files</h2>
+      <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
+      <p>Paths are resolved from the command's working directory. A later command joins the background server for the same OS user and adds its files to the existing session. Already-open paths are skipped.</p>
+
+      <h2>Options</h2>
+      <table>
+        <tbody>
+          <tr><th><code>--port &lt;n&gt;</code></th><td>Preferred port for the first server start. The default is <code>6280</code>; if unavailable, the OS assigns a port.</td></tr>
+          <tr><th><code>--no-open</code></th><td>Do not open a browser. By default, the browser opens for a newly started server or a command with no files.</td></tr>
+          <tr><th><code>--stop</code></th><td>Stop the recorded background server for the current OS user.</td></tr>
+          <tr><th><code>--import &lt;file&gt;</code></th><td>Validate a <code>zatto-session</code> version 1 JSON file and replace the server session.</td></tr>
+          <tr><th><code>--export &lt;file&gt;</code></th><td>Save the session's absolute paths in display order as version 1 JSON.</td></tr>
+          <tr><th><code>-h</code>, <code>--help</code></th><td>Print command help.</td></tr>
+          <tr><th><code>-v</code>, <code>--version</code></th><td>Print the package version.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Operation rules</h2>
+      <ul>
+        <li><code>--stop</code>, <code>--import</code>, <code>--export</code>, and positional files are mutually exclusive.</li>
+        <li><code>--port</code> must be an integer from 1 through 65535.</li>
+        <li><code>--port</code> does not move an already running zatto server.</li>
+        <li>Import and export file names must not be empty.</li>
+        <li>Import replaces the session; use the browser UI when a merge is required.</li>
+      </ul>
+
+      <h2>Examples</h2>
+      <pre><code>npx @yuske-nakajima/zatto --no-open page.html
+npx @yuske-nakajima/zatto --port 7000
+npx @yuske-nakajima/zatto --export saved-session.json
+npx @yuske-nakajima/zatto --import saved-session.json
+npx @yuske-nakajima/zatto --stop</code></pre>
+
+      <h2>Server executable</h2>
+      <p>The package's server entry accepts <code>--port</code>, <code>--instance-id</code>, and <code>--runtime-file</code>. These options support the managed background process; ordinary use should go through the <code>zatto</code> command.</p>
+    </main>
+  </body>
+</html>

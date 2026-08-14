@@ -81,6 +81,18 @@ Session JSON contains absolute paths and may reveal usernames or other local
 information. It is intended for restoring files on the same computer, not for
 sharing.
 
+## Built-in documentation
+
+Select **Docs** on the left side of the footer to open the built-in
+documentation as the third main-area view. Documentation does not create or
+select a session entry.
+
+The navigation provides Getting started, CLI, API, and GUI/API mapping pages.
+English is selected by default. Use the language control to view each page in
+Japanese. The `doc` and `lang` URL parameters store the selected page and
+language, so reload and browser Back and Forward restore the same documentation
+view.
+
 ## Options
 
 | Option | Description |

@@ -7,7 +7,12 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.3.0";
+const expectedVersion = "0.4.0";
+const documentationLanguages = ["en", "ja"];
+const documentationPages = ["getting-started", "cli", "api", "gui-api-mapping"];
+const documentationPaths = documentationLanguages.flatMap((language) =>
+  documentationPages.map((page) => `/docs/${language}/${page}.html`),
+);
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const packageDirectory = await mkdtemp(path.join(os.tmpdir(), "zatto-pack-"));
 const consumerDirectory = await mkdtemp(
@@ -63,6 +68,7 @@ try {
     "dist/server/index.d.ts",
     "dist/server/index.js",
     "dist/web/index.html",
+    ...documentationPaths.map((docPath) => `dist/web${docPath}`),
     "package.json",
   ];
   for (const requiredPath of requiredPaths) {
@@ -131,16 +137,27 @@ try {
     `http://127.0.0.1:${runtime.port}/api/health`,
   );
   const pageResponse = await fetch(`http://127.0.0.1:${runtime.port}/`);
+  const documentationResponses = await Promise.all(
+    documentationPaths.map((documentationPath) =>
+      fetch(`http://127.0.0.1:${runtime.port}${documentationPath}`),
+    ),
+  );
   const health = await healthResponse.json();
   const session = await readFile(sessionPath, "utf8");
+  const documentationIsAvailable = documentationResponses.every(
+    (response) =>
+      response.ok &&
+      response.headers.get("content-type")?.includes("text/html"),
+  );
   if (
     !healthResponse.ok ||
     health.version !== expectedVersion ||
     !pageResponse.ok ||
+    !documentationIsAvailable ||
     !session.includes("Package fixture")
   ) {
     throw new Error(
-      "インストールしたパッケージからサーバーを起動できませんでした",
+      "インストールしたパッケージからサーバーと組み込みドキュメントを起動できませんでした",
     );
   }
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { APP_NAME, APP_VERSION } from "../meta.js";
+import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
 import { registerSearchRoute } from "./search.js";
@@ -115,6 +116,8 @@ export async function createApp(
     const body = await readFile(assetPath);
     return reply.type(contentTypeForPath(assetPath)).send(body);
   });
+
+  registerDocsRoute(app, options.frontendDistPath);
 
   app.get("/api/health", async () => {
     return {

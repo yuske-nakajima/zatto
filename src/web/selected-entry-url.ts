@@ -1,9 +1,9 @@
-const SELECTED_ENTRY_PARAMETER = "entry";
+import { activateMainView, NAVIGATION_PARAMETERS } from "./main-view-url.js";
 
 export function readSelectedEntryIdFromUrl(): string | null {
   try {
     return new URL(window.location.href).searchParams.get(
-      SELECTED_ENTRY_PARAMETER,
+      NAVIGATION_PARAMETERS.entry,
     );
   } catch {
     return null;
@@ -27,29 +27,31 @@ function writeSelectedEntryIdInUrl(
 ): void {
   try {
     const url = new URL(window.location.href);
-    const currentEntryId = url.searchParams.get(SELECTED_ENTRY_PARAMETER);
+    const currentEntryId = url.searchParams.get(NAVIGATION_PARAMETERS.entry);
     if (
       currentEntryId === selectedEntryId &&
       (!exitsSearch ||
-        (!url.searchParams.has("searchView") &&
-          !url.searchParams.has("match"))) &&
+        (!url.searchParams.has(NAVIGATION_PARAMETERS.searchView) &&
+          !url.searchParams.has(NAVIGATION_PARAMETERS.match) &&
+          !url.searchParams.has(NAVIGATION_PARAMETERS.matchText) &&
+          !url.searchParams.has(NAVIGATION_PARAMETERS.doc))) &&
       (selectedEntryId !== null ||
-        !url.searchParams.has(SELECTED_ENTRY_PARAMETER))
+        !url.searchParams.has(NAVIGATION_PARAMETERS.entry))
     ) {
       return;
     }
 
     if (selectedEntryId) {
-      url.searchParams.set(SELECTED_ENTRY_PARAMETER, selectedEntryId);
+      url.searchParams.set(NAVIGATION_PARAMETERS.entry, selectedEntryId);
     } else {
-      url.searchParams.delete(SELECTED_ENTRY_PARAMETER);
+      url.searchParams.delete(NAVIGATION_PARAMETERS.entry);
     }
     if (exitsSearch) {
-      url.searchParams.delete("searchView");
+      activateMainView(url, "preview");
     }
     if (exitsSearch || currentEntryId !== selectedEntryId) {
-      url.searchParams.delete("match");
-      url.searchParams.delete("matchText");
+      url.searchParams.delete(NAVIGATION_PARAMETERS.match);
+      url.searchParams.delete(NAVIGATION_PARAMETERS.matchText);
     }
 
     const nextUrl = `${url.pathname}${url.search}${url.hash}`;

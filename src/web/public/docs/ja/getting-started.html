@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>はじめに | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 16px/1.75 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 760px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; line-height: 1.2; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      p, li { max-width: 70ch; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; }
+      pre code { padding: 0; background: transparent; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .note { padding: 12px 16px; border-left: 4px solid #6b78d6; background: color-mix(in srgb, #6b78d6 10%, Canvas); }
+      @media (max-width: 540px) { main { padding: 24px 18px 48px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>はじめに</h1>
+      <p class="lead">複数のローカルHTMLファイルを、1つのブラウザーセッションで閲覧します。</p>
+
+      <h2>zattoを起動する</h2>
+      <p>グローバルインストールせずに起動できます。ブラウザーが開き、コマンドの終了後もローカルサーバーは動作を続けます。</p>
+      <pre><code>npx @yuske-nakajima/zatto</code></pre>
+      <p>起動と同時に、1つ以上のファイルを追加することもできます。</p>
+      <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
+
+      <h2>ファイルを追加する</h2>
+      <p>macOSでは、<strong>+ Add</strong>、<strong>Select HTML files</strong>、または<kbd>Command</kbd>+<kbd>O</kbd>を使います。既存の<code>.html</code>ファイルと<code>.htm</code>ファイルを選択できます。</p>
+      <p><strong>Add folder…</strong>では、選択フォルダー直下または子孫を含むHTMLファイルを追加できます。シンボリックリンクは無視し、登録済みパスは重複追加せず、相対パス順に追加します。</p>
+
+      <h2>閲覧・検索する</h2>
+      <ul>
+        <li>ListまたはFoldersでファイルを選ぶと、プレビューを表示します。</li>
+        <li>ファイルパネルの区切りをドラッグすると幅を変更できます。ダブルクリックすると既定の幅へ戻ります。</li>
+        <li>Searchでは、セッション内の全HTMLソースから固定文字列を検索できます。</li>
+        <li>開いているファイルの変更は、プレビューと検索結果へ反映されます。</li>
+      </ul>
+      <p class="note">エントリやフォルダー行を削除しても、zattoのセッションから外れるだけです。ディスク上のファイルやフォルダーは削除しません。</p>
+
+      <h2>セッションを保存・復元する</h2>
+      <p><strong>Export session…</strong>は、開いているファイルパスと表示順を保存します。<strong>Import session…</strong>では、一覧の全置換または未登録パスの追加を選択できます。</p>
+      <p>セッションJSONには絶対パスが入り、ローカルのアカウント名やディレクトリ名が含まれる場合があります。利用するコンピューター内で保管してください。</p>
+
+      <h2>サーバーを停止する</h2>
+      <pre><code>npx @yuske-nakajima/zatto --stop</code></pre>
+    </main>
+  </body>
+</html>

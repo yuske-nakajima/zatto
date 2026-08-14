@@ -2,11 +2,15 @@ import {
   type FocusEvent,
   type PointerEvent,
   type ReactNode,
+  type RefObject,
   useState,
 } from "react";
 
 interface StatusBarFrameProps {
   children: ReactNode;
+  isDocsVisible: boolean;
+  docsButtonRef: RefObject<HTMLButtonElement | null>;
+  onToggleDocs: () => void;
 }
 
 const DEFAULT_DESCRIPTION = "";
@@ -17,8 +21,16 @@ const DEFAULT_DESCRIPTION = "";
  * @param props - ステータスバーの対象にするアプリケーション本体
  * @returns 文脈説明を追跡するアプリケーションフレーム
  */
-export function StatusBarFrame({ children }: StatusBarFrameProps) {
+export function StatusBarFrame({
+  children,
+  isDocsVisible,
+  docsButtonRef,
+  onToggleDocs,
+}: StatusBarFrameProps) {
   const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
+  const docsDescription = isDocsVisible
+    ? "Close the built-in documentation."
+    : "Open the built-in documentation.";
 
   function handlePointerOver(event: PointerEvent<HTMLElement>): void {
     setDescription(readDescription(event.target));
@@ -45,8 +57,18 @@ export function StatusBarFrame({ children }: StatusBarFrameProps) {
       onPointerOver={handlePointerOver}
     >
       {children}
-      <section className="status-bar" aria-label="Action descriptions">
-        <span className="status-bar-left" aria-hidden="true" />
+      <section className="status-bar" aria-label="Status bar">
+        <div className="status-bar-left">
+          <button
+            ref={docsButtonRef}
+            type="button"
+            aria-pressed={isDocsVisible}
+            data-status-description={docsDescription}
+            onClick={onToggleDocs}
+          >
+            Docs
+          </button>
+        </div>
         <span className="status-bar-description">
           <span key={description}>{description}</span>
         </span>
