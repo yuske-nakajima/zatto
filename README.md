@@ -19,6 +19,8 @@ npx @yuske-nakajima/zatto file.html
 Use the file panel in the browser to switch between them.
 On desktop, drag the divider beside the file panel to adjust its width.
 Double-click the divider to restore the default width.
+In the folder view, removing a folder row removes every open session entry in
+that folder and its descendants. Files and folders remain on disk.
 
 ## Usage
 

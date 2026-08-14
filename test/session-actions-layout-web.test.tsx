@@ -25,6 +25,7 @@ const baseProps = {
   onSelect: vi.fn(),
   onCopyPath: vi.fn(),
   onRemove: vi.fn(),
+  onRemoveEntries: vi.fn(),
   onDragStart: vi.fn(),
   onDragEnter: vi.fn(),
   onDragEnd: vi.fn(),

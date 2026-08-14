@@ -710,6 +710,13 @@ button:focus-visible,
   white-space: nowrap;
 }
 
+.directory-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
 .empty-list {
   margin: auto var(--spacing-20);
   padding: var(--spacing-24) 0;

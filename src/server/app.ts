@@ -32,6 +32,10 @@ type ReorderSessionBody = {
   ids?: string[];
 };
 
+interface RemoveSessionEntriesBody {
+  ids?: unknown;
+}
+
 export async function createApp(
   options: CreateAppOptions,
 ): Promise<FastifyInstance> {
@@ -232,6 +236,25 @@ export async function createApp(
     },
   );
 
+  app.delete<{ Body: unknown }>(
+    "/api/session/entries",
+    async (request, reply) => {
+      const ids = getRemoveSessionEntryIds(request.body);
+      if (!ids) {
+        return reply.code(400).send({
+          message: "`ids` には重複のないエントリIDを1件以上指定してください",
+        });
+      }
+
+      const removed = await options.sessionStore.removeEntries(ids);
+      if (!removed) {
+        return reply.code(404).send({ message: "エントリが見つかりません" });
+      }
+      await publishSessionUpdate();
+      return reply.code(204).send();
+    },
+  );
+
   app.delete<{ Params: { id: string } }>(
     "/api/session/:id",
     async (request, reply) => {
@@ -332,6 +355,22 @@ export async function createApp(
 
 function isHtmlPath(filePath: string): boolean {
   return [".htm", ".html"].includes(path.extname(filePath).toLowerCase());
+}
+
+function getRemoveSessionEntryIds(body: unknown): string[] | undefined {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return undefined;
+  }
+  const { ids } = body as RemoveSessionEntriesBody;
+  if (
+    !Array.isArray(ids) ||
+    ids.length === 0 ||
+    ids.some((id) => typeof id !== "string" || id.length === 0) ||
+    new Set(ids).size !== ids.length
+  ) {
+    return undefined;
+  }
+  return ids;
 }
 
 export function defaultFrontendDistPath(): string {

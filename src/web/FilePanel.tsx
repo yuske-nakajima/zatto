@@ -29,6 +29,7 @@ interface FilePanelProps {
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
+  onRemoveEntries: (ids: string[]) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnter: (id: string) => void;
   onDragEnd: () => void;
@@ -57,6 +58,7 @@ export function FilePanel({
   onSelect,
   onCopyPath,
   onRemove,
+  onRemoveEntries,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -167,6 +169,7 @@ export function FilePanel({
             onSelect={onSelect}
             onCopyPath={onCopyPath}
             onRemove={onRemove}
+            onRemoveEntries={onRemoveEntries}
           />
         )}
         {entries.length === 0 && (

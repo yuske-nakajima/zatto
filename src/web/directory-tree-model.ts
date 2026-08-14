@@ -7,6 +7,37 @@ export interface DirectoryTreeNode {
   children: DirectoryTreeNode[];
 }
 
+/**
+ * Collects session entry IDs contained directly or transitively in a directory.
+ *
+ * @param node - Directory subtree whose session entries are collected
+ * @returns Entry IDs in tree traversal order
+ */
+export function collectDirectoryEntryIds(node: DirectoryTreeNode): string[] {
+  return [
+    ...node.entries.map(({ id }) => id),
+    ...node.children.flatMap(collectDirectoryEntryIds),
+  ];
+}
+
+/**
+ * Determines whether a directory subtree contains the selected session entry.
+ *
+ * @param node - Directory subtree to inspect
+ * @param selectedId - Selected session entry ID, or null when no entry is selected
+ * @returns Whether the selected entry exists in the subtree
+ */
+export function directoryContainsEntry(
+  node: DirectoryTreeNode,
+  selectedId: string | null,
+): boolean {
+  return (
+    selectedId !== null &&
+    (node.entries.some((entry) => entry.id === selectedId) ||
+      node.children.some((child) => directoryContainsEntry(child, selectedId)))
+  );
+}
+
 interface ParsedDirectory {
   root: string;
   rootKey: string;
