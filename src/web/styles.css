@@ -190,10 +190,11 @@ button:focus-visible,
 .list-heading {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  height: 42px;
-  padding: 0 var(--spacing-16);
+  min-height: 42px;
+  padding: var(--spacing-6) var(--spacing-16);
   border-bottom: 1px solid var(--color-border-default);
 }
 
@@ -234,8 +235,18 @@ button:focus-visible,
 
 .list-actions {
   display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--spacing-4);
+}
+
+.list-actions .add-button,
+.list-actions .clear-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: 10px;
 }
 
 .add-button {

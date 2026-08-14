@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { createApp, defaultFrontendDistPath } from "./app.js";
 import { runServerCommand } from "./command.js";
 import { isDirectExecution } from "./direct-execution.js";
-import { createNativeFilePicker } from "./file-picker.js";
+import {
+  createNativeDirectoryPicker,
+  createNativeFilePicker,
+} from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
 import {
   acquireServerLock,
@@ -76,6 +79,7 @@ export async function startServer(
     const createdApp = await createApp({
       sessionStore,
       pickFiles: createNativeFilePicker(),
+      pickDirectory: createNativeDirectoryPicker(),
       realtimeHub,
       frontendDistPath: defaultFrontendDistPath(),
       serverIdentity: {

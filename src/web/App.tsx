@@ -10,7 +10,7 @@ import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { requestSessionChange } from "./session-change.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
-import { useNativeFilePicker } from "./useNativeFilePicker.js";
+import { useNativeEntryPicker } from "./useNativeEntryPicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
 import { useSessionTransfer } from "./useSessionTransfer.js";
@@ -30,6 +30,7 @@ export function App() {
     errorMessage,
     setErrorMessage,
     filePicker,
+    directoryPicker,
     serverInstanceId,
     isLoaded: isSessionLoaded,
     applyImportedEntries,
@@ -39,8 +40,9 @@ export function App() {
   });
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const filePickerControl = useNativeFilePicker({
-    capability: filePicker,
+  const pickerControl = useNativeEntryPicker({
+    fileCapability: filePicker,
+    directoryCapability: directoryPicker,
     selectEntry,
     setErrorMessage,
   });
@@ -97,9 +99,7 @@ export function App() {
       `/api/session/${encodeURIComponent(id)}`,
       { method: "DELETE" },
     );
-    if (!removed) {
-      setErrorMessage("Could not remove the entry.");
-    }
+    if (!removed) setErrorMessage("Could not remove the entry.");
   }
   async function clearEntries(): Promise<void> {
     if (entries.length === 0 || !window.confirm("Remove all entries?")) {
@@ -108,9 +108,7 @@ export function App() {
     const cleared = await requestSessionChange("/api/session", {
       method: "DELETE",
     });
-    if (!cleared) {
-      setErrorMessage("Could not remove all entries.");
-    }
+    if (!cleared) setErrorMessage("Could not remove all entries.");
   }
   async function reorderEntries(targetId: string): Promise<void> {
     if (!draggedId || draggedId === targetId) {
@@ -155,7 +153,8 @@ export function App() {
               draggedId={draggedId}
               dropTargetId={dropTargetId}
               canPickFiles={filePicker.available}
-              isFilePickerOpen={filePickerControl.isOpen}
+              canPickDirectory={directoryPicker.available}
+              nativePickerPending={pickerControl.pending}
               sessionTransferPending={sessionTransfer.pending}
               isSessionLoaded={isSessionLoaded}
               isSearchVisible={search.isVisible}
@@ -171,7 +170,8 @@ export function App() {
               onDragEnter={setDropTargetId}
               onDragEnd={resetDragState}
               onDrop={reorderEntries}
-              onPickFiles={filePickerControl.open}
+              onPickFiles={pickerControl.openFiles}
+              onPickDirectory={pickerControl.openDirectory}
               onOpenSearch={search.open}
               onImportSession={sessionTransfer.importFile}
               onExportSession={sessionTransfer.exportFile}
@@ -187,11 +187,11 @@ export function App() {
             errorMessage={errorMessage}
             copyFeedback={copyFeedback}
             canPickFiles={filePicker.available}
-            isFilePickerOpen={filePickerControl.isOpen}
+            isFilePickerOpen={pickerControl.isOpen}
             onSelect={selectSearchResult}
             onToggleFilePanel={filePanel.toggleVisibility}
             onCopyPath={copyPath}
-            onPickFiles={filePickerControl.open}
+            onPickFiles={pickerControl.openFiles}
           />
         }
       />

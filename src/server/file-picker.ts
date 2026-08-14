@@ -13,12 +13,23 @@ try
 on error number -128
   return cancelToken
 end try`;
+const DIRECTORY_PICKER_SCRIPT = `set cancelToken to "${CANCELLED_OUTPUT}"
+try
+  set selectedDirectory to choose folder with prompt "Select a folder containing HTML files"
+  return POSIX path of selectedDirectory
+on error number -128
+  return cancelToken
+end try`;
 
 export type FilePickerResult =
   | { kind: "selected"; paths: string[] }
   | { kind: "cancelled" };
 
 export type PickFiles = () => Promise<FilePickerResult>;
+export type DirectoryPickerResult =
+  | { kind: "selected"; path: string }
+  | { kind: "cancelled" };
+export type PickDirectory = () => Promise<DirectoryPickerResult>;
 export type RunCommand = (
   executable: string,
   args: string[],
@@ -48,12 +59,41 @@ export function createNativeFilePicker(
   };
 }
 
+/**
+ * Creates a macOS directory picker backed by AppleScript.
+ *
+ * @param platform - Host platform that controls native picker availability
+ * @param runCommand - Command runner used to invoke AppleScript
+ * @returns A directory picker on macOS, or undefined on unsupported platforms
+ * @throws When AppleScript cannot be executed
+ */
+export function createNativeDirectoryPicker(
+  platform: NodeJS.Platform = process.platform,
+  runCommand: RunCommand = runExecutable,
+): PickDirectory | undefined {
+  if (platform !== "darwin") {
+    return undefined;
+  }
+
+  return async () => {
+    const stdout = await runCommand("/usr/bin/osascript", [
+      "-e",
+      DIRECTORY_PICKER_SCRIPT,
+    ]);
+    const output = stdout.endsWith("\n") ? stdout.slice(0, -1) : stdout;
+    if (output === CANCELLED_OUTPUT) {
+      return { kind: "cancelled" };
+    }
+    return { kind: "selected", path: output };
+  };
+}
+
 function runExecutable(executable: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(executable, args, { encoding: "utf8" }, (error, stdout) => {
       if (error) {
         reject(
-          new Error("ファイル選択ダイアログを開けませんでした", {
+          new Error("ネイティブ選択ダイアログを開けませんでした", {
             cause: error,
           }),
         );

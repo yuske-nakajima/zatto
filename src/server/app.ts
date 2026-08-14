@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { APP_NAME, APP_VERSION } from "../meta.js";
-import type { PickFiles } from "./file-picker.js";
+import type { PickDirectory, PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
 import { registerSearchRoute } from "./search.js";
 import { fileExists, type Session, type SessionStore } from "./session.js";
 import { registerSessionExchangeRoutes } from "./session-exchange-routes.js";
+import { registerSessionPickerRoutes } from "./session-picker-routes.js";
 import { contentTypeForPath, readAsset, renderEntryHtml } from "./view.js";
 
 type CreateAppOptions = {
@@ -17,6 +18,7 @@ type CreateAppOptions = {
   frontendDistPath?: string;
   realtimeHub?: RealtimeHub;
   pickFiles?: PickFiles;
+  pickDirectory?: PickDirectory;
   onSessionChanged?: (session: Session) => Promise<void> | void;
   serverIdentity?: {
     instanceId: string;
@@ -41,7 +43,6 @@ export async function createApp(
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const realtimeHub = options.realtimeHub ?? new RealtimeHub();
-  let filePickerActive = false;
   await app.register(websocket);
 
   app.get("/ws", { websocket: true }, (socket) => {
@@ -136,6 +137,13 @@ export async function createApp(
               instanceId: options.serverIdentity.instanceId,
             }
           : { available: false },
+      directoryPicker:
+        options.pickDirectory && options.serverIdentity
+          ? {
+              available: true,
+              instanceId: options.serverIdentity.instanceId,
+            }
+          : { available: false },
     };
   });
 
@@ -146,6 +154,14 @@ export async function createApp(
   });
 
   registerSearchRoute(app, options.sessionStore);
+
+  registerSessionPickerRoutes(app, {
+    sessionStore: options.sessionStore,
+    pickFiles: options.pickFiles,
+    pickDirectory: options.pickDirectory,
+    serverIdentity: options.serverIdentity,
+    publishSessionUpdate,
+  });
 
   app.post<{ Body: AddSessionBody }>(
     "/api/session/add",
@@ -175,44 +191,6 @@ export async function createApp(
       });
     },
   );
-
-  app.post("/api/session/pick", async (request, reply) => {
-    if (
-      !options.serverIdentity ||
-      request.headers["x-zatto-instance-id"] !==
-        options.serverIdentity.instanceId
-    ) {
-      return reply.code(409).send({ message: "サーバー識別子が一致しません" });
-    }
-    if (!options.pickFiles) {
-      return reply.code(501).send({ message: "ファイル選択を利用できません" });
-    }
-    if (filePickerActive) {
-      return reply
-        .code(409)
-        .send({ message: "ファイル選択ダイアログはすでに開いています" });
-    }
-
-    filePickerActive = true;
-    try {
-      const result = await options.pickFiles();
-      if (result.kind === "cancelled") {
-        return reply.code(200).send({ cancelled: true, added: [] });
-      }
-      const htmlPaths = result.paths.filter(isHtmlPath);
-      const addedEntries = await options.sessionStore.addEntries(htmlPaths);
-      if (addedEntries.length > 0) {
-        await publishSessionUpdate();
-      }
-      return reply.code(201).send({
-        cancelled: false,
-        added: addedEntries,
-        session: options.sessionStore.getSession(),
-      });
-    } finally {
-      filePickerActive = false;
-    }
-  });
 
   app.patch<{ Body: ReorderSessionBody }>(
     "/api/session/order",
@@ -351,10 +329,6 @@ export async function createApp(
   }
 
   return app;
-}
-
-function isHtmlPath(filePath: string): boolean {
-  return [".htm", ".html"].includes(path.extname(filePath).toLowerCase());
 }
 
 function getRemoveSessionEntryIds(body: unknown): string[] | undefined {

@@ -1,10 +1,15 @@
 import type { DragEvent, RefObject } from "react";
 import type { Entry } from "../server/session.js";
+import { AddEntryControls } from "./AddEntryControls.js";
 import zattoLogo from "./assets/zatto-logo-black.png";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import type { FilePanelView } from "./file-panel-model.js";
 import { SessionActions } from "./SessionActions.js";
+import type {
+  DirectoryPickerMode,
+  NativePickerPending,
+} from "./useNativeEntryPicker.js";
 import type {
   SessionExportOrder,
   SessionImportMode,
@@ -18,7 +23,8 @@ interface FilePanelProps {
   draggedId: string | null;
   dropTargetId: string | null;
   canPickFiles: boolean;
-  isFilePickerOpen: boolean;
+  canPickDirectory: boolean;
+  nativePickerPending: NativePickerPending;
   sessionTransferPending: SessionTransferPending;
   isSessionLoaded: boolean;
   isSearchVisible: boolean;
@@ -35,6 +41,7 @@ interface FilePanelProps {
   onDragEnd: () => void;
   onDrop: (id: string) => void;
   onPickFiles: () => void;
+  onPickDirectory: (mode: DirectoryPickerMode) => void;
   onOpenSearch: () => void;
   onImportSession: (file: File, mode: SessionImportMode) => Promise<void>;
   onExportSession: (order: SessionExportOrder) => void;
@@ -47,7 +54,8 @@ export function FilePanel({
   draggedId,
   dropTargetId,
   canPickFiles,
-  isFilePickerOpen,
+  canPickDirectory,
+  nativePickerPending,
   sessionTransferPending,
   isSessionLoaded,
   isSearchVisible,
@@ -64,6 +72,7 @@ export function FilePanel({
   onDragEnd,
   onDrop,
   onPickFiles,
+  onPickDirectory,
   onOpenSearch,
   onImportSession,
   onExportSession,
@@ -80,19 +89,14 @@ export function FilePanel({
         <span className="entry-count">
           ENTRIES <strong>{entries.length}</strong>
         </span>
-        <span className="list-actions">
-          {canPickFiles && (
-            <button
-              className="add-button"
-              data-status-description="Add HTML files to this session."
-              type="button"
-              aria-label="Add HTML files"
-              disabled={isFilePickerOpen}
-              onClick={onPickFiles}
-            >
-              {isFilePickerOpen ? "Opening…" : "+ Add"}
-            </button>
-          )}
+        <div className="list-actions">
+          <AddEntryControls
+            canPickFiles={canPickFiles}
+            canPickDirectory={canPickDirectory}
+            pending={nativePickerPending}
+            onPickFiles={onPickFiles}
+            onPickDirectory={onPickDirectory}
+          />
           <button
             className="clear-button"
             data-status-description="Remove all files from this session."
@@ -103,7 +107,7 @@ export function FilePanel({
           >
             Clear All
           </button>
-        </span>
+        </div>
       </div>
       <fieldset className="view-switcher">
         <legend className="visually-hidden">File panel view</legend>
