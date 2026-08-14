@@ -4,6 +4,7 @@ import type { CopyFeedback } from "./copy-feedback.js";
 import { prepareEntryDrag } from "./entry-drag.js";
 import { FilePanel } from "./FilePanel.js";
 import { moveEntry } from "./file-panel-model.js";
+import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
@@ -130,12 +131,10 @@ export function App() {
       setErrorMessage("Could not reorder the entries.");
     }
   }
-
   function resetDragState(): void {
     setDraggedId(null);
     setDropTargetId(null);
   }
-
   function handleDragStart(
     event: DragEvent<HTMLButtonElement>,
     id: string,
@@ -143,7 +142,6 @@ export function App() {
     prepareEntryDrag(event, id);
     setDraggedId(id);
   }
-
   return (
     <StatusBarFrame>
       <ResizableLayout
@@ -168,6 +166,7 @@ export function App() {
               onSelect={selectEntry}
               onCopyPath={copyPath}
               onRemove={removeEntry}
+              onRemoveEntries={createFolderSessionRemover(setErrorMessage)}
               onDragStart={handleDragStart}
               onDragEnter={setDropTargetId}
               onDragEnd={resetDragState}

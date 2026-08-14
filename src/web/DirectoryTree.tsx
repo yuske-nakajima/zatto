@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import type { Entry } from "../server/session.js";
 import {
   buildDirectoryTree,
+  collectDirectoryEntryIds,
   type DirectoryTreeNode,
+  directoryContainsEntry,
 } from "./directory-tree-model.js";
 import { EntryRow } from "./EntryRow.js";
 import { Icon } from "./icons.js";
@@ -13,18 +15,15 @@ interface DirectoryTreeProps {
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
+  onRemoveEntries: (ids: string[]) => void;
 }
 
-interface DirectoryBranchProps {
+type DirectoryBranchProps = Omit<DirectoryTreeProps, "entries"> & {
   node: DirectoryTreeNode;
-  selectedId: string | null;
   collapsedDirectories: Set<string>;
   isRoot?: boolean;
   onToggle: (directory: string) => void;
-  onSelect: (id: string) => void;
-  onCopyPath: (path: string) => void;
-  onRemove: (id: string) => void;
-}
+};
 
 const COLLAPSED_DIRECTORY_PATHS_KEY = "zatto:collapsed-directory-paths";
 
@@ -34,6 +33,7 @@ export function DirectoryTree({
   onSelect,
   onCopyPath,
   onRemove,
+  onRemoveEntries,
 }: DirectoryTreeProps) {
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(
     readCollapsedDirectoryPaths,
@@ -69,6 +69,7 @@ export function DirectoryTree({
             onSelect={onSelect}
             onCopyPath={onCopyPath}
             onRemove={onRemove}
+            onRemoveEntries={onRemoveEntries}
           />
         ))}
       </ul>
@@ -116,9 +117,11 @@ function DirectoryBranch({
   onSelect,
   onCopyPath,
   onRemove,
+  onRemoveEntries,
 }: DirectoryBranchProps) {
   const isExpanded = !collapsedDirectories.has(node.directory);
-  const containsSelection = nodeContainsEntry(node, selectedId);
+  const containsSelection = directoryContainsEntry(node, selectedId);
+  const entryIds = collectDirectoryEntryIds(node);
   const toggleLabel = `${isExpanded ? "Collapse" : "Expand"} directory ${node.directory}`;
   const branchClassName = [
     "directory-branch",
@@ -143,15 +146,26 @@ function DirectoryBranch({
           <Icon name="folder" size={14} />
           <strong>{node.name}</strong>
         </button>
-        <button
-          className="directory-path-copy icon-button"
-          data-status-description="Copy this folder path."
-          type="button"
-          aria-label={`Copy directory path ${node.directory}`}
-          onClick={() => onCopyPath(node.directory)}
-        >
-          <Icon name="clipboardCopy" size={12} />
-        </button>
+        <span className="directory-actions">
+          <button
+            className="directory-path-copy icon-button"
+            data-status-description="Copy this folder path."
+            type="button"
+            aria-label={`Copy directory path ${node.directory}`}
+            onClick={() => onCopyPath(node.directory)}
+          >
+            <Icon name="clipboardCopy" size={12} />
+          </button>
+          <button
+            className="directory-remove icon-button"
+            data-status-description="Remove files in this folder and its subfolders from this session."
+            type="button"
+            aria-label={`Remove files in folder ${node.directory} from the session (${entryIds.length})`}
+            onClick={() => onRemoveEntries(entryIds)}
+          >
+            <Icon name="trash" size={12} />
+          </button>
+        </span>
       </div>
       {isExpanded && (
         <ul className="directory-children">
@@ -176,21 +190,11 @@ function DirectoryBranch({
               onSelect={onSelect}
               onCopyPath={onCopyPath}
               onRemove={onRemove}
+              onRemoveEntries={onRemoveEntries}
             />
           ))}
         </ul>
       )}
     </li>
-  );
-}
-
-function nodeContainsEntry(
-  node: DirectoryTreeNode,
-  selectedId: string | null,
-): boolean {
-  return (
-    selectedId !== null &&
-    (node.entries.some((entry) => entry.id === selectedId) ||
-      node.children.some((child) => nodeContainsEntry(child, selectedId)))
   );
 }

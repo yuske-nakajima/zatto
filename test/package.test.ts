@@ -33,7 +33,7 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("0.1.7");
+    expect(manifest.version).toBe("0.2.0");
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);

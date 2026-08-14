@@ -156,6 +156,36 @@ export class SessionStore {
     return true;
   }
 
+  /**
+   * Removes a complete set of known entries in one persisted session update.
+   *
+   * @param ids - Unique, non-empty entry IDs to remove
+   * @returns Whether every ID was valid and the entries were removed
+   * @throws When session persistence fails
+   */
+  async removeEntries(ids: string[]): Promise<boolean> {
+    if (
+      ids.length === 0 ||
+      ids.some((id) => id.length === 0) ||
+      new Set(ids).size !== ids.length
+    ) {
+      return false;
+    }
+    const entriesById = new Set(this.session.entries.map((entry) => entry.id));
+    if (ids.some((id) => !entriesById.has(id))) {
+      return false;
+    }
+    const idsToRemove = new Set(ids);
+    const nextSession = {
+      entries: this.session.entries.filter(
+        (entry) => !idsToRemove.has(entry.id),
+      ),
+    };
+    await this.persistSession(nextSession);
+    this.session = nextSession;
+    return true;
+  }
+
   async reorderEntries(ids: string[]): Promise<boolean> {
     if (
       ids.length !== this.session.entries.length ||
