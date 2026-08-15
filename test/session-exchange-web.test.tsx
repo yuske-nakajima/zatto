@@ -196,7 +196,11 @@ describe("session exchange web UI", () => {
       "Could not import the session.",
     );
     expect(screen.getByTitle("Alpha preview")).toBeTruthy();
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.filter(([input]) => input !== "/api/agent/context"),
+      ).toHaveLength(1),
+    );
   });
 
   test("merge後も存在する選択entryと検索状態と履歴を維持する", async () => {

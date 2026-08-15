@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { APP_NAME, APP_VERSION } from "../meta.js";
+import {
+  AgentContextStore,
+  registerAgentContextRoutes,
+} from "./agent-context.js";
 import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
@@ -21,6 +25,7 @@ type CreateAppOptions = {
   pickFiles?: PickFiles;
   pickDirectory?: PickDirectory;
   onSessionChanged?: (session: Session) => Promise<void> | void;
+  agentContextStore?: AgentContextStore;
   serverIdentity?: {
     instanceId: string;
     protocolVersion: number;
@@ -118,6 +123,12 @@ export async function createApp(
   });
 
   registerDocsRoute(app, options.frontendDistPath);
+
+  registerAgentContextRoutes(
+    app,
+    options.sessionStore,
+    options.agentContextStore ?? new AgentContextStore(),
+  );
 
   app.get("/api/health", async () => {
     return {

@@ -93,6 +93,28 @@ Japanese. The `doc` and `lang` URL parameters store the selected page and
 language, so reload and browser Back and Forward restore the same documentation
 view.
 
+## AI agent interface
+
+An AI agent can discover the paths open in a running `zatto` viewer without
+receiving the HTML contents automatically.
+
+```bash
+zatto agent usage
+zatto agent context --json
+```
+
+The context contains the active file path, ordered open file paths, and the
+current `preview`, `search`, or `docs` view. The command reports an error when
+the viewer is not running and never starts it automatically.
+
+`zatto` also provides a generic read-only MCP server over standard input and
+output. Use `zatto mcp usage` to print its product-independent connection
+description, or configure an MCP client to run `zatto mcp serve`. Client setup
+and automatic configuration changes are intentionally outside `zatto`.
+
+Local paths can contain private information. Treat HTML as untrusted input,
+and obtain user approval before sending file contents to an external service.
+
 ## Options
 
 | Option | Description |

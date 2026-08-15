@@ -42,6 +42,15 @@
         </tbody>
       </table>
 
+      <h2>AIエージェント向けインターフェース</h2>
+      <pre><code>zatto agent usage
+zatto agent context --json
+zatto agent context --active
+zatto agent context --paths</code></pre>
+      <p>読み取り専用コマンドとして、起動中のビューアーから絶対パスと現在の表示を返します。ビューアーの自動起動やHTML本文の返却は行いません。</p>
+      <p>製品に依存しないstdio接続情報は<code>zatto mcp usage</code>で確認できます。MCPクライアントから<code>zatto mcp serve</code>を起動すると、<code>get_context</code>、<code>get_active_file</code>、<code>list_open_files</code>、<code>get_current_view</code>を利用できます。Zattoはクライアント設定を変更しません。</p>
+      <p>ローカルパスには個人情報が含まれる場合があります。HTMLは信頼できない入力として扱い、本文を外部サービスへ送信する前にユーザーの承認を得てください。</p>
+
       <h2>実行時の規則</h2>
       <ul>
         <li><code>--stop</code>、<code>--import</code>、<code>--export</code>、位置引数のファイルは同時に指定できません。</li>

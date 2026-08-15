@@ -60,6 +60,12 @@
       <h3><code class="operation">GET /api/search</code></h3>
       <p>The <code>q</code> query parameter is a case-insensitive fixed string matched in HTML source. Empty text returns no matches. Queries are limited to 256 UTF-16 code units; file, match, and response limits may set <code>truncated</code>.</p>
 
+      <h2>AI agent context</h2>
+      <h3><code class="operation">GET /api/agent/context</code></h3>
+      <p>Returns schema version 1 with the selected absolute path or <code>null</code>, every open absolute path in display order, and the current <code>preview</code>, <code>search</code>, or <code>docs</code> view. It never returns HTML contents.</p>
+      <h3><code class="operation">PUT /api/agent/context</code></h3>
+      <p>The browser reports <code>{ "activeEntryId": string | null, "view": ... }</code>. This volatile state is not persisted or included in session exchange files.</p>
+
       <h2>Preview and realtime</h2>
       <table>
         <tbody>

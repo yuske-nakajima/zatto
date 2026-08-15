@@ -60,6 +60,12 @@
       <h3><code class="operation">GET /api/search</code></h3>
       <p><code>q</code>の大文字・小文字を区別しない固定文字列をHTMLソースから検索します。空文字は結果なしです。クエリーはUTF-16で256コード単位までで、ファイル、件数、応答量の上限到達時は<code>truncated</code>を返します。</p>
 
+      <h2>AIエージェント向けコンテキスト</h2>
+      <h3><code class="operation">GET /api/agent/context</code></h3>
+      <p>schema version 1として、選択中の絶対パスまたは<code>null</code>、表示順の全絶対パス、現在の<code>preview</code>、<code>search</code>、<code>docs</code>表示を返します。HTML本文は返しません。</p>
+      <h3><code class="operation">PUT /api/agent/context</code></h3>
+      <p>ブラウザーが<code>{ "activeEntryId": string | null, "view": ... }</code>を通知します。この一時状態は永続化せず、セッション交換JSONにも含めません。</p>
+
       <h2>プレビューとリアルタイム更新</h2>
       <table>
         <tbody>

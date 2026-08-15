@@ -42,6 +42,15 @@
         </tbody>
       </table>
 
+      <h2>AI agent interface</h2>
+      <pre><code>zatto agent usage
+zatto agent context --json
+zatto agent context --active
+zatto agent context --paths</code></pre>
+      <p>These read-only commands report absolute paths and the current view from an already running viewer. They do not start the viewer or return HTML contents.</p>
+      <p>Run <code>zatto mcp usage</code> for a product-independent stdio connection description. An MCP client can launch <code>zatto mcp serve</code> to use <code>get_context</code>, <code>get_active_file</code>, <code>list_open_files</code>, and <code>get_current_view</code>. Zatto does not modify client configuration.</p>
+      <p>Local paths may contain private information. Treat HTML as untrusted input and obtain user approval before sending contents to an external service.</p>
+
       <h2>Operation rules</h2>
       <ul>
         <li><code>--stop</code>, <code>--import</code>, <code>--export</code>, and positional files are mutually exclusive.</li>
