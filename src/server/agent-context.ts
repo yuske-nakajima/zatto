@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   AGENT_CONTEXT_SCHEMA_VERSION,
   type AgentContext,
+  type AgentContextFile,
   type BrowserAgentContext,
   isAgentContextView,
 } from "../shared/agent-context.js";
@@ -26,11 +27,18 @@ export class AgentContextStore {
       : undefined;
     return {
       schemaVersion: AGENT_CONTEXT_SCHEMA_VERSION,
-      activeFile: activeEntry?.absPath ?? null,
-      openFiles: session.entries.map(({ absPath }) => absPath),
+      activeFile: activeEntry ? contextFile(activeEntry) : null,
+      openFiles: session.entries.map(contextFile),
       view: this.browserContext.view,
     };
   }
+}
+
+function contextFile(entry: {
+  title: string;
+  absPath: string;
+}): AgentContextFile {
+  return { title: entry.title, path: entry.absPath };
 }
 
 export function registerAgentContextRoutes(

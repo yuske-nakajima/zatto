@@ -7,12 +7,18 @@ import {
 } from "../src/cli/agent-command.js";
 import { runCli } from "../src/cli/index.js";
 import { MCP_USAGE } from "../src/mcp/server.js";
-import type { AgentContext } from "../src/shared/agent-context.js";
+import {
+  type AgentContext,
+  parseAgentContext,
+} from "../src/shared/agent-context.js";
 
 const context: AgentContext = {
   schemaVersion: 1,
-  activeFile: "/workspace/active.html",
-  openFiles: ["/workspace/active.html", "/workspace/reference.html"],
+  activeFile: { title: "Active page", path: "/workspace/active.html" },
+  openFiles: [
+    { title: "Active page", path: "/workspace/active.html" },
+    { title: "Reference", path: "/workspace/reference.html" },
+  ],
   view: "preview",
 };
 
@@ -55,7 +61,7 @@ describe("Agent CLI", () => {
   test.each([
     [
       ["context"],
-      "Zatto Agent Context\nView: preview\nActive file: /workspace/active.html\nOpen files:\n- /workspace/active.html\n- /workspace/reference.html",
+      "Zatto Agent Context\nView: preview\nActive file: Active page — /workspace/active.html\nOpen files:\n- Active page — /workspace/active.html\n- Reference — /workspace/reference.html",
     ],
     [["context", "--json"], JSON.stringify(context, null, 2)],
     [["context", "--active"], "/workspace/active.html"],
@@ -116,6 +122,22 @@ describe("Agent CLI", () => {
 
     expect(exitCode).toBe(1);
     expect(stderr).toHaveBeenCalledWith("zatto サーバーは起動していません");
+  });
+
+  test("titleとpathを持たない旧形式のコンテキストを拒否する", () => {
+    expect(parseAgentContext(context)).toEqual(context);
+    expect(() =>
+      parseAgentContext({
+        ...context,
+        openFiles: ["/workspace/active.html"],
+      }),
+    ).toThrow("不正なAgentコンテキスト");
+    expect(() =>
+      parseAgentContext({
+        ...context,
+        activeFile: { title: "", path: "/workspace/active.html" },
+      }),
+    ).toThrow("不正なAgentコンテキスト");
   });
 
   test.each([

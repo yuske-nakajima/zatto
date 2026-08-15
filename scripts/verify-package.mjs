@@ -166,7 +166,8 @@ try {
     agentContext.activeFile !== null ||
     agentContext.view !== "preview" ||
     agentContext.openFiles.length !== 1 ||
-    agentContext.openFiles[0] !== fixturePath
+    agentContext.openFiles[0]?.title !== "Package fixture" ||
+    agentContext.openFiles[0]?.path !== fixturePath
   ) {
     throw new Error(
       "インストールしたCLIからAgentコンテキストを取得できませんでした",

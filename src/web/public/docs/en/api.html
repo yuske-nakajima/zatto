@@ -62,7 +62,7 @@
 
       <h2>AI agent context</h2>
       <h3><code class="operation">GET /api/agent/context</code></h3>
-      <p>Returns schema version 1 with the selected absolute path or <code>null</code>, every open absolute path in display order, and the current <code>preview</code>, <code>search</code>, or <code>docs</code> view. It never returns HTML contents.</p>
+      <p>Returns schema version 1 with the selected file or <code>null</code>, every open file in display order, and the current <code>preview</code>, <code>search</code>, or <code>docs</code> view. Each file has an untrusted <code>title</code> for candidate selection and an authoritative absolute <code>path</code>. Outside the preview view, the active file remains the session selection and may not be visible. The endpoint never returns HTML contents.</p>
       <h3><code class="operation">PUT /api/agent/context</code></h3>
       <p>The browser reports <code>{ "activeEntryId": string | null, "view": ... }</code>. This volatile state is not persisted or included in session exchange files.</p>
 

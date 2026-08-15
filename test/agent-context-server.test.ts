@@ -34,8 +34,14 @@ describe("AIエージェント向けコンテキストAPI", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       schemaVersion: 1,
-      activeFile: entries[1]?.absPath,
-      openFiles: entries.map(({ absPath }) => absPath),
+      activeFile: {
+        title: entries[1]?.title,
+        path: entries[1]?.absPath,
+      },
+      openFiles: entries.map(({ title, absPath }) => ({
+        title,
+        path: absPath,
+      })),
       view: "search",
     });
     await app.close();
@@ -52,7 +58,10 @@ describe("AIエージェント向けコンテキストAPI", () => {
     expect(response.json()).toEqual({
       schemaVersion: 1,
       activeFile: null,
-      openFiles: entries.map(({ absPath }) => absPath),
+      openFiles: entries.map(({ title, absPath }) => ({
+        title,
+        path: absPath,
+      })),
       view: "preview",
     });
     await app.close();
@@ -92,7 +101,12 @@ describe("AIエージェント向けコンテキストAPI", () => {
 
     expect(response.json()).toMatchObject({
       activeFile: null,
-      openFiles: [entries[1]?.absPath],
+      openFiles: [
+        {
+          title: entries[1]?.title,
+          path: entries[1]?.absPath,
+        },
+      ],
       view: "docs",
     });
     await app.close();

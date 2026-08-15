@@ -5,8 +5,11 @@ import type { AgentContext } from "../src/shared/agent-context.js";
 
 const context: AgentContext = {
   schemaVersion: 1,
-  activeFile: "/workspace/active.html",
-  openFiles: ["/workspace/active.html", "/workspace/reference.html"],
+  activeFile: { title: "Active page", path: "/workspace/active.html" },
+  openFiles: [
+    { title: "Active page", path: "/workspace/active.html" },
+    { title: "Reference", path: "/workspace/reference.html" },
+  ],
   view: "search",
 };
 
@@ -23,16 +26,11 @@ describe("Zatto MCP server", () => {
       transport: "stdio",
       command: "zatto",
       args: ["mcp", "serve"],
-      tools: [
-        "get_context",
-        "get_active_file",
-        "list_open_files",
-        "get_current_view",
-      ],
+      tools: ["get_context", "get_active_file", "list_open_files"],
     });
   });
 
-  test("4つの読み取り専用ツールが共通コンテキストを返す", async () => {
+  test("3つの読み取り専用ツールが用途別に共通コンテキストを返す", async () => {
     const { client } = await connect(async () => context);
     const tools = await client.listTools();
 
@@ -45,6 +43,15 @@ describe("Zatto MCP server", () => {
         openWorldHint: false,
       });
     }
+    expect(
+      tools.tools.find(({ name }) => name === "get_context")?.description,
+    ).toContain("selection, file collection, and current view");
+    expect(
+      tools.tools.find(({ name }) => name === "get_active_file")?.description,
+    ).toContain("without exposing the complete file list");
+    expect(
+      tools.tools.find(({ name }) => name === "list_open_files")?.description,
+    ).toContain("identify an ambiguous target");
     await expect(toolResult(client, "get_context")).resolves.toEqual(context);
     await expect(toolResult(client, "get_active_file")).resolves.toEqual({
       schemaVersion: 1,
@@ -53,10 +60,6 @@ describe("Zatto MCP server", () => {
     await expect(toolResult(client, "list_open_files")).resolves.toEqual({
       schemaVersion: 1,
       openFiles: context.openFiles,
-    });
-    await expect(toolResult(client, "get_current_view")).resolves.toEqual({
-      schemaVersion: 1,
-      view: context.view,
     });
   });
 
