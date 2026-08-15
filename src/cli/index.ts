@@ -4,7 +4,10 @@ import { parseArgs } from "node:util";
 import { APP_VERSION } from "../meta.js";
 import { DEFAULT_PORT } from "../server/index.js";
 import { resolveRuntimeFilePath } from "../server/runtime.js";
+import { runAgentCommand } from "./agent-command.js";
+import { createAgentContextReader } from "./agent-context-client.js";
 import { HELP_TEXT } from "./help.js";
+import { runMcpCommand } from "./mcp-command.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
 import {
   addFiles,
@@ -107,6 +110,21 @@ export async function runCli(
   overrides: Partial<CliDependencies> = {},
 ): Promise<number> {
   const dependencies = { ...defaultDependencies, ...overrides };
+  const readContext = createAgentContextReader(dependencies);
+  if (args[0] === "agent") {
+    return runAgentCommand(args.slice(1), {
+      readContext,
+      stdout: dependencies.stdout,
+      stderr: dependencies.stderr,
+    });
+  }
+  if (args[0] === "mcp") {
+    return runMcpCommand(args.slice(1), {
+      readContext,
+      stdout: dependencies.stdout,
+      stderr: dependencies.stderr,
+    });
+  }
   let options: CliOptions;
 
   try {

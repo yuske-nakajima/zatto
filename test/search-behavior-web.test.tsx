@@ -137,6 +137,9 @@ describe("HTML search behavior", () => {
         if (input === "/api/session") {
           return Response.json({ entries });
         }
+        if (input === "/api/agent/context") {
+          return new Response(null, { status: 204 });
+        }
         searchCalls += 1;
         return Response.json(
           searchCalls === 1

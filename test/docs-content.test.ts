@@ -15,6 +15,8 @@ const HTTP_OPERATIONS = [
   "GET /api/session/export",
   "PUT /api/session",
   "GET /api/search",
+  "GET /api/agent/context",
+  "PUT /api/agent/context",
   "POST /api/session/pick",
   "POST /api/session/pick-directory",
   "POST /api/session/add",
@@ -40,6 +42,7 @@ const GUI_OPERATIONS = [
   "DELETE /api/session",
   "PUT /api/session",
   "GET /api/session/export",
+  "PUT /api/agent/context",
 ] as const;
 
 describe("組み込みドキュメント本文", () => {
@@ -70,8 +73,8 @@ describe("組み込みドキュメント本文", () => {
     }
   });
 
-  test("APIページが全19 HTTP routesとWebSocketを記載する", async () => {
-    expect(HTTP_OPERATIONS).toHaveLength(19);
+  test("APIページが全21 HTTP routesとWebSocketを記載する", async () => {
+    expect(HTTP_OPERATIONS).toHaveLength(21);
     for (const locale of LOCALES) {
       const html = await readDoc(locale, "api");
       const codeValues = readCodeValues(html);

@@ -11,7 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-export const SERVER_PROTOCOL_VERSION = 1;
+export const SERVER_PROTOCOL_VERSION = 2;
 export const DEFAULT_RUNTIME_FILE = path.join(
   os.homedir(),
   ".config",

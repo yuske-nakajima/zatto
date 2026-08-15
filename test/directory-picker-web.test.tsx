@@ -141,6 +141,9 @@ describe("directory picker", () => {
     let resolveDirectory: ((response: Response) => void) | undefined;
     const fetchMock = vi.fn((input) => {
       if (input === "/api/session") return Promise.resolve(sessionResponse());
+      if (input === "/api/agent/context") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
       return new Promise<Response>((resolve) => {
         resolveDirectory = resolve;
       });
@@ -152,14 +155,14 @@ describe("directory picker", () => {
 
     await user.click(screen.getByRole("button", { name: "Add folder" }));
     await user.click(screen.getByRole("button", { name: "Choose folder" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(nonContextRequests(fetchMock)).toHaveLength(2));
     expect(
       screen
         .getByRole("button", { name: "Add HTML files" })
         .hasAttribute("disabled"),
     ).toBe(true);
     await user.keyboard("{Meta>}o{/Meta}");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(nonContextRequests(fetchMock)).toHaveLength(2);
 
     resolveDirectory?.(Response.json({ cancelled: true, added: [] }));
     await waitFor(() =>
@@ -192,3 +195,9 @@ describe("directory picker", () => {
     );
   });
 });
+
+function nonContextRequests(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.filter(
+    ([input]) => input !== "/api/agent/context",
+  );
+}

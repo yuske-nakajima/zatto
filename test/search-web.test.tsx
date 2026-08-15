@@ -128,6 +128,9 @@ describe("HTML search view", () => {
       if (input === "/api/session") {
         return Response.json({ entries });
       }
+      if (input === "/api/agent/context") {
+        return new Response(null, { status: 204 });
+      }
       searchAttempt += 1;
       if (searchAttempt === 2) {
         throw new Error("read failed");

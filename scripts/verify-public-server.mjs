@@ -60,7 +60,7 @@ export async function verifyPublicServer(options) {
       health.name !== "zatto" ||
       health.version !== options.expectedVersion ||
       health.instanceId !== instanceId ||
-      health.protocolVersion !== 1
+      health.protocolVersion !== 2
     ) {
       throw new Error("公開サーバーエントリーのhealthが不正です");
     }

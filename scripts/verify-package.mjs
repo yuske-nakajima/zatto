@@ -7,7 +7,7 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.4.0";
+const expectedVersion = "0.5.0";
 const documentationLanguages = ["en", "ja"];
 const documentationPages = ["getting-started", "cli", "api", "gui-api-mapping"];
 const documentationPaths = documentationLanguages.flatMap((language) =>
@@ -65,6 +65,7 @@ try {
     "README.ja.md",
     "bin/zatto.js",
     "dist/cli/index.js",
+    "dist/mcp/server.js",
     "dist/server/index.d.ts",
     "dist/server/index.js",
     "dist/web/index.html",
@@ -113,6 +114,24 @@ try {
   if (!helpOutput.includes("Usage: zatto")) {
     throw new Error("インストールしたCLIからヘルプを取得できませんでした");
   }
+  const { stdout: agentUsageOutput } = await execFileAsync(
+    installedBin,
+    ["agent", "usage"],
+    { cwd: consumerDirectory, timeout: 10_000 },
+  );
+  const { stdout: mcpUsageOutput } = await execFileAsync(
+    installedBin,
+    ["mcp", "usage"],
+    { cwd: consumerDirectory, timeout: 10_000 },
+  );
+  if (
+    !agentUsageOutput.includes("zatto agent context --json") ||
+    JSON.parse(mcpUsageOutput).transport !== "stdio"
+  ) {
+    throw new Error(
+      "インストールしたCLIからAgentインターフェースを取得できませんでした",
+    );
+  }
 
   console.log("インストールしたCLIからサーバーを起動します");
   const fixturePath = path.join(consumerDirectory, "fixture.html");
@@ -131,6 +150,29 @@ try {
     },
   );
   serverStarted = true;
+
+  const { stdout: agentContextOutput } = await execFileAsync(
+    installedBin,
+    ["agent", "context", "--json"],
+    {
+      cwd: consumerDirectory,
+      env: serverEnvironment,
+      timeout: 10_000,
+    },
+  );
+  const agentContext = JSON.parse(agentContextOutput);
+  if (
+    agentContext.schemaVersion !== 1 ||
+    agentContext.activeFile !== null ||
+    agentContext.view !== "preview" ||
+    agentContext.openFiles.length !== 1 ||
+    agentContext.openFiles[0]?.title !== "Package fixture" ||
+    agentContext.openFiles[0]?.path !== fixturePath
+  ) {
+    throw new Error(
+      "インストールしたCLIからAgentコンテキストを取得できませんでした",
+    );
+  }
 
   const runtime = JSON.parse(await readFile(runtimePath, "utf8"));
   const healthResponse = await fetch(

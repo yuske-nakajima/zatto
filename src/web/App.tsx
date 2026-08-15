@@ -7,6 +7,7 @@ import { ResizableLayout } from "./ResizableLayout.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { requestSessionChange } from "./session-change.js";
+import { useAgentContextSync } from "./useAgentContextSync.js";
 import { useDocsNavigation } from "./useDocsNavigation.js";
 import { useEntryReordering } from "./useEntryReordering.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
@@ -59,6 +60,16 @@ export function App() {
     setErrorMessage,
   });
   const selectedEntry = entries.find(({ id }) => id === selectedId) ?? null;
+  const mainView = docs.isVisible
+    ? "docs"
+    : search.isVisible
+      ? "search"
+      : "preview";
+  useAgentContextSync({
+    activeEntryId: selectedEntry?.id ?? null,
+    view: mainView,
+    enabled: isSessionLoaded,
+  });
   function selectEntry(id: string): void {
     copyRequestId.current += 1;
     setCopyFeedback(null);

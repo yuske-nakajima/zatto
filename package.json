@@ -1,6 +1,6 @@
 {
   "name": "@yuske-nakajima/zatto",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A local viewer for browsing HTML files as one session.",
   "type": "module",
   "license": "MIT",
@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@fastify/websocket": "11.3.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "chokidar": "5.0.0",
     "fastify": "5.10.0",
     "nanoid": "6.0.0",
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
+    "@modelcontextprotocol/client": "2.0.0",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
     "@types/node": "26.1.2",

@@ -29,6 +29,18 @@ interface ServerConnection {
   started: boolean;
 }
 
+export async function connectToRunningServer(
+  dependencies: Pick<ServerClientDependencies, "fetch" | "runtimeFilePath">,
+): Promise<ServerRecord> {
+  const record = await resolveManagedServer(dependencies);
+  if (!record) {
+    throw new Error(
+      "zatto サーバーは起動していません。ビューアーを起動してから再実行してください",
+    );
+  }
+  return record;
+}
+
 export async function connectOrStartServer(
   preferredPort: number,
   dependencies: ServerClientDependencies,

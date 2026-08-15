@@ -8,6 +8,7 @@
   },
   "include": [
     "src/cli/**/*.ts",
+    "src/mcp/**/*.ts",
     "src/server/**/*.ts",
     "src/shared/**/*.ts",
     "src/meta.ts"
