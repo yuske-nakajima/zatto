@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 15px/1.6 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 980px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 38px; font-size: 1.3rem; }
+      h3 { margin: 24px 0 6px; font-size: 1rem; }
+      p { max-width: 76ch; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      th { white-space: nowrap; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .operation { display: inline-block; min-width: 16rem; }
+      @media (max-width: 660px) { main { padding: 24px 18px 48px; } .operation { min-width: 0; } table, tbody, tr, th, td { display: block; } th { border: 0; padding-bottom: 2px; } td { padding-top: 2px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Local server API</h1>
+      <p class="lead">The server listens on loopback. Browser and CLI clients use JSON unless a route returns HTML or a static asset.</p>
+
+      <h2>Health and lifecycle</h2>
+      <h3><code class="operation">GET /api/health</code></h3>
+      <p>Returns <code>name</code>, <code>version</code>, and, for a managed server, <code>instanceId</code> and <code>protocolVersion</code>.</p>
+      <h3><code class="operation">POST /api/shutdown</code></h3>
+      <p>Returns <code>202</code> and schedules shutdown. A managed server requires its <code>x-zatto-instance-id</code> header; a mismatch returns <code>409</code>.</p>
+
+      <h2>Session</h2>
+      <h3><code class="operation">GET /api/session</code></h3>
+      <p>Returns ordered entries plus server identity and native file/folder picker capabilities.</p>
+      <h3><code class="operation">POST /api/session/add</code></h3>
+      <p>Body: <code>{ "paths": ["page.html"] }</code>. Paths are resolved to absolute paths; existing paths not already in the session are added once. The endpoint does not require an HTML file extension. The response is <code>201</code> with <code>added</code> and <code>session</code>.</p>
+      <h3><code class="operation">POST /api/session/pick</code></h3>
+      <p>Opens the managed native file picker. Requires <code>x-zatto-instance-id</code>. It returns <code>501</code> when unavailable and <code>409</code> while another native picker is active.</p>
+      <h3><code class="operation">POST /api/session/pick-directory</code></h3>
+      <p>Body: <code>{ "mode": "direct" }</code> or <code>{ "mode": "recursive" }</code>. The identity, availability, and single-picker rules match the file picker.</p>
+      <h3><code class="operation">PATCH /api/session/order</code></h3>
+      <p>Body: <code>{ "ids": [...] }</code>. The list must contain every current entry ID exactly once. Success returns <code>204</code>.</p>
+      <h3><code class="operation">DELETE /api/session/:id</code></h3>
+      <p>Removes one entry. Returns <code>404</code> for an unknown ID and <code>204</code> on success.</p>
+      <h3><code class="operation">DELETE /api/session/entries</code></h3>
+      <p>Body: <code>{ "ids": [...] }</code>. IDs must be non-empty, unique, and known. The operation is atomic and returns <code>204</code>.</p>
+      <h3><code class="operation">DELETE /api/session</code></h3>
+      <p>Clears all entries and returns <code>204</code>.</p>
+
+      <h2>Session exchange</h2>
+      <h3><code class="operation">GET /api/session/export</code></h3>
+      <p>Returns <code>{ "format": "zatto-session", "version": 1, "entries": [{ "path": ... }] }</code> in display order.</p>
+      <h3><code class="operation">PUT /api/session</code></h3>
+      <p>Validates a version 1 exchange document. <code>?mode=replace</code> is the default; <code>?mode=merge</code> appends unregistered paths. Managed servers require <code>x-zatto-instance-id</code>.</p>
+
+      <h2>Search</h2>
+      <h3><code class="operation">GET /api/search</code></h3>
+      <p>The <code>q</code> query parameter is a case-insensitive fixed string matched in HTML source. Empty text returns no matches. Queries are limited to 256 UTF-16 code units; file, match, and response limits may set <code>truncated</code>.</p>
+
+      <h2>Preview and realtime</h2>
+      <table>
+        <tbody>
+          <tr><th><code>GET /f/:id/</code></th><td>Returns the selected entry's HTML.</td></tr>
+          <tr><th><code>GET /f/:id/*</code></th><td>Returns a relative asset with its MIME type. Requests outside the entry directory are rejected.</td></tr>
+          <tr><th><code>WS /ws</code></th><td>Sends <code>session:update</code> after session changes and <code>file:changed</code> when a watched file changes.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Web resources</h2>
+      <table>
+        <tbody>
+          <tr><th><code>GET /</code></th><td>Returns the built web application, or a service-unavailable page when it is absent.</td></tr>
+          <tr><th><code>GET /manifest.webmanifest</code></th><td>Returns the web app manifest.</td></tr>
+          <tr><th><code>GET /assets/*</code></th><td>Returns frontend build assets without allowing traversal outside the assets directory.</td></tr>
+          <tr><th><code>GET /docs/*</code></th><td>Returns bundled documentation without allowing traversal outside the docs directory.</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

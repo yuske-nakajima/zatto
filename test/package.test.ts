@@ -25,6 +25,16 @@ type PackageManifest = {
 };
 
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
+const bundledDocumentationPaths = [
+  "dist/web/docs/en/getting-started.html",
+  "dist/web/docs/en/cli.html",
+  "dist/web/docs/en/api.html",
+  "dist/web/docs/en/gui-api-mapping.html",
+  "dist/web/docs/ja/getting-started.html",
+  "dist/web/docs/ja/cli.html",
+  "dist/web/docs/ja/api.html",
+  "dist/web/docs/ja/gui-api-mapping.html",
+];
 
 describe("npmパッケージ", () => {
   test("公開メタデータと公開ファイルを定義する", async () => {
@@ -33,7 +43,7 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
@@ -136,6 +146,35 @@ describe("npmパッケージ", () => {
       expect(readme).toContain("@yuske-nakajima/zatto/server");
       expect(readme).not.toMatch(/npx zatto(?:\s|$)/);
     }
+    expect(englishReadme).toContain("## Built-in documentation");
+    expect(englishReadme).toContain("**Docs** on the left side of the footer");
+    expect(englishReadme).toContain(
+      "Getting started, CLI, API, and GUI/API mapping",
+    );
+    expect(englishReadme).toContain("English is selected by default");
+    expect(englishReadme).toContain("`doc` and `lang` URL parameters");
+    expect(japaneseReadme).toContain("## 組み込みドキュメント");
+    expect(japaneseReadme).toContain("フッター左側の**Docs**");
+    expect(japaneseReadme).toContain(
+      "Getting started、CLI、API、GUI/API mapping",
+    );
+    expect(japaneseReadme).toContain("既定の表示言語は英語です");
+    expect(japaneseReadme).toContain("URLの`doc`と`lang`");
+  });
+
+  test("公開パッケージの組み込みドキュメントを検証する", async () => {
+    const verifierSource = await readFile(
+      path.join(repositoryRoot, "scripts", "verify-package.mjs"),
+      "utf8",
+    );
+
+    expect(verifierSource).toContain('["en", "ja"]');
+    for (const documentationPath of bundledDocumentationPaths.slice(0, 4)) {
+      const page = path.basename(documentationPath, ".html");
+      expect(verifierSource).toContain(`"${page}"`);
+    }
+    expect(verifierSource).toContain("...documentationPaths.map(");
+    expect(verifierSource).toContain("`dist/web");
   });
 
   test("GitHub ActionsからOIDCでnpmパッケージを公開する", async () => {

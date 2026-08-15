@@ -1,10 +1,6 @@
 import { SEARCH_QUERY_MAX_LENGTH } from "../shared/search.js";
 import { truncateUnicode } from "../shared/text.js";
-
-const SEARCH_PARAMETER = "search";
-const SEARCH_VIEW_PARAMETER = "searchView";
-const MATCH_PARAMETER = "match";
-const MATCH_TEXT_PARAMETER = "matchText";
+import { activateMainView, NAVIGATION_PARAMETERS } from "./main-view-url.js";
 
 export interface SearchResultLocator {
   entryId: string;
@@ -43,10 +39,12 @@ export function readSearchLocation(): SearchLocation {
   try {
     const url = new URL(window.location.href);
     const query = truncateUnicode(
-      url.searchParams.get(SEARCH_PARAMETER) ?? "",
+      url.searchParams.get(NAVIGATION_PARAMETERS.search) ?? "",
       SEARCH_QUERY_MAX_LENGTH,
     );
-    const isSearchVisible = url.searchParams.get(SEARCH_VIEW_PARAMETER) === "1";
+    const isSearchVisible =
+      !url.searchParams.has(NAVIGATION_PARAMETERS.doc) &&
+      url.searchParams.get(NAVIGATION_PARAMETERS.searchView) === "1";
     return {
       query,
       isSearchVisible,
@@ -75,15 +73,18 @@ function writeSearchLocation(
 ): void {
   try {
     const url = new URL(window.location.href);
+    if (mode === "push") {
+      activateMainView(url, location.isSearchVisible ? "search" : "preview");
+    }
     const query = truncateUnicode(location.query, SEARCH_QUERY_MAX_LENGTH);
-    setOptionalParameter(url, SEARCH_PARAMETER, query || null);
+    setOptionalParameter(url, NAVIGATION_PARAMETERS.search, query || null);
     setOptionalParameter(
       url,
-      SEARCH_VIEW_PARAMETER,
+      NAVIGATION_PARAMETERS.searchView,
       location.isSearchVisible ? "1" : null,
     );
     if (entryId !== undefined) {
-      setOptionalParameter(url, "entry", entryId);
+      setOptionalParameter(url, NAVIGATION_PARAMETERS.entry, entryId);
     }
     writeLocator(url, { ...location, query });
     const nextUrl = `${url.pathname}${url.search}${url.hash}`;
@@ -97,11 +98,12 @@ function writeSearchLocation(
 }
 
 function readLocator(url: URL, query: string): SearchResultLocator | null {
-  const parts = url.searchParams.get(MATCH_PARAMETER)?.split(".") ?? [];
+  const parts =
+    url.searchParams.get(NAVIGATION_PARAMETERS.match)?.split(".") ?? [];
   if (
     parts.length !== 4 ||
     query.length === 0 ||
-    !url.searchParams.has("entry")
+    !url.searchParams.has(NAVIGATION_PARAMETERS.entry)
   ) {
     return null;
   }
@@ -118,9 +120,9 @@ function readLocator(url: URL, query: string): SearchResultLocator | null {
   ) {
     return null;
   }
-  const matchText = url.searchParams.get(MATCH_TEXT_PARAMETER);
+  const matchText = url.searchParams.get(NAVIGATION_PARAMETERS.matchText);
   return {
-    entryId: url.searchParams.get("entry") ?? "",
+    entryId: url.searchParams.get(NAVIGATION_PARAMETERS.entry) ?? "",
     lineNumber,
     offset,
     length,
@@ -137,12 +139,12 @@ function readLocator(url: URL, query: string): SearchResultLocator | null {
 function writeLocator(url: URL, location: SearchLocation): void {
   const locator = location.locator;
   if (location.isSearchVisible || !locator || location.query.length === 0) {
-    url.searchParams.delete(MATCH_PARAMETER);
-    url.searchParams.delete(MATCH_TEXT_PARAMETER);
+    url.searchParams.delete(NAVIGATION_PARAMETERS.match);
+    url.searchParams.delete(NAVIGATION_PARAMETERS.matchText);
     return;
   }
   url.searchParams.set(
-    MATCH_PARAMETER,
+    NAVIGATION_PARAMETERS.match,
     [locator.lineNumber, locator.offset, locator.length, locator.ordinal].join(
       ".",
     ),
@@ -152,7 +154,7 @@ function writeLocator(url: URL, location: SearchLocation): void {
     : null;
   setOptionalParameter(
     url,
-    MATCH_TEXT_PARAMETER,
+    NAVIGATION_PARAMETERS.matchText,
     matchText && matchText !== location.query ? matchText : null,
   );
 }

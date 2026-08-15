@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GUI and API mapping | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 15px/1.6 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 980px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      thead th { background: color-mix(in srgb, CanvasText 7%, Canvas); }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); white-space: nowrap; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .note { padding: 12px 16px; border-left: 4px solid #6b78d6; background: color-mix(in srgb, #6b78d6 10%, Canvas); }
+      @media (max-width: 720px) { main { padding: 24px 18px 48px; } table, thead, tbody, tr, th, td { display: block; } thead { position: absolute; width: 1px; height: 1px; overflow: hidden; } tbody tr { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); } tbody td { padding: 3px 0; border: 0; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GUI and API mapping</h1>
+      <p class="lead">The browser UI is a client of the same local server. This table shows the request behind each visible action.</p>
+
+      <table>
+        <thead><tr><th>GUI behavior</th><th>Server operation</th><th>Result in the UI</th></tr></thead>
+        <tbody>
+          <tr><td>Open the viewer</td><td><code>GET /api/session</code></td><td>Loads ordered entries, server identity, and picker availability.</td></tr>
+          <tr><td>Select a file</td><td><code>GET /f/:id/</code></td><td>Loads the HTML in the preview iframe; relative resources use <code>GET /f/:id/*</code>.</td></tr>
+          <tr><td>Open a Docs page</td><td><code>GET /docs/*</code></td><td>Loads the selected locale and slug in a same-origin iframe without creating a session entry.</td></tr>
+          <tr><td>Receive session or file changes</td><td><code>WS /ws</code></td><td>Updates the file panel, preview, and search state.</td></tr>
+          <tr><td>Search HTML files</td><td><code>GET /api/search</code></td><td>Shows fixed-string source matches and truncation status.</td></tr>
+          <tr><td>Select HTML files</td><td><code>POST /api/session/pick</code></td><td>Opens the native file dialog and selects the first added entry.</td></tr>
+          <tr><td>Add folder…</td><td><code>POST /api/session/pick-directory</code></td><td>Uses the selected direct or recursive scope and selects the first added entry.</td></tr>
+          <tr><td>Drag entries to reorder</td><td><code>PATCH /api/session/order</code></td><td>Persists the complete display order.</td></tr>
+          <tr><td>Remove one file</td><td><code>DELETE /api/session/:id</code></td><td>Removes the entry after confirmation.</td></tr>
+          <tr><td>Remove a folder row</td><td><code>DELETE /api/session/entries</code></td><td>Atomically removes every session entry in that subtree.</td></tr>
+          <tr><td>Clear session</td><td><code>DELETE /api/session</code></td><td>Removes all session entries after confirmation.</td></tr>
+          <tr><td>Import session…</td><td><code>PUT /api/session</code></td><td>Replaces entries or merges unregistered paths according to the chosen mode.</td></tr>
+          <tr><td>Export session…</td><td><code>GET /api/session/export</code></td><td>Downloads display order or a path-sorted copy without changing the session.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Operations without a direct GUI control</h2>
+      <p><code>POST /api/session/add</code> is used by the CLI to add path arguments. <code>GET /api/health</code> identifies a compatible server, and <code>POST /api/shutdown</code> supports the stop command.</p>
+      <p class="note">Docs are built-in content. They do not become session entries and are excluded from List, Folders, HTML search, import, export, removal, and ordering.</p>
+    </main>
+  </body>
+</html>

@@ -1,7 +1,8 @@
 import type { DragEvent, RefObject } from "react";
 import type { Entry } from "../server/session.js";
 import { AddEntryControls } from "./AddEntryControls.js";
-import zattoLogo from "./assets/zatto-logo-black.png";
+import zattoLogoBlack from "./assets/zatto-logo-black.png";
+import zattoLogoWhite from "./assets/zatto-logo-white.png";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import type { FilePanelView } from "./file-panel-model.js";
@@ -15,6 +16,8 @@ import type {
   SessionImportMode,
   SessionTransferPending,
 } from "./useSessionTransfer.js";
+
+const DARK_COLOR_SCHEME = "(prefers-color-scheme: dark)";
 
 interface FilePanelProps {
   entries: Entry[];
@@ -82,7 +85,10 @@ export function FilePanel({
       <header className="sidebar-header">
         <p className="eyebrow">LOCAL HTML VIEWER</p>
         <h1>
-          <img src={zattoLogo} alt="zatto" />
+          <picture>
+            <source media={DARK_COLOR_SCHEME} srcSet={zattoLogoWhite} />
+            <img src={zattoLogoBlack} alt="zatto" />
+          </picture>
         </h1>
       </header>
       <div className="list-heading">

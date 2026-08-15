@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLI | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 16px/1.75 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 820px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      th { font-weight: 650; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; }
+      pre code { padding: 0; background: transparent; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      @media (max-width: 620px) { main { padding: 24px 18px 48px; } table, tbody, tr, th, td { display: block; } th { padding-bottom: 2px; border: 0; } td { padding-top: 2px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>コマンドラインインターフェース</h1>
+      <p class="lead"><code>zatto [options] [file...]</code></p>
+
+      <h2>ファイルを開く・追加する</h2>
+      <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
+      <p>パスはコマンドの作業ディレクトリを基準に解決します。次回以降のコマンドは、同じOSユーザーの常駐サーバーへ合流し、既存セッションへファイルを追加します。登録済みのパスは追加しません。</p>
+
+      <h2>オプション</h2>
+      <table>
+        <tbody>
+          <tr><th><code>--port &lt;n&gt;</code></th><td>初回起動時の希望ポートです。既定値は<code>6280</code>で、使用中の場合はOSがポートを割り当てます。</td></tr>
+          <tr><th><code>--no-open</code></th><td>ブラウザーを開きません。既定では、サーバーを起動した場合、またはファイル指定なしの場合にブラウザーを開きます。</td></tr>
+          <tr><th><code>--stop</code></th><td>同じOSユーザーの常駐サーバーを停止します。</td></tr>
+          <tr><th><code>--import &lt;file&gt;</code></th><td><code>zatto-session</code> version 1のJSONを検証し、サーバーのセッションを全置換します。</td></tr>
+          <tr><th><code>--export &lt;file&gt;</code></th><td>表示順の絶対パスをversion 1のJSONとして保存します。</td></tr>
+          <tr><th><code>-h</code>, <code>--help</code></th><td>コマンドヘルプを表示します。</td></tr>
+          <tr><th><code>-v</code>, <code>--version</code></th><td>パッケージのバージョンを表示します。</td></tr>
+        </tbody>
+      </table>
+
+      <h2>実行時の規則</h2>
+      <ul>
+        <li><code>--stop</code>、<code>--import</code>、<code>--export</code>、位置引数のファイルは同時に指定できません。</li>
+        <li><code>--port</code>には1から65535までの整数を指定します。</li>
+        <li>起動済みのzattoサーバーは、<code>--port</code>で移動しません。</li>
+        <li>インポート・エクスポートのファイル名に空文字は指定できません。</li>
+        <li>CLIのインポートは全置換です。追加するときはブラウザーUIを使います。</li>
+      </ul>
+
+      <h2>実行例</h2>
+      <pre><code>npx @yuske-nakajima/zatto --no-open page.html
+npx @yuske-nakajima/zatto --port 7000
+npx @yuske-nakajima/zatto --export saved-session.json
+npx @yuske-nakajima/zatto --import saved-session.json
+npx @yuske-nakajima/zatto --stop</code></pre>
+
+      <h2>サーバー実行ファイル</h2>
+      <p>パッケージのサーバーエントリーは、<code>--port</code>、<code>--instance-id</code>、<code>--runtime-file</code>を受け取ります。これらは管理対象の常駐プロセス用です。通常は<code>zatto</code>コマンドを使ってください。</p>
+    </main>
+  </body>
+</html>

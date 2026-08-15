@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Getting started | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 16px/1.65 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 760px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; line-height: 1.2; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      p, li { max-width: 70ch; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; }
+      pre code { padding: 0; background: transparent; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .note { padding: 12px 16px; border-left: 4px solid #6b78d6; background: color-mix(in srgb, #6b78d6 10%, Canvas); }
+      @media (max-width: 540px) { main { padding: 24px 18px 48px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Getting started</h1>
+      <p class="lead">Open local HTML files together in one browser session.</p>
+
+      <h2>Start zatto</h2>
+      <p>Run zatto without installing it globally. A browser window opens and the local server remains available after the command exits.</p>
+      <pre><code>npx @yuske-nakajima/zatto</code></pre>
+      <p>You can also add one or more files as the viewer starts.</p>
+      <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
+
+      <h2>Add files</h2>
+      <p>On macOS, use <strong>+ Add</strong>, <strong>Select HTML files</strong>, or <kbd>Command</kbd>+<kbd>O</kbd>. The picker accepts existing <code>.html</code> and <code>.htm</code> files.</p>
+      <p>Use <strong>Add folder…</strong> to add either the HTML files directly inside a folder or all HTML files in its descendants. Symbolic links are ignored, registered paths are not added twice, and files are ordered by relative path.</p>
+
+      <h2>Browse and search</h2>
+      <ul>
+        <li>Choose a file in List or Folders to show its preview.</li>
+        <li>Drag the file-panel divider to resize it; double-click the divider to restore its default width.</li>
+        <li>Use Search to find fixed text across the HTML source of every session entry.</li>
+        <li>Changes to an open file refresh its preview and search results.</li>
+      </ul>
+      <p class="note">Removing an entry or folder row only changes the zatto session. It never deletes files or folders from disk.</p>
+
+      <h2>Save or restore a session</h2>
+      <p><strong>Export session…</strong> saves the open file paths and their order. <strong>Import session…</strong> can replace the list or merge paths that are not already open.</p>
+      <p>Session JSON contains absolute paths and can reveal local account or directory names. Keep it on the computer where it is used.</p>
+
+      <h2>Stop the server</h2>
+      <pre><code>npx @yuske-nakajima/zatto --stop</code></pre>
+    </main>
+  </body>
+</html>

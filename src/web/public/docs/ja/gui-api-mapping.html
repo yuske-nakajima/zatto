@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GUIとAPIの対照表 | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 15px/1.7 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 980px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 36px; font-size: 1.25rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      thead th { background: color-mix(in srgb, CanvasText 7%, Canvas); }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); white-space: nowrap; }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .note { padding: 12px 16px; border-left: 4px solid #6b78d6; background: color-mix(in srgb, #6b78d6 10%, Canvas); }
+      @media (max-width: 720px) { main { padding: 24px 18px 48px; } table, thead, tbody, tr, th, td { display: block; } thead { position: absolute; width: 1px; height: 1px; overflow: hidden; } tbody tr { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); } tbody td { padding: 3px 0; border: 0; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GUIとAPIの対照表</h1>
+      <p class="lead">ブラウザーUIは同じローカルサーバーのクライアントです。画面操作の背後で使うリクエストを示します。</p>
+
+      <table>
+        <thead><tr><th>GUIの動作</th><th>サーバー操作</th><th>UIへの反映</th></tr></thead>
+        <tbody>
+          <tr><td>ビューアーを開く</td><td><code>GET /api/session</code></td><td>表示順のエントリ、サーバー識別子、選択機能の利用可否を読み込みます。</td></tr>
+          <tr><td>ファイルを選択</td><td><code>GET /f/:id/</code></td><td>プレビューiframeへHTMLを読み込みます。相対リソースには<code>GET /f/:id/*</code>を使います。</td></tr>
+          <tr><td>Docsページを開く</td><td><code>GET /docs/*</code></td><td>セッションエントリを作らず、選択した言語とページを同一オリジンのiframeへ読み込みます。</td></tr>
+          <tr><td>セッション・ファイル変更を受信</td><td><code>WS /ws</code></td><td>ファイルパネル、プレビュー、検索状態を更新します。</td></tr>
+          <tr><td>HTMLファイルを検索</td><td><code>GET /api/search</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>
+          <tr><td>Select HTML files</td><td><code>POST /api/session/pick</code></td><td>ネイティブファイル選択を開き、追加した最初のエントリを選択します。</td></tr>
+          <tr><td>Add folder…</td><td><code>POST /api/session/pick-directory</code></td><td>選択した直下・再帰範囲を使い、追加した最初のエントリを選択します。</td></tr>
+          <tr><td>ドラッグで並べ替え</td><td><code>PATCH /api/session/order</code></td><td>完全な表示順を永続化します。</td></tr>
+          <tr><td>ファイルを1件削除</td><td><code>DELETE /api/session/:id</code></td><td>確認後、エントリをセッションから外します。</td></tr>
+          <tr><td>フォルダー行を削除</td><td><code>DELETE /api/session/entries</code></td><td>配下の全セッションエントリを原子的に削除します。</td></tr>
+          <tr><td>セッションを消去</td><td><code>DELETE /api/session</code></td><td>確認後、全セッションエントリを削除します。</td></tr>
+          <tr><td>Import session…</td><td><code>PUT /api/session</code></td><td>選択したモードに従い、全置換または未登録パスの追加を行います。</td></tr>
+          <tr><td>Export session…</td><td><code>GET /api/session/export</code></td><td>セッションを変更せず、表示順またはパス順のJSONをダウンロードします。</td></tr>
+        </tbody>
+      </table>
+
+      <h2>直接のGUI操作がないAPI</h2>
+      <p><code>POST /api/session/add</code>は、CLIが位置引数のパスを追加するときに使います。<code>GET /api/health</code>は互換サーバーの識別、<code>POST /api/shutdown</code>は停止コマンドで使います。</p>
+      <p class="note">Docsは組み込みコンテンツです。セッションエントリにはならず、List、Folders、HTML検索、インポート、エクスポート、削除、並べ替えの対象外です。</p>
+    </main>
+  </body>
+</html>

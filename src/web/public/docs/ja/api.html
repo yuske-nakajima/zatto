@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API | zatto</title>
+    <style>
+      :root { color-scheme: light dark; font: 15px/1.7 system-ui, sans-serif; }
+      body { margin: 0; color: CanvasText; background: Canvas; }
+      main { max-width: 980px; margin: auto; padding: 32px 24px 64px; }
+      h1 { margin: 0 0 8px; font-size: 2rem; }
+      h2 { margin-top: 38px; font-size: 1.3rem; }
+      h3 { margin: 24px 0 6px; font-size: 1rem; }
+      p { max-width: 76ch; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
+      th { white-space: nowrap; }
+      code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .operation { display: inline-block; min-width: 16rem; }
+      @media (max-width: 660px) { main { padding: 24px 18px 48px; } .operation { min-width: 0; } table, tbody, tr, th, td { display: block; } th { border: 0; padding-bottom: 2px; } td { padding-top: 2px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>ローカルサーバーAPI</h1>
+      <p class="lead">サーバーはループバックで待ち受けます。HTMLや静的アセット以外は、ブラウザーとCLIがJSONで通信します。</p>
+
+      <h2>ヘルスチェックとライフサイクル</h2>
+      <h3><code class="operation">GET /api/health</code></h3>
+      <p><code>name</code>と<code>version</code>を返します。管理対象サーバーでは、<code>instanceId</code>と<code>protocolVersion</code>も返します。</p>
+      <h3><code class="operation">POST /api/shutdown</code></h3>
+      <p><code>202</code>を返して停止を予約します。管理対象サーバーでは<code>x-zatto-instance-id</code>が必須で、不一致は<code>409</code>です。</p>
+
+      <h2>セッション</h2>
+      <h3><code class="operation">GET /api/session</code></h3>
+      <p>表示順のエントリ、サーバー識別子、ネイティブのファイル・フォルダー選択機能を返します。</p>
+      <h3><code class="operation">POST /api/session/add</code></h3>
+      <p>本文は<code>{ "paths": ["page.html"] }</code>です。パスを絶対パスへ解決し、存在していてセッションに未登録のパスを1回だけ追加します。HTMLの拡張子は必須ではありません。<code>201</code>と<code>added</code>、<code>session</code>を返します。</p>
+      <h3><code class="operation">POST /api/session/pick</code></h3>
+      <p>管理対象のネイティブファイル選択を開きます。<code>x-zatto-instance-id</code>が必要です。利用不可は<code>501</code>、別の選択画面が開いている場合は<code>409</code>です。</p>
+      <h3><code class="operation">POST /api/session/pick-directory</code></h3>
+      <p>本文は<code>{ "mode": "direct" }</code>または<code>{ "mode": "recursive" }</code>です。識別子、利用可否、同時に1つだけ開く規則はファイル選択と同じです。</p>
+      <h3><code class="operation">PATCH /api/session/order</code></h3>
+      <p>本文は<code>{ "ids": [...] }</code>です。全エントリIDを重複なく1回ずつ指定します。成功時は<code>204</code>です。</p>
+      <h3><code class="operation">DELETE /api/session/:id</code></h3>
+      <p>1件のエントリを削除します。不明なIDは<code>404</code>、成功時は<code>204</code>です。</p>
+      <h3><code class="operation">DELETE /api/session/entries</code></h3>
+      <p>本文は<code>{ "ids": [...] }</code>です。空でない既知のIDを重複なく指定します。処理は原子的で、成功時は<code>204</code>です。</p>
+      <h3><code class="operation">DELETE /api/session</code></h3>
+      <p>全エントリを削除し、<code>204</code>を返します。</p>
+
+      <h2>セッション交換</h2>
+      <h3><code class="operation">GET /api/session/export</code></h3>
+      <p>表示順で<code>{ "format": "zatto-session", "version": 1, "entries": [{ "path": ... }] }</code>を返します。</p>
+      <h3><code class="operation">PUT /api/session</code></h3>
+      <p>version 1の交換JSONを検証します。既定の<code>?mode=replace</code>は全置換、<code>?mode=merge</code>は未登録パスの追加です。管理対象サーバーでは<code>x-zatto-instance-id</code>が必要です。</p>
+
+      <h2>検索</h2>
+      <h3><code class="operation">GET /api/search</code></h3>
+      <p><code>q</code>の大文字・小文字を区別しない固定文字列をHTMLソースから検索します。空文字は結果なしです。クエリーはUTF-16で256コード単位までで、ファイル、件数、応答量の上限到達時は<code>truncated</code>を返します。</p>
+
+      <h2>プレビューとリアルタイム更新</h2>
+      <table>
+        <tbody>
+          <tr><th><code>GET /f/:id/</code></th><td>選択したエントリのHTMLを返します。</td></tr>
+          <tr><th><code>GET /f/:id/*</code></th><td>MIME付きで相対アセットを返します。エントリの基点ディレクトリ外へのアクセスは拒否します。</td></tr>
+          <tr><th><code>WS /ws</code></th><td>セッション変更時に<code>session:update</code>、監視ファイル変更時に<code>file:changed</code>を送ります。</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Webリソース</h2>
+      <table>
+        <tbody>
+          <tr><th><code>GET /</code></th><td>ビルド済みWebアプリを返します。存在しない場合はサービス利用不可ページを返します。</td></tr>
+          <tr><th><code>GET /manifest.webmanifest</code></th><td>Webアプリマニフェストを返します。</td></tr>
+          <tr><th><code>GET /assets/*</code></th><td>assetsディレクトリ外への移動を拒否し、フロントエンドアセットを返します。</td></tr>
+          <tr><th><code>GET /docs/*</code></th><td>docsディレクトリ外への移動を拒否し、組み込みドキュメントを返します。</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

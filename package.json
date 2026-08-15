@@ -1,6 +1,6 @@
 {
   "name": "@yuske-nakajima/zatto",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A local viewer for browsing HTML files as one session.",
   "type": "module",
   "license": "MIT",

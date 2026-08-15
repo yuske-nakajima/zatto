@@ -1,12 +1,15 @@
 import type { Entry } from "../server/session.js";
 import type { CopyFeedback } from "./copy-feedback.js";
+import { DocsView } from "./DocsView.js";
 import { SearchWorkspace } from "./SearchWorkspace.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
+import type { DocsNavigation } from "./useDocsNavigation.js";
 import type { SearchNavigation } from "./useSearchNavigation.js";
 import { Viewer } from "./Viewer.js";
 
 interface AppViewerProps {
   search: SearchNavigation;
+  docs: DocsNavigation;
   selectedEntry: Entry | null;
   reloadVersion: number;
   isFilePanelVisible: boolean;
@@ -22,6 +25,7 @@ interface AppViewerProps {
 
 export function AppViewer({
   search,
+  docs,
   selectedEntry,
   reloadVersion,
   isFilePanelVisible,
@@ -36,6 +40,7 @@ export function AppViewer({
 }: AppViewerProps) {
   return (
     <>
+      {docs.isVisible && <DocsView navigation={docs} />}
       <SearchWorkspace
         navigation={search}
         isFilePanelVisible={isFilePanelVisible}
@@ -43,7 +48,7 @@ export function AppViewer({
         onToggleFilePanel={onToggleFilePanel}
       />
       <Viewer
-        isHidden={search.isVisible}
+        isHidden={search.isVisible || docs.isVisible}
         filePanelButtonRef={search.viewerPanelButtonRef}
         previewTarget={search.previewTarget}
         searchQuery={search.query}

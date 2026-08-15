@@ -70,6 +70,31 @@
   text-rendering: optimizeLegibility;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg-accent: #6366f2;
+    --color-bg-app: #0f1729;
+    --color-bg-hover: #1f293b;
+    --color-bg-selected: #262159;
+    --color-bg-sidebar: #1a1f2e;
+    --color-bg-surface: #1a1f2e;
+    --color-border-accent: #6366f2;
+    --color-border-default: #334054;
+    --color-border-strong: #334054;
+    --color-border-subtle: #1f293b;
+    --color-icon-accent: #828cf7;
+    --color-icon-danger: #63738c;
+    --color-icon-default: #94a3b8;
+    --color-icon-hover: #f0f5fa;
+    --color-text-accent: #828cf7;
+    --color-text-inverse: #f0f5fa;
+    --color-text-primary: #f0f5fa;
+    --color-text-secondary: #94a3b8;
+    --color-text-tertiary: #63738c;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
