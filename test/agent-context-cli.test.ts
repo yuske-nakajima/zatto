@@ -8,7 +8,9 @@ import {
 import { runCli } from "../src/cli/index.js";
 import { MCP_USAGE } from "../src/mcp/server.js";
 import {
+  AGENT_CONTEXT_TITLE_MAX_LENGTH,
   type AgentContext,
+  normalizeAgentContextTitle,
   parseAgentContext,
 } from "../src/shared/agent-context.js";
 
@@ -138,6 +140,24 @@ describe("Agent CLI", () => {
         activeFile: { title: "", path: "/workspace/active.html" },
       }),
     ).toThrow("不正なAgentコンテキスト");
+  });
+
+  test("titleの空白と制御文字を正規化してコードポイント単位で制限する", () => {
+    expect(normalizeAgentContextTitle("  A\n\u001b\u202eB  ")).toBe("A B");
+    expect(normalizeAgentContextTitle("あ".repeat(201))).toBe(
+      "あ".repeat(AGENT_CONTEXT_TITLE_MAX_LENGTH),
+    );
+  });
+
+  test("未正規化または上限超過のtitleを拒否する", () => {
+    for (const title of ["A\u202eB", "a".repeat(201)]) {
+      expect(() =>
+        parseAgentContext({
+          ...context,
+          activeFile: { title, path: "/workspace/active.html" },
+        }),
+      ).toThrow("不正なAgentコンテキスト");
+    }
   });
 
   test.each([

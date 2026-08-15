@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import {
   AGENT_CONTEXT_SCHEMA_VERSION,
@@ -5,6 +6,7 @@ import {
   type AgentContextFile,
   type BrowserAgentContext,
   isAgentContextView,
+  normalizeAgentContextTitle,
 } from "../shared/agent-context.js";
 import type { SessionStore } from "./session.js";
 
@@ -38,7 +40,14 @@ function contextFile(entry: {
   title: string;
   absPath: string;
 }): AgentContextFile {
-  return { title: entry.title, path: entry.absPath };
+  const title = normalizeAgentContextTitle(entry.title);
+  const fallbackTitle = normalizeAgentContextTitle(
+    path.basename(entry.absPath),
+  );
+  return {
+    title: title || fallbackTitle || "(untitled)",
+    path: entry.absPath,
+  };
 }
 
 export function registerAgentContextRoutes(

@@ -1,4 +1,5 @@
 export const AGENT_CONTEXT_SCHEMA_VERSION = 1 as const;
+export const AGENT_CONTEXT_TITLE_MAX_LENGTH = 200;
 
 export type AgentContextView = "preview" | "search" | "docs";
 
@@ -46,6 +47,17 @@ export function isAgentContextView(value: unknown): value is AgentContextView {
   return value === "preview" || value === "search" || value === "docs";
 }
 
+export function normalizeAgentContextTitle(value: string): string {
+  const normalized = value
+    .replace(/\s+/gu, " ")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "")
+    .trim();
+  return Array.from(normalized)
+    .slice(0, AGENT_CONTEXT_TITLE_MAX_LENGTH)
+    .join("")
+    .trim();
+}
+
 function isAgentContextFile(value: unknown): value is AgentContextFile {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -54,6 +66,7 @@ function isAgentContextFile(value: unknown): value is AgentContextFile {
   return (
     typeof file.title === "string" &&
     file.title.length > 0 &&
+    normalizeAgentContextTitle(file.title) === file.title &&
     typeof file.path === "string" &&
     file.path.length > 0
   );

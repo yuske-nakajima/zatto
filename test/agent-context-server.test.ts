@@ -111,6 +111,24 @@ describe("AIエージェント向けコンテキストAPI", () => {
     });
     await app.close();
   });
+
+  test("正規化後に空のtitleはファイル名へフォールバックする", async () => {
+    const { app, entries } = await createFixture();
+    const entry = entries[0];
+    if (!entry) throw new Error("fixture entry is missing");
+    entry.title = "\u001b\u202e";
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/agent/context",
+    });
+
+    expect(response.json().openFiles[0]).toEqual({
+      title: path.basename(entry.absPath),
+      path: entry.absPath,
+    });
+    await app.close();
+  });
 });
 
 async function createFixture() {

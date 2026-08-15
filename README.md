@@ -106,8 +106,10 @@ zatto agent context --json
 The context contains the untrusted title and authoritative absolute path for
 the active file and each ordered open file, plus the current `preview`,
 `search`, or `docs` view. The active file remains the session selection outside
-the preview view. The command reports an error when the viewer is not running
-and never starts it automatically.
+the preview view. Titles have whitespace normalized, Unicode control and format
+characters removed, and are limited to 200 Unicode code points. An empty result
+falls back to the file name. The command reports an error when the viewer is not
+running and never starts it automatically.
 
 `zatto` also provides a generic read-only MCP server over standard input and
 output. Use `zatto mcp usage` to print its product-independent connection

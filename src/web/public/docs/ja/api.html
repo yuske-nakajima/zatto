@@ -62,7 +62,7 @@
 
       <h2>AIエージェント向けコンテキスト</h2>
       <h3><code class="operation">GET /api/agent/context</code></h3>
-      <p>schema version 1として、選択中のファイルまたは<code>null</code>、表示順の全ファイル、現在の<code>preview</code>、<code>search</code>、<code>docs</code>表示を返します。各ファイルには、候補選定用の信頼できない<code>title</code>と、識別に使う絶対<code>path</code>が入ります。プレビュー以外では、active fileはセッション上の選択を表し、表示中とは限りません。HTML本文は返しません。</p>
+      <p>schema version 1として、選択中のファイルまたは<code>null</code>、表示順の全ファイル、現在の<code>preview</code>、<code>search</code>、<code>docs</code>表示を返します。各ファイルには、候補選定用の信頼できない<code>title</code>と、識別に使う絶対<code>path</code>が入ります。タイトルは、空白の統一、Unicode制御文字・書式制御文字の削除、Unicodeコードポイント単位で200文字への制限を行います。正規化後に空の場合はファイル名を使います。プレビュー以外では、active fileはセッション上の選択を表し、表示中とは限りません。HTML本文は返しません。</p>
       <h3><code class="operation">PUT /api/agent/context</code></h3>
       <p>ブラウザーが<code>{ "activeEntryId": string | null, "view": ... }</code>を通知します。この一時状態は永続化せず、セッション交換JSONにも含めません。</p>
 
