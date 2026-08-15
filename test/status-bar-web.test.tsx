@@ -48,7 +48,7 @@ describe("操作説明ステータスバー", () => {
       name: "Status bar",
     });
     expect(statusBar.querySelector(".status-bar-left")?.textContent).toBe(
-      "Docs",
+      "?Docs",
     );
     expect(
       statusBar.querySelector(".status-bar-description")?.textContent,

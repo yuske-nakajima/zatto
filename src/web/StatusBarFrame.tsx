@@ -62,11 +62,15 @@ export function StatusBarFrame({
           <button
             ref={docsButtonRef}
             type="button"
+            className="status-docs-button"
             aria-pressed={isDocsVisible}
             data-status-description={docsDescription}
             onClick={onToggleDocs}
           >
-            Docs
+            <span className="status-docs-glyph" aria-hidden="true">
+              ?
+            </span>
+            <span className="status-docs-label">Docs</span>
           </button>
         </div>
         <span className="status-bar-description">

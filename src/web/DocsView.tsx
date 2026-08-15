@@ -32,6 +32,7 @@ export function DocsView({ navigation }: DocsViewProps) {
             <LanguageButton language="en" navigation={navigation}>
               English
             </LanguageButton>
+            <span className="docs-language-divider" aria-hidden="true" />
             <LanguageButton language="ja" navigation={navigation}>
               Japanese
             </LanguageButton>
@@ -43,7 +44,10 @@ export function DocsView({ navigation }: DocsViewProps) {
             aria-label="Close documentation"
             onClick={navigation.close}
           >
-            Close
+            <span className="docs-close-icon" aria-hidden="true">
+              ✕
+            </span>
+            <span className="docs-close-label">Close</span>
           </button>
         </div>
       </header>
@@ -85,10 +89,16 @@ function LanguageButton({
   return (
     <button
       type="button"
+      aria-label={children}
       aria-pressed={navigation.language === language}
       onClick={() => navigation.selectLanguage(language)}
     >
-      {children}
+      <span className="docs-language-label--full" aria-hidden="true">
+        {children}
+      </span>
+      <span className="docs-language-label--compact" aria-hidden="true">
+        {language.toUpperCase()}
+      </span>
     </button>
   );
 }
