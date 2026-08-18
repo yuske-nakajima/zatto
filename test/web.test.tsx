@@ -1002,6 +1002,22 @@ describe("App", () => {
     );
   });
 
+  test("プレビュー上部から選択中のファイルをセッション解除する", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+
+    const removeButton = screen.getByRole("button", {
+      name: "Remove selected file from session",
+    });
+    expect(removeButton.querySelector('img[data-icon="trash"]')).not.toBeNull();
+    await user.click(removeButton);
+
+    expect(fetch).toHaveBeenCalledWith("/api/session/a", {
+      method: "DELETE",
+    });
+  });
+
   test("ファイル未選択時はパスをコピーできない", async () => {
     vi.stubGlobal(
       "fetch",
@@ -1017,6 +1033,11 @@ describe("App", () => {
     expect(copyButton.hasAttribute("disabled")).toBe(true);
     await user.click(copyButton);
     expect(writeText).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole("button", { name: "Remove selected file from session" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   test("コピー中に選択が変わった場合は古い成功結果を表示しない", async () => {

@@ -195,6 +195,7 @@ export function App() {
             onSelect={selectSearchResult}
             onToggleFilePanel={filePanel.toggleVisibility}
             onCopyPath={copyPath}
+            onRemove={removeEntry}
             onPickFiles={pickerControl.openFiles}
           />
         }

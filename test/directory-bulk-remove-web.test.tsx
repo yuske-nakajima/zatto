@@ -70,10 +70,17 @@ describe("folder session removal", () => {
       expect(button.querySelector('img[data-icon="trash"]')).not.toBeNull();
     }
     expect(
+      screen
+        .getByRole("button", {
+          name: "Copy directory path /workspace/reports",
+        })
+        .querySelector('img[data-icon="link"]'),
+    ).not.toBeNull();
+    expect(
       screen.getByRole("button", {
-        name: "Copy directory path /workspace/reports",
-      }),
-    ).toBeTruthy();
+        name: "Collapse directory /workspace/reports",
+      }).textContent,
+    ).toContain("reports(2)");
     expect(
       screen.getByRole("button", {
         name: "Collapse directory /workspace/reports",

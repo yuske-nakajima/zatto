@@ -21,6 +21,7 @@ interface ViewerProps {
   isFilePickerOpen: boolean;
   onToggleFilePanel: () => void;
   onCopyPath: (path: string) => void;
+  onRemove: (id: string) => void;
   onPickFiles: () => void;
 }
 
@@ -38,6 +39,7 @@ export function Viewer({
   isFilePickerOpen,
   onToggleFilePanel,
   onCopyPath,
+  onRemove,
   onPickFiles,
 }: ViewerProps) {
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
@@ -126,6 +128,17 @@ export function Viewer({
           >
             <Icon name="clipboardCopy" size={12} />
             Copy
+          </button>
+          <button
+            className="preview-remove-button icon-button"
+            data-status-description="Remove the selected file from this session."
+            type="button"
+            aria-label="Remove selected file from session"
+            aria-describedby={selectedEntry ? "selected-file-path" : undefined}
+            disabled={!selectedEntry}
+            onClick={() => selectedEntry && onRemove(selectedEntry.id)}
+          >
+            <Icon name="trash" size={12} />
           </button>
         </div>
       </header>

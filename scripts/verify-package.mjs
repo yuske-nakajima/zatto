@@ -7,7 +7,7 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "0.5.0";
+const expectedVersion = "0.6.0";
 const documentationLanguages = ["en", "ja"];
 const documentationPages = ["getting-started", "cli", "api", "gui-api-mapping"];
 const documentationPaths = documentationLanguages.flatMap((language) =>

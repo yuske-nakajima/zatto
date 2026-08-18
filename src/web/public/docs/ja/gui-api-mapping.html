@@ -35,7 +35,7 @@
           <tr><td>Select HTML files</td><td><code>POST /api/session/pick</code></td><td>ネイティブファイル選択を開き、追加した最初のエントリを選択します。</td></tr>
           <tr><td>Add folder…</td><td><code>POST /api/session/pick-directory</code></td><td>選択した直下・再帰範囲を使い、追加した最初のエントリを選択します。</td></tr>
           <tr><td>ドラッグで並べ替え</td><td><code>PATCH /api/session/order</code></td><td>完全な表示順を永続化します。</td></tr>
-          <tr><td>ファイルを1件削除</td><td><code>DELETE /api/session/:id</code></td><td>確認後、エントリをセッションから外します。</td></tr>
+          <tr><td>ファイル行またはプレビューから1件削除</td><td><code>DELETE /api/session/:id</code></td><td>ディスク上のファイルを削除せず、選択中のエントリをセッションから外します。</td></tr>
           <tr><td>フォルダー行を削除</td><td><code>DELETE /api/session/entries</code></td><td>配下の全セッションエントリを原子的に削除します。</td></tr>
           <tr><td>セッションを消去</td><td><code>DELETE /api/session</code></td><td>確認後、全セッションエントリを削除します。</td></tr>
           <tr><td>Import session…</td><td><code>PUT /api/session</code></td><td>選択したモードに従い、全置換または未登録パスの追加を行います。</td></tr>

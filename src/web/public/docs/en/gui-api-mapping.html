@@ -35,7 +35,7 @@
           <tr><td>Select HTML files</td><td><code>POST /api/session/pick</code></td><td>Opens the native file dialog and selects the first added entry.</td></tr>
           <tr><td>Add folder…</td><td><code>POST /api/session/pick-directory</code></td><td>Uses the selected direct or recursive scope and selects the first added entry.</td></tr>
           <tr><td>Drag entries to reorder</td><td><code>PATCH /api/session/order</code></td><td>Persists the complete display order.</td></tr>
-          <tr><td>Remove one file</td><td><code>DELETE /api/session/:id</code></td><td>Removes the entry after confirmation.</td></tr>
+          <tr><td>Remove one file from its row or preview</td><td><code>DELETE /api/session/:id</code></td><td>Removes the selected session entry without deleting its file.</td></tr>
           <tr><td>Remove a folder row</td><td><code>DELETE /api/session/entries</code></td><td>Atomically removes every session entry in that subtree.</td></tr>
           <tr><td>Clear session</td><td><code>DELETE /api/session</code></td><td>Removes all session entries after confirmation.</td></tr>
           <tr><td>Import session…</td><td><code>PUT /api/session</code></td><td>Replaces entries or merges unregistered paths according to the chosen mode.</td></tr>
