@@ -20,6 +20,7 @@ interface AppViewerProps {
   onSelect: (entryId: string, locator: SearchResultLocator | null) => void;
   onToggleFilePanel: () => void;
   onCopyPath: (path: string) => void;
+  onRemove: (id: string) => void;
   onPickFiles: () => void;
 }
 
@@ -36,6 +37,7 @@ export function AppViewer({
   onSelect,
   onToggleFilePanel,
   onCopyPath,
+  onRemove,
   onPickFiles,
 }: AppViewerProps) {
   return (
@@ -61,6 +63,7 @@ export function AppViewer({
         isFilePickerOpen={isFilePickerOpen}
         onToggleFilePanel={onToggleFilePanel}
         onCopyPath={onCopyPath}
+        onRemove={onRemove}
         onPickFiles={onPickFiles}
       />
     </>

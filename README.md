@@ -21,6 +21,8 @@ On desktop, drag the divider beside the file panel to adjust its width.
 Double-click the divider to restore the default width.
 In the folder view, removing a folder row removes every open session entry in
 that folder and its descendants. Files and folders remain on disk.
+Each folder row shows the number of open files in that subtree. The preview
+header also removes the selected file from the session.
 
 ## Usage
 
@@ -301,6 +303,14 @@ Reorder entries by sending every ID from `GET /api/session` in display order.
 curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
+```
+
+Remove multiple entries in one atomic session update.
+
+```bash
+curl -X DELETE "http://127.0.0.1:${ZATTO_PORT}/api/session/entries" \
+  -H 'content-type: application/json' \
+  --data '{"ids":["<entry-id-1>","<entry-id-2>"]}'
 ```
 
 Import a validated session document. The server identity prevents a browser or

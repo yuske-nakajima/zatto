@@ -108,6 +108,7 @@ function renderViewer() {
       isFilePickerOpen={false}
       onToggleFilePanel={vi.fn()}
       onCopyPath={vi.fn()}
+      onRemove={vi.fn()}
       onPickFiles={vi.fn()}
     />,
   );

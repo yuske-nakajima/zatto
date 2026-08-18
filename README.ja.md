@@ -21,6 +21,8 @@ npx @yuske-nakajima/zatto file.html
 区切りをダブルクリックすると、既定の幅へ戻ります。
 フォルダー表示でフォルダー行を削除すると、その配下で開いているすべてのエントリをセッションから外します。
 ディスク上のファイルとフォルダーは削除しません。
+各フォルダー行には、子孫を含めて開いているファイル数を表示します。
+プレビュー上部から、選択中のファイルをセッションから外すこともできます。
 
 ## 使い方
 
@@ -288,6 +290,14 @@ curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
 curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
   -H 'content-type: application/json' \
   --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
+```
+
+複数のエントリを、1回の原子的なセッション更新で削除します。
+
+```bash
+curl -X DELETE "http://127.0.0.1:${ZATTO_PORT}/api/session/entries" \
+  -H 'content-type: application/json' \
+  --data '{"ids":["<entry-id-1>","<entry-id-2>"]}'
 ```
 
 検証済みのセッションJSONをインポートします。

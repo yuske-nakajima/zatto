@@ -145,6 +145,7 @@ function DirectoryBranch({
           <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={12} />
           <Icon name="folder" size={14} />
           <strong>{node.name}</strong>
+          <span className="directory-entry-count">({entryIds.length})</span>
         </button>
         <span className="directory-actions">
           <button
@@ -154,7 +155,7 @@ function DirectoryBranch({
             aria-label={`Copy directory path ${node.directory}`}
             onClick={() => onCopyPath(node.directory)}
           >
-            <Icon name="clipboardCopy" size={12} />
+            <Icon name="link" size={12} />
           </button>
           <button
             className="directory-remove icon-button"
