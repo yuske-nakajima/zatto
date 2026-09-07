@@ -9,6 +9,10 @@
 
 [日本語](./README.ja.md)
 
+<p align="center">
+  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
+</p>
+
 Browse local HTML files together without installing anything.
 
 ```bash
@@ -203,6 +207,23 @@ Build and inspect the npm package, then install and exercise it in an isolated d
 ```bash
 pnpm verify:package
 ```
+
+Preview the Remotion composition in Studio.
+
+```bash
+pnpm video:studio
+```
+
+Render the English and Japanese product videos as 1920×1080 MP4 files.
+Both versions use the same silent 20-second timeline at 30 fps.
+
+```bash
+pnpm video:render
+```
+
+The generated files are `media/zatto-pv.mp4` (English) and
+`media/zatto-pv-ja.mp4` (Japanese). Use `pnpm video:render:en` or
+`pnpm video:render:ja` to render one language.
 
 ## Release
 
