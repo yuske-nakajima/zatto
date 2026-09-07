@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>zatto — 20秒PVタイムライン</title>
+<style>
+/*
+ * output-html スキル固定スタイルシート
+ * 文書タイプ（仕様書 / 結果 / 図解 / 実装解説）を問わず不変のデザインを定義する。
+ * 可変なのは .hero の中身のみで、それ以外のクラスはすべての文書タイプで共通利用する。
+ * このファイルは LLM が書き換えず、機械的なファイル注入（awk）で HTML に埋め込む。
+ */
+
+:root {
+  --bg: #ffffff;
+  --surface: #f4f7f6;
+  --surface-alt: #e9efed;
+  --border: #dde5e3;
+  --border-strong: #c2cdc9;
+  --text: #17211e;
+  --text-secondary: #4c5a56;
+  --text-muted: #67746f;
+  --primary: #0f6b5c;
+  --primary-strong: #0a4d42;
+  --primary-light: #e4f2ef;
+  --success: #146c3e;
+  --success-light: #e2f4e9;
+  --warning: #8a5a00;
+  --warning-light: #fdf1dc;
+  --danger: #a3212e;
+  --danger-light: #fbe7e8;
+  --info: #10577f;
+  --info-light: #e3f1f8;
+  --purple: #5b3a94;
+  --purple-light: #ede8f8;
+  --font-sans: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', 'Hiragino Sans',
+    'Yu Gothic', 'メイリオ', Meiryo, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --content-width: 820px;
+  --toc-width: 220px;
+}
+
+/* OS のダークモード設定に追従する。トグル UI は持たない */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181a;
+    --surface: #1d2325;
+    --surface-alt: #262d2f;
+    --border: #333c3e;
+    --border-strong: #46514f;
+    --text: #f3f6f5;
+    --text-secondary: #b9c4c1;
+    --text-muted: #8a9694;
+    --primary: #5fd3b8;
+    --primary-strong: #8ee6cf;
+    --primary-light: #17332c;
+    --success: #7bd996;
+    --success-light: #163524;
+    --warning: #f0b64d;
+    --warning-light: #3a2c10;
+    --danger: #f28b8b;
+    --danger-light: #3a1d1f;
+    --info: #7ec8ec;
+    --info-light: #14293a;
+    --purple: #c3aef2;
+    --purple-light: #2a2140;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { line-height: 1.35; font-weight: 700; letter-spacing: -0.01em; }
+
+a { color: var(--primary); }
+a:hover { color: var(--primary-strong); }
+
+/* ── ヘッダー ── */
+.doc-header {
+  border-bottom: 3px solid var(--primary);
+  padding: 3rem 2rem 2rem;
+  max-width: calc(var(--content-width) + var(--toc-width) + 4rem);
+  margin: 0 auto;
+}
+.doc-header h1 { font-size: 2.1rem; margin-bottom: 0.5rem; }
+.doc-header .subtitle { font-size: 1.0625rem; color: var(--text-secondary); margin-bottom: 1.25rem; }
+.doc-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.doc-meta-item {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 0.25rem 0.625rem;
+}
+
+/* ── 2 カラムレイアウト ── */
+.doc-layout {
+  display: grid;
+  grid-template-columns: var(--toc-width) 1fr;
+  gap: 2rem;
+  max-width: calc(var(--content-width) + var(--toc-width) + 4rem);
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.toc {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  font-size: 0.8125rem;
+  padding-right: 1rem;
+  border-right: 1px solid var(--border);
+}
+.toc-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+.toc ol, .toc ul { list-style: none; padding-left: 0; }
+.toc li { margin-bottom: 0.125rem; }
+.toc a {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-xs);
+}
+.toc a:hover, .toc a.active { color: var(--primary); background: var(--primary-light); }
+.toc .toc-sub { padding-left: 1rem; }
+.toc .toc-sub a { font-size: 0.75rem; }
+
+.doc-main { max-width: var(--content-width); min-width: 0; }
+.doc-main section { margin-bottom: 3rem; scroll-margin-top: 1.5rem; }
+.doc-main h2 {
+  font-size: 1.4375rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary);
+}
+.doc-main h3 { font-size: 1.125rem; margin-top: 1.75rem; margin-bottom: 0.75rem; }
+.doc-main p { margin-bottom: 1rem; }
+.doc-main ul, .doc-main ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+.doc-main li { margin-bottom: 0.375rem; }
+
+.doc-footer {
+  border-top: 1px solid var(--border);
+  max-width: calc(var(--content-width) + var(--toc-width) + 4rem);
+  margin: 2rem auto 0;
+  padding: 1.5rem 2rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.doc-footer p { margin-bottom: 0.25rem; }
+
+/* ── Hero: 文書冒頭で最も大きく見せる塊。中身だけが文書タイプごとに変わる ── */
+.hero {
+  background: linear-gradient(135deg, var(--primary-light), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 2.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.hero-title {
+  font-size: 1.75rem;
+  color: var(--primary-strong);
+  margin-bottom: 0.75rem;
+}
+.hero-body { font-size: 1.0625rem; color: var(--text); }
+
+/* ── カードグリッド ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.card-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.375rem; }
+.card-detail { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; }
+.card--accent-info { border-left: 3px solid var(--info); }
+.card--accent-primary { border-left: 3px solid var(--primary); }
+.card--accent-warning { border-left: 3px solid var(--warning); }
+.card--accent-danger { border-left: 3px solid var(--danger); }
+
+/* ── 表 ── */
+.spec-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin: 1rem 0 1.5rem; }
+.spec-table thead { background: var(--surface); }
+.spec-table th {
+  font-weight: 600;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.spec-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.spec-table tbody tr:hover { background: var(--surface); }
+.spec-table code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--surface-alt);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs);
+}
+
+/* ── コールアウト ── */
+.callout {
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface);
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.9375rem;
+}
+.callout-title {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.375rem;
+}
+.callout-info { border-left-color: var(--info); background: var(--info-light); }
+.callout-info .callout-title { color: var(--info); }
+.callout-warning { border-left-color: var(--warning); background: var(--warning-light); }
+.callout-warning .callout-title { color: var(--warning); }
+.callout-danger { border-left-color: var(--danger); background: var(--danger-light); }
+.callout-danger .callout-title { color: var(--danger); }
+.callout-success { border-left-color: var(--success); background: var(--success-light); }
+.callout-success .callout-title { color: var(--success); }
+
+/* ── 図 ── */
+/* background を明示するため .hero 内に置かれても figcaption のコントラストが .hero のグラデーションに引きずられない */
+.diagram-container { margin: 1.5rem 0; text-align: center; background: var(--bg); }
+.diagram-container .mermaid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.diagram-container svg { max-width: 100%; height: auto; }
+.diagram-container figcaption {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* ── 用語集 ── */
+.glossary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.glossary-item { padding: 0.875rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.glossary-term { font-weight: 600; font-size: 0.9375rem; margin-bottom: 0.25rem; }
+.glossary-def { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── リスクカード ── */
+.risk-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+.risk-card--high { border-left: 3px solid var(--danger); }
+.risk-card--medium { border-left: 3px solid var(--warning); }
+.risk-card--low { border-left: 3px solid var(--success); }
+.risk-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.375rem; }
+.risk-title { font-weight: 600; font-size: 0.9375rem; }
+.risk-body { font-size: 0.875rem; color: var(--text-secondary); }
+
+/* ── 未解決事項 ── */
+.question-list { list-style: none; padding-left: 0; }
+.question-list li {
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-xs);
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+  background: var(--info-light);
+}
+.question-list li::before {
+  content: "?";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--info);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.625rem;
+}
+
+/* ── ディレクトリツリー ── */
+/* white-space: pre で改行とインデントをそのまま保持するため、<pre> で二重に包む必要はない */
+.tree-view {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  white-space: pre;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.tree-view .dir { color: var(--primary-strong); font-weight: 600; }
+.tree-view .file { color: var(--text-secondary); }
+.tree-view .comment { color: var(--text-muted); font-style: italic; }
+
+/* ── 実行フローの番号付きステップ ── */
+.flow-steps { list-style: none; padding-left: 0; counter-reset: flow-step; margin: 1.25rem 0; }
+.flow-steps li {
+  counter-increment: flow-step;
+  position: relative;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  margin-bottom: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+}
+.flow-steps li::before {
+  content: counter(flow-step);
+  position: absolute;
+  left: 0.9rem;
+  top: 0.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── バッジ ── */
+.badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+/* .badge-* は色のみを定義する。併記規則は references/classes.md の .badge 行を参照する */
+/* トレーサビリティ: 原文保持 / 要約 / 推論 の 3 種のみ固定する */
+.badge-preserved { background: var(--success-light); color: var(--success); }
+.badge-summarized { background: var(--info-light); color: var(--info); }
+.badge-inferred { background: var(--purple-light); color: var(--purple); }
+/* 汎用強調: 意味の割り当ては文書タイプ側に委ねる。優先度語彙をクラス名に固定しない */
+.badge-neutral { background: var(--surface-alt); color: var(--text-secondary); }
+.badge-accent { background: var(--primary-light); color: var(--primary-strong); }
+.badge-warn { background: var(--warning-light); color: var(--warning); }
+.badge-danger { background: var(--danger-light); color: var(--danger); }
+.badge-ok { background: var(--success-light); color: var(--success); }
+
+/* ── コード表示 ── */
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  margin: 1rem 0;
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--surface-alt);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs);
+}
+pre code { background: none; padding: 0; }
+
+.code-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  margin: 1rem 0;
+  overflow: hidden;
+}
+.code-block-header {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
+  padding: 0.375rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+.code-block pre { margin: 0; border: none; border-radius: 0; }
+
+/* コードハイライト用トークン。外部ハイライト CDN は追加せず、この 6 クラスに閉じる */
+.tok-kw { color: var(--purple); font-weight: 600; }
+.tok-str { color: var(--success); }
+.tok-com { color: var(--text-muted); font-style: italic; }
+.tok-num { color: var(--info); }
+.tok-fn { color: var(--primary-strong); }
+.tok-type { color: var(--warning); }
+
+/* ── レスポンシブ ── */
+@media screen and (max-width: 900px) {
+  .doc-layout { grid-template-columns: 1fr; padding: 1.25rem; }
+  .toc {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+  }
+  .doc-header { padding: 2rem 1.25rem 1.5rem; }
+  .doc-header h1 { font-size: 1.625rem; }
+  .hero { padding: 1.5rem; }
+  .card-grid, .glossary { grid-template-columns: 1fr; }
+}
+
+/* ── 印刷 ── */
+/* OS がダークモードでも印刷はライト固定にする（CSS 変数のみ対象。Mermaid SVG は JS 初期化時のテーマ判定のためこの固定の対象外） */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #f4f7f6;
+    --surface-alt: #e9efed;
+    --border: #dde5e3;
+    --border-strong: #c2cdc9;
+    --text: #17211e;
+    --text-secondary: #4c5a56;
+    --text-muted: #67746f;
+    --primary: #0f6b5c;
+    --primary-strong: #0a4d42;
+    --primary-light: #e4f2ef;
+    --success: #146c3e;
+    --success-light: #e2f4e9;
+    --warning: #8a5a00;
+    --warning-light: #fdf1dc;
+    --danger: #a3212e;
+    --danger-light: #fbe7e8;
+    --info: #10577f;
+    --info-light: #e3f1f8;
+    --purple: #5b3a94;
+    --purple-light: #ede8f8;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body { font-size: 11pt; }
+  .toc { display: none; }
+  .doc-meta { display: none; }
+  .doc-layout { display: block; }
+  .doc-header { padding: 1rem 0; border-bottom: 2px solid var(--border-strong); }
+  .doc-main h2, .doc-main h3, .hero, .diagram-container, .card, .risk-card { page-break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.75em; color: var(--text-muted); }
+  .doc-footer { border-top: 1px solid var(--border-strong); }
+}
+</style>
+</head>
+<body>
+<header class="doc-header"><h1>zatto — 20秒PVタイムライン</h1><p class="subtitle">ローカルHTMLを、ひとつのタブで。</p><div class="doc-meta"><span class="doc-meta-item">2026-09-07</span><span class="doc-meta-item">尺：20秒</span><span class="doc-meta-item">構成・演出案</span></div></header>
+<div class="doc-layout">
+<nav class="toc" aria-label="目次"><ol><li><a href="#direction">コンセプト</a></li><li><a href="#timeline">20秒のタイムライン</a></li><li><a href="#visual">画面と動き</a></li><li><a href="#production">制作時に詰めること</a></li><li><a href="#sources">出典と表記</a></li></ol></nav>
+<main class="doc-main">
+<section class="hero" id="direction"><h2 class="hero-title">ローカルHTMLを、ひとつのタブで。</h2><p class="hero-body">開く。探す。ざっと見る。</p><p><strong>zatto</strong> <span class="badge badge-preserved">合意したコピー</span></p><div class="card-grid"><article class="card"><p class="card-label">コンセプト</p><p class="card-value">道具らしく、クールに。</p><p class="card-detail">「ざっと」見る軽さを、短いコピーと具体的な操作で伝える。</p></article><article class="card"><p class="card-label">見せる価値</p><p class="card-value">CLIとGUIが、ひとつにつながる。</p><p class="card-detail">同じ時間軸で追加と反映を見せ、リスト・フォルダ・検索へつなぐ。</p></article></div><p><span class="badge badge-summarized">会話の要約</span> 約20秒。ローカルHTMLビューアーであることと、ブラウザの1タブに収まる便利さを押し出す。</p><p><span class="badge badge-inferred">演出案</span> 以下の秒数・画面配置・素材・音の扱いは、合意した方向性を具体化した提案。</p></section>
+<section id="timeline"><h2>20秒のタイムライン</h2><p><span class="badge badge-inferred">演出案</span> CLIで開く → GUIで切り替える → フォルダでたどる → 検索で見つける → ざっと見る。</p>
+<table class="spec-table"><thead><tr><th>時間</th><th>映像・操作</th><th>画面内コピー</th><th>伝えること</th></tr></thead><tbody>
+<tr><td>0.0–2.5秒<br>2.5秒</td><td>メインコピーを大きく表示。背景にブラウザの輪郭を薄く置き、操作シーンへつなぐ。</td><td>ローカルHTMLを、<br>ひとつのタブで。</td><td>最初に用途と価値を伝える。</td></tr>
+<tr><td>2.5–7.0秒<br>4.5秒</td><td>ブラウザを主役に、ターミナルを横に置く。起動済みのzattoへCLIからHTMLを追加。Enterの直後、同じ画面内のGUIリストにファイルが増える。GUIで追加された項目をクリックして開く。</td><td>開く。</td><td>CLIの操作とGUIの反映が直結する。クリックでも操作できる。</td></tr>
+<tr><td>7.0–10.0秒<br>3.0秒</td><td>ターミナルを退かせ、GUIへ寄る。リストの別ファイルをクリック。レポートから図解へ、内容がはっきり変わる。</td><td>リスト</td><td>複数のHTMLを同じタブで切り替えられる。</td></tr>
+<tr><td>10.0–13.0秒<br>3.0秒</td><td>フォルダ表示へ切り替える。フォルダを1つ展開し、配下のHTMLを開く。リストと同じファイル群を使う。</td><td>フォルダ</td><td>フォルダ構造から目的のHTMLをたどれる。</td></tr>
+<tr><td>13.0–16.5秒<br>3.5秒</td><td>検索欄に短い語を入力。候補が絞られ、目的のHTMLをクリックして表示する。</td><td>探す。</td><td>ファイルが増えても検索で見つけられる。</td></tr>
+<tr><td>16.5–20.0秒<br>3.5秒</td><td>見つけたHTMLを一拍見せる。画面を引き、同じブラウザタブだったことを見せる。最後はロゴとコピーに切り替え、約2秒保持する。</td><td>ざっと見る。<br><strong>zatto</strong><br><small>ローカルHTMLを、ひとつのタブで。</small></td><td>操作の気持ちよさを名前に結びつける。</td></tr>
+</tbody></table><div class="callout callout-info"><p class="callout-title">CLIとGUIを同じタイムラインで見せる</p><p>2.5–7.0秒は、ターミナルとブラウザを同時に映す。入力、Enter、リストへの追加、クリック、プレビュー表示の順に視線を誘導する。操作と結果の間でカットを切らず、因果関係が見える時間を確保する。</p></div></section>
+<section id="visual"><h2>画面と動き</h2><p><span class="badge badge-inferred">演出案</span></p><table class="spec-table"><thead><tr><th>項目</th><th>方針</th></tr></thead><tbody><tr><td>トーン</td><td>白・黒・グレーを基調に、アクセントは実際のzatto UIに合わせる。短い文字と整った余白で、道具としての静かな印象を作る。</td></tr><tr><td>カメラ</td><td>クリック先と入力欄へ必要な分だけ寄る。操作前に移動を終え、結果を読める間を置く。</td></tr><tr><td>ブラウザ</td><td>一連の操作で同じタブを維持する。冒頭の操作画面と締めの引き画では、タブバーを見せる。</td></tr><tr><td>表示するHTML</td><td>レポート、図解、文章中心のメモなど、切り替えたことが一目で分かる素材を用意する。フォルダ表示と検索も同じ素材で通す。</td></tr><tr><td>文字</td><td>メインコピー以外は「開く。」「リスト」「フォルダ」「探す。」「ざっと見る。」に絞る。</td></tr><tr><td>CLI</td><td>実行可能なコマンドを使用する。入力例：<code>npx @yuske-nakajima/zatto report.html diagram.html</code>。動画素材の実際のパスに合わせ、読める大きさを確保する。</td></tr><tr><td>音</td><td>声なしをたたき台とする。軽いキー音とクリック音を操作に同期。BGMの有無は制作時に決め、無音でも内容が伝わる構成にする。</td></tr></tbody></table></section>
+<section id="production"><h2>制作時に詰めること</h2><p><span class="badge badge-inferred">未確定の制作項目</span> この文書はPVの構成案。動画の実装・撮影・レンダリングは未着手。</p><ul class="question-list"><li>画面比率と解像度：参考動画に合わせ、16:9・1920×1080・30fpsを仮置きする。</li><li>実画面の収録とRemotionで再構成する範囲。</li><li>CLIで追加した際のGUI反映、フォルダ表示、検索の挙動を実機で確認する。検索語は実際に結果が出る素材に合わせる。</li><li>表示するHTML素材、文字サイズ、BGMと効果音。</li></ul></section>
+<section id="sources"><h2>出典と表記</h2><p>出典：この会話で合意したコンセプトとコピー、参考動画「remotion-参考.mp4」、既存動画「media/zatto-demo.mp4」。参考・既存動画の視覚的な確認は1秒ごとの抽出画像に基づく。音の内容は未確認。</p><table class="spec-table"><thead><tr><th>ラベル</th><th>意味</th><th>対象</th></tr></thead><tbody><tr><td><span class="badge badge-preserved">原文保持</span></td><td>会話で合意した文言をそのまま掲載。</td><td>メインコピー、動詞のコピー、zatto表記。</td></tr><tr><td><span class="badge badge-summarized">要約</span></td><td>ユーザーの希望を整理。</td><td>約20秒、クールな道具感、CLIとGUI、リスト・フォルダ・検索、1タブ。</td></tr><tr><td><span class="badge badge-inferred">推論・提案</span></td><td>会話の方向性を具体化した未確定の案。</td><td>秒数配分、カメラ、画面構成、素材、音、制作条件。</td></tr></tbody></table></section>
+</main></div><footer class="doc-footer">zatto PV / 20秒構成案 · 外部依存なし</footer>
+<script>
+const sections = document.querySelectorAll('.doc-main section[id]');
+const tocLinks = document.querySelectorAll('.toc a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+sections.forEach((s) => observer.observe(s));
+</script>
+</body></html>
