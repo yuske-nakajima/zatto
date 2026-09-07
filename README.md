@@ -9,6 +9,10 @@
 
 [日本語](./README.ja.md)
 
+<p align="center">
+  <img src="./media/zatto-demo.gif" alt="zatto opens and switches between local HTML files in one browser session" width="800">
+</p>
+
 Browse local HTML files together without installing anything.
 
 ```bash
@@ -203,6 +207,21 @@ Build and inspect the npm package, then install and exercise it in an isolated d
 ```bash
 pnpm verify:package
 ```
+
+Preview the Remotion composition in Studio.
+
+```bash
+pnpm video:studio
+```
+
+Render the 1280x720 MP4 for social media and the 640x360 GIF used by this README.
+Both outputs come from the same silent 12-second composition.
+
+```bash
+pnpm video:render
+```
+
+The generated files are `media/zatto-demo.mp4` and `media/zatto-demo.gif`.
 
 ## Release
 

@@ -9,6 +9,10 @@
 
 [English](./README.md)
 
+<p align="center">
+  <img src="./media/zatto-demo.gif" alt="ローカルHTMLを1つのブラウザーセッションで開いて切り替えるzatto" width="800">
+</p>
+
 インストールせずに、ローカルのHTMLファイルをまとめて閲覧できます。
 
 ```bash
@@ -194,6 +198,21 @@ npmパッケージの内容と、別ディレクトリへ展開したCLIを検�
 ```bash
 pnpm verify:package
 ```
+
+RemotionのコンポジションをStudioでプレビューします。
+
+```bash
+pnpm video:studio
+```
+
+SNS向けの1280x720 MP4と、このREADMEで使う640x360 GIFを生成します。
+どちらも同じ12秒の無音コンポジションから生成されます。
+
+```bash
+pnpm video:render
+```
+
+生成先は`media/zatto-demo.mp4`と`media/zatto-demo.gif`です。
 
 ## リリース
 
