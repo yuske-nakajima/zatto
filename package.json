@@ -53,10 +53,9 @@
     "prepack": "pnpm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p video/tsconfig.json",
-    "video:render": "pnpm run video:render:mp4 && pnpm run video:render:gif",
-    "video:render:gif": "remotion render video/index.ts ZattoDemo media/zatto-demo.gif --codec=gif --scale=0.5 --every-nth-frame=3 --number-of-gif-loops=0 --overwrite",
-    "video:render:mp4": "remotion render video/index.ts ZattoDemo media/zatto-demo.mp4 --codec=h264 --crf=18 --muted --overwrite",
-    "video:render:v2": "remotion render video/index.ts ZattoSingleTab media/v2/zatto-pv.mp4 --codec=h264 --crf=18 --muted --overwrite",
+    "video:render": "pnpm run video:render:en && pnpm run video:render:ja",
+    "video:render:en": "remotion render video/index.ts ZattoPv media/zatto-pv.mp4 --codec=h264 --crf=18 --muted --overwrite",
+    "video:render:ja": "remotion render video/index.ts ZattoPvJa media/zatto-pv-ja.mp4 --codec=h264 --crf=18 --muted --overwrite",
     "video:studio": "remotion studio video/index.ts",
     "verify:package": "pnpm run build && node scripts/verify-package.mjs"
   },

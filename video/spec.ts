@@ -1,15 +1,15 @@
-export interface VideoSpec {
-  id: string;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
-}
+/** Supported promotion copy languages. */
+export type FilmLocale = "en" | "ja";
 
-export const VIDEO_SPEC: VideoSpec = {
-  id: "ZattoDemo",
-  width: 1280,
-  height: 720,
+const VIDEO_FORMAT = {
+  width: 1920,
+  height: 1080,
   fps: 30,
-  durationInFrames: 360,
+  durationInFrames: 600,
+};
+
+/** Official promotions share their format and animation timeline. */
+export const VIDEO_SPECS = {
+  en: { ...VIDEO_FORMAT, id: "ZattoPv" },
+  ja: { ...VIDEO_FORMAT, id: "ZattoPvJa" },
 };

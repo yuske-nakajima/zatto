@@ -1,16 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { getFilmState, SINGLE_TAB_SPEC } from "../video/single-tab/timeline.js";
+import { getFilmState } from "../video/single-tab/timeline.js";
 
 describe("single-tab promotion timeline", () => {
-  test("renders twenty seconds in full HD", () => {
-    expect(SINGLE_TAB_SPEC).toMatchObject({
-      width: 1920,
-      height: 1080,
-      fps: 30,
-      durationInFrames: 600,
-    });
-  });
-
   test("adds the report after CLI submission and opens it only after the GUI click", () => {
     expect(getFilmState(133)).toMatchObject({
       submitted: false,

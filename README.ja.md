@@ -10,7 +10,7 @@
 [English](./README.md)
 
 <p align="center">
-  <img src="./media/zatto-demo.gif" alt="ローカルHTMLを1つのブラウザーセッションで開いて切り替えるzatto" width="800">
+  <a href="./media/zatto-pv-ja.mp4"><img src="./media/zatto-pv-ja-poster.jpg" alt="zattoの20秒動画を見る：ローカルHTMLを、ひとつのタブで。" width="800"></a>
 </p>
 
 インストールせずに、ローカルのHTMLファイルをまとめて閲覧できます。
@@ -205,14 +205,15 @@ RemotionのコンポジションをStudioでプレビューします。
 pnpm video:studio
 ```
 
-SNS向けの1280x720 MP4と、このREADMEで使う640x360 GIFを生成します。
-どちらも同じ12秒の無音コンポジションから生成されます。
+英語版と日本語版のPVを、1920×1080のMP4として生成します。
+どちらも20秒・30fps・無音で、共通のタイムラインを使います。
 
 ```bash
 pnpm video:render
 ```
 
-生成先は`media/zatto-demo.mp4`と`media/zatto-demo.gif`です。
+生成先は英語版が`media/zatto-pv.mp4`、日本語版が`media/zatto-pv-ja.mp4`です。
+片方だけ生成する場合は、`pnpm video:render:en`または`pnpm video:render:ja`を使います。
 
 ## リリース
 

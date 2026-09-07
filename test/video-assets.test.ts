@@ -1,51 +1,71 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { VIDEO_SPEC } from "../video/spec.js";
+import { VIDEO_SPECS } from "../video/spec.js";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
 };
 
-describe("zatto demo video", () => {
-  test("READMEとSNSへ共用できる16:9の無音コンポジションを定義する", () => {
-    expect(VIDEO_SPEC).toEqual({
-      id: "ZattoDemo",
-      width: 1280,
-      height: 720,
-      fps: 30,
-      durationInFrames: 360,
-    });
-  });
+describe("zatto promotion videos", () => {
+  test.each([
+    ["en", "ZattoPv"],
+    ["ja", "ZattoPvJa"],
+  ] as const)(
+    "registers the %s promotion as twenty seconds in full HD",
+    (locale, id) => {
+      expect(VIDEO_SPECS[locale]).toEqual({
+        id,
+        width: 1920,
+        height: 1080,
+        fps: 30,
+        durationInFrames: 600,
+      });
+    },
+  );
 
-  test("同じコンポジションからGIFとMP4を再生成する", () => {
+  test("renders both official MP4s from the default command", () => {
     expect(packageJson.scripts["video:studio"]).toBe(
       "remotion studio video/index.ts",
     );
-    expect(packageJson.scripts["video:render:mp4"]).toContain(
-      "ZattoDemo media/zatto-demo.mp4",
-    );
-    expect(packageJson.scripts["video:render:mp4"]).toContain("--muted");
-    expect(packageJson.scripts["video:render:gif"]).toContain(
-      "ZattoDemo media/zatto-demo.gif",
-    );
     expect(packageJson.scripts["video:render"]).toBe(
-      "pnpm run video:render:mp4 && pnpm run video:render:gif",
+      "pnpm run video:render:en && pnpm run video:render:ja",
     );
+    for (const [locale, target] of [
+      ["en", "ZattoPv media/zatto-pv.mp4"],
+      ["ja", "ZattoPvJa media/zatto-pv-ja.mp4"],
+    ]) {
+      expect(packageJson.scripts[`video:render:${locale}`]).toContain(target);
+      expect(packageJson.scripts[`video:render:${locale}`]).toContain(
+        "--codec=h264",
+      );
+      expect(packageJson.scripts[`video:render:${locale}`]).toContain(
+        "--muted",
+      );
+    }
+    for (const retired of [
+      "video:render:v2",
+      "video:render:gif",
+      "video:render:mp4",
+    ]) {
+      expect(packageJson.scripts[retired]).toBeUndefined();
+    }
   });
 
-  test("Remotionパッケージを同じバージョンで固定する", () => {
+  test("pins compatible Remotion packages", () => {
     expect(packageJson.devDependencies.remotion).toBe("4.0.522");
     expect(packageJson.devDependencies["@remotion/cli"]).toBe("4.0.522");
     expect(packageJson.devDependencies.zod).toBe("4.5.4");
   });
 
-  test.each(["README.md", "README.ja.md"])(
-    "%sにデモGIFと再生成コマンドを掲載する",
-    (path) => {
-      const readme = readFileSync(path, "utf8");
-      expect(readme).toContain("media/zatto-demo.gif");
-      expect(readme).toContain("pnpm video:render");
-    },
-  );
+  test.each([
+    ["README.md", "zatto-pv"],
+    ["README.ja.md", "zatto-pv-ja"],
+  ])("%s links its language-specific poster to the MP4", (path, name) => {
+    const readme = readFileSync(path, "utf8");
+    expect(readme).toContain(`media/${name}-poster.jpg`);
+    expect(readme).toContain(`media/${name}.mp4`);
+    expect(readme).toContain("pnpm video:render");
+    expect(readme).not.toContain("zatto-demo");
+  });
 });

@@ -1,12 +1,3 @@
-/** Full-HD, twenty-second single-tab promotion. */
-export const SINGLE_TAB_SPEC = {
-  id: "ZattoSingleTab",
-  width: 1920,
-  height: 1080,
-  fps: 30,
-  durationInFrames: 600,
-};
-
 /** HTML documents shared by list, folders, search and preview. */
 export const DOCUMENTS = {
   diagram: {

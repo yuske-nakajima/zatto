@@ -10,7 +10,7 @@
 [日本語](./README.ja.md)
 
 <p align="center">
-  <img src="./media/zatto-demo.gif" alt="zatto opens and switches between local HTML files in one browser session" width="800">
+  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv-poster.jpg" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
 </p>
 
 Browse local HTML files together without installing anything.
@@ -214,14 +214,16 @@ Preview the Remotion composition in Studio.
 pnpm video:studio
 ```
 
-Render the 1280x720 MP4 for social media and the 640x360 GIF used by this README.
-Both outputs come from the same silent 12-second composition.
+Render the English and Japanese product videos as 1920×1080 MP4 files.
+Both versions use the same silent 20-second timeline at 30 fps.
 
 ```bash
 pnpm video:render
 ```
 
-The generated files are `media/zatto-demo.mp4` and `media/zatto-demo.gif`.
+The generated files are `media/zatto-pv.mp4` (English) and
+`media/zatto-pv-ja.mp4` (Japanese). Use `pnpm video:render:en` or
+`pnpm video:render:ja` to render one language.
 
 ## Release
 

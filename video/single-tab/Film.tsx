@@ -1,17 +1,21 @@
 import { AbsoluteFill, Img, useCurrentFrame } from "remotion";
 import logo from "../../src/web/assets/zatto-logo-black.png";
+import type { FilmLocale } from "../spec";
 import { FilmBrowser } from "./Browser";
 import { FilmCursor } from "./Cursor";
+import { FILM_COPY } from "./copy";
 import { FONT, INK, MONO, move } from "./style";
 import { FilmTerminal } from "./Terminal";
 import { getFilmState } from "./timeline";
 
 /**
  * Plays the CLI-to-GUI workflow through one persistent browser tab.
+ * @param props - Promotion copy language.
  * @returns The deterministic twenty-second promotion.
  */
-export function SingleTabFilm() {
+export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
   const frame = useCurrentFrame();
+  const copy = FILM_COPY[locale];
   const state = getFilmState(frame);
   const focus = move(frame, 195, 218);
   const pullback = move(frame, 495, 522);
@@ -21,14 +25,14 @@ export function SingleTabFilm() {
   const sceneOpacity = move(frame, 66, 86) * move(frame, 520, 542, 1, 0);
   const title =
     frame < 210
-      ? "開く。"
+      ? copy.open
       : frame < 300
-        ? "リスト"
+        ? copy.list
         : frame < 390
-          ? "フォルダ"
+          ? copy.folders
           : frame < 495
-            ? "探す。"
-            : "ざっと見る。";
+            ? copy.find
+            : copy.glance;
   return (
     <AbsoluteFill
       style={{
@@ -109,9 +113,9 @@ export function SingleTabFilm() {
             fontWeight: 560,
           }}
         >
-          ローカルHTMLを、
+          {copy.intro[0]}
           <br />
-          ひとつのタブで。
+          {copy.intro[1]}
         </div>
         <div
           style={{
@@ -136,14 +140,14 @@ export function SingleTabFilm() {
         }}
       >
         <div style={{ fontSize: 40, letterSpacing: -1.5, marginBottom: 40 }}>
-          ざっと見る。
+          {copy.glance}
         </div>
         <Img
           src={logo}
           style={{ width: 402, height: 100.5, marginBottom: 43 }}
         />
         <div style={{ color: "#717987", fontSize: 23, letterSpacing: 0.5 }}>
-          ローカルHTMLを、ひとつのタブで。
+          {copy.tagline}
         </div>
       </div>
     </AbsoluteFill>
