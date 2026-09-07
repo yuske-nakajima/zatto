@@ -525,9 +525,13 @@ const tocLinks = document.querySelectorAll('.toc a');
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (!entry.isIntersecting) return;
-    tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+    tocLinks.forEach((a) => {
+      a.classList.toggle('active', a.getAttribute('href') === `#${entry.target.id}`);
+    });
   });
 }, { rootMargin: '-10% 0px -80% 0px' });
-sections.forEach((s) => observer.observe(s));
+sections.forEach((s) => {
+  observer.observe(s);
+});
 </script>
 </body></html>
