@@ -1,15 +1,17 @@
 import { FONT, MONO, move } from "./style";
 
+const COMMAND = "npx @yuske-nakajima/zatto \\\n  report.html";
+
 /**
- * Types a runnable installed-CLI command beside the receiving browser.
+ * Types a scoped npm command beside the receiving browser.
  * @param props - Global film frame.
  * @returns A terminal window with submission synchronized to session insertion.
  */
 export function FilmTerminal({ frame }: { frame: number }) {
   const opacity = move(frame, 78, 91) * move(frame, 195, 215, 1, 0);
-  const command = "zatto report.html".slice(
+  const command = COMMAND.slice(
     0,
-    Math.max(0, Math.floor((frame - 94) / 2)),
+    Math.max(0, Math.floor(((frame - 94) / 36) * COMMAND.length)),
   );
   return (
     <div
@@ -64,30 +66,34 @@ export function FilmTerminal({ frame }: { frame: number }) {
       </div>
       <div
         style={{
-          padding: "29px 26px",
+          padding: "22px 26px",
           fontFamily: MONO,
           fontSize: 23,
-          lineHeight: 1.8,
+          lineHeight: 1.5,
         }}
       >
-        <div style={{ color: "#9298a6", fontSize: 14, marginBottom: 15 }}>
+        <div style={{ color: "#9298a6", fontSize: 14, marginBottom: 10 }}>
           ~/workspace
         </div>
-        <span style={{ color: "#a5b4fc", marginRight: 13 }}>❯</span>
-        <span style={{ color: "#f8fafc" }}>{command}</span>
-        {frame < 134 && (
-          <span
-            style={{
-              display: "inline-block",
-              width: 11,
-              height: 24,
-              verticalAlign: "middle",
-              background: "#a5b4fc",
-              opacity: frame % 24 < 16 ? 1 : 0,
-            }}
-          />
-        )}
-        <div style={{ opacity: move(frame, 134, 139), marginTop: 17 }}>
+        <div style={{ display: "flex", alignItems: "flex-start" }}>
+          <span style={{ color: "#a5b4fc", marginRight: 13 }}>❯</span>
+          <span style={{ color: "#f8fafc", whiteSpace: "pre" }}>
+            {command}
+            {frame < 134 && (
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 11,
+                  height: 24,
+                  verticalAlign: "middle",
+                  background: "#a5b4fc",
+                  opacity: frame % 24 < 16 ? 1 : 0,
+                }}
+              />
+            )}
+          </span>
+        </div>
+        <div style={{ opacity: move(frame, 134, 139), marginTop: 12 }}>
           <div style={{ color: "#a5b4fc", fontSize: 15, marginBottom: 8 }}>
             http://localhost:6280/
           </div>

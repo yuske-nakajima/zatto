@@ -17,7 +17,9 @@ pnpm video:render:v2
 
 The interface is a deterministic Remotion reconstruction, with illustrative
 documents and timed cursor actions. It is not a live screen recording. The CLI
-scene assumes `zatto` is installed and a viewer session is already running.
+scene runs `npx @yuske-nakajima/zatto report.html` against an existing viewer
+session. The package is assumed to be cached so the sequence focuses on adding
+the file rather than the initial package download.
 
 The original `media/zatto-demo.mp4` and `media/zatto-demo.gif` remain available.
 
