@@ -10,7 +10,7 @@
 [日本語](./README.ja.md)
 
 <p align="center">
-  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv-poster.jpg" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
+  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
 </p>
 
 Browse local HTML files together without installing anything.

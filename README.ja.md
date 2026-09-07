@@ -10,7 +10,7 @@
 [English](./README.md)
 
 <p align="center">
-  <a href="./media/zatto-pv-ja.mp4"><img src="./media/zatto-pv-ja-poster.jpg" alt="zattoの20秒動画を見る：ローカルHTMLを、ひとつのタブで。" width="800"></a>
+  <a href="./media/zatto-pv-ja.mp4"><img src="./media/zatto-pv-ja.gif" alt="zattoの20秒動画を見る：ローカルHTMLを、ひとつのタブで。" width="800"></a>
 </p>
 
 インストールせずに、ローカルのHTMLファイルをまとめて閲覧できます。

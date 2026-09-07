@@ -61,9 +61,9 @@ describe("zatto promotion videos", () => {
   test.each([
     ["README.md", "zatto-pv"],
     ["README.ja.md", "zatto-pv-ja"],
-  ])("%s links its language-specific poster to the MP4", (path, name) => {
+  ])("%s links its language-specific GIF to the MP4", (path, name) => {
     const readme = readFileSync(path, "utf8");
-    expect(readme).toContain(`media/${name}-poster.jpg`);
+    expect(readme).toContain(`src="./media/${name}.gif"`);
     expect(readme).toContain(`media/${name}.mp4`);
     expect(readme).toContain("pnpm video:render");
     expect(readme).not.toContain("zatto-demo");
