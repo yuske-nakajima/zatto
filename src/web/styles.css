@@ -269,12 +269,6 @@ button:focus-visible,
   gap: var(--spacing-4);
 }
 
-.list-actions .add-button,
-.list-actions .clear-button {
-  padding: var(--spacing-2) var(--spacing-4);
-  font-size: 10px;
-}
-
 .add-button {
   padding: var(--spacing-4) var(--spacing-8);
   color: var(--color-text-accent);
@@ -308,6 +302,12 @@ button:focus-visible,
 .clear-button:disabled {
   cursor: default;
   opacity: 0.4;
+}
+
+.list-actions .add-button,
+.list-actions .clear-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: 10px;
 }
 
 .view-switcher {
@@ -634,7 +634,7 @@ button:focus-visible,
   font-weight: 500;
 }
 
-.entry-row--selected .entry-copy strong {
+:where(.entry-row--selected) .entry-copy strong {
   color: var(--color-text-accent);
   font-weight: 600;
 }
@@ -657,11 +657,11 @@ button:focus-visible,
   padding-right: 0;
 }
 
-.entry-row--grouped .entry-copy strong {
+:where(.entry-row--grouped) .entry-copy strong {
   font-size: 12px;
 }
 
-.entry-row--grouped .entry-copy small {
+:where(.entry-row--grouped) .entry-copy small {
   font-size: 9px;
 }
 
@@ -709,16 +709,16 @@ button:focus-visible,
   background: var(--color-bg-sidebar);
 }
 
-.directory-tree > .directory-branch--root:first-child > .directory-heading {
-  padding: var(--spacing-10) var(--spacing-12) var(--spacing-6);
-}
-
 .directory-branch--collapsed-selection > .directory-heading {
   box-shadow: inset 2px 0 0 var(--color-border-accent);
 }
 
-.directory-branch--collapsed-selection
-  > .directory-heading
+.directory-tree > .directory-branch--root:first-child > .directory-heading {
+  padding: var(--spacing-10) var(--spacing-12) var(--spacing-6);
+}
+
+:where(.directory-branch--collapsed-selection)
+  > :where(.directory-heading)
   > .directory-toggle
   strong {
   color: var(--color-text-accent);
