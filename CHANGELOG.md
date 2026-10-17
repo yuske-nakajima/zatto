@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/yuske-nakajima/zatto/compare/v2.0.0...v2.1.0) (2026-10-17)
+
+
+### Features
+
+* **mcp:** ワークスペースの整理状態の参照とファイル登録を追加 ([54e0134](https://github.com/yuske-nakajima/zatto/commit/54e0134c489b3d51082d23c2a78bc46bd63dd2d2))
+* **mcp:** ワークスペースの整理状態の参照とファイル登録を追加 ([d474e03](https://github.com/yuske-nakajima/zatto/commit/d474e03b2a26adbe3a61c98f0b8a003ae107446a)), closes [#71](https://github.com/yuske-nakajima/zatto/issues/71)
+
+
+### Documentation
+
+* **mcp:** MCPクライアントへの登録例を追加 ([1053983](https://github.com/yuske-nakajima/zatto/commit/105398305687604be4ce8877a31e887ff741d8ac)), closes [#71](https://github.com/yuske-nakajima/zatto/issues/71)
+
 ## [2.0.0](https://github.com/yuske-nakajima/zatto/compare/v1.2.0...v2.0.0) (2026-10-17)
 
 
