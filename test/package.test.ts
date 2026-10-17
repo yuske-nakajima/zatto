@@ -122,13 +122,13 @@ describe("npmパッケージ", () => {
       expect(readme).toContain("src/web/assets/zatto-logo-white.png");
     }
     expect(englishReadme).toContain("[日本語](./README.ja.md)");
-    expect(englishReadme).toContain("Browse local HTML files");
+    expect(englishReadme).toContain("Browse local HTML and Markdown files");
     expect(japaneseReadme).toContain("[English](./README.md)");
     expect(japaneseReadme).toContain(
-      "ローカルのHTMLファイルをまとめて閲覧できます",
+      "ローカルのHTMLとMarkdownのファイルをまとめて閲覧できます",
     );
     expect(englishReadme).toContain(
-      "add individual `.html` or `.htm` files with **+ Add**",
+      "add individual `.html`, `.htm`, `.md` or `.markdown` files with",
     );
     expect(englishReadme).toContain("separate **Add folder…** button");
     expect(englishReadme).toContain("selected folder only");

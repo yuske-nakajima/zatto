@@ -128,9 +128,7 @@ export function FilePanel({
         {view !== "directories" ? (
           <ol
             className="entry-list"
-            aria-label={
-              view === "favorites" ? "Favorite HTML entries" : "HTML entries"
-            }
+            aria-label={view === "favorites" ? "Favorite entries" : "Entries"}
           >
             {visibleEntries.map((entry) => (
               <EntryRow
@@ -169,7 +167,7 @@ export function FilePanel({
         )}
         {view !== "favorites" && entries.length === 0 && (
           <div className="empty-list">
-            <p>Add HTML files from the CLI</p>
+            <p>Add HTML or Markdown files from the CLI</p>
             <code>zatto page.html</code>
           </div>
         )}

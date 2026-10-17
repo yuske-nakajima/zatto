@@ -1,6 +1,7 @@
 import type { Stats } from "node:fs";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import { viewableKind } from "./viewable-file.js";
 
 export type DirectoryImportMode = "direct" | "recursive";
 
@@ -32,7 +33,7 @@ type PathKind = "directory" | "file";
  * @throws When a selected path is invalid, changes during inspection, escapes
  * the selected root, or cannot be read
  */
-export async function enumerateHtmlFiles(
+export async function enumerateViewableFiles(
   rootPath: string,
   mode: DirectoryImportMode,
 ): Promise<string[]> {
@@ -67,7 +68,7 @@ async function collectHtmlPaths(
   });
   for (const entry of entries) {
     const absolutePath = path.join(directory.absolutePath, entry.name);
-    if (entry.isFile() && isHtmlPath(entry.name)) {
+    if (entry.isFile() && viewableKind(entry.name) !== null) {
       output.push(await validatePath(absolutePath, "file", root));
     } else if (mode === "recursive" && entry.isDirectory()) {
       const child = await validatePath(absolutePath, "directory", root);
@@ -159,11 +160,6 @@ function sameIdentity(left: PathIdentity, right: PathIdentity): boolean {
     left.mtimeMs === right.mtimeMs &&
     left.ctimeMs === right.ctimeMs
   );
-}
-
-function isHtmlPath(filePath: string): boolean {
-  const extension = path.extname(filePath).toLowerCase();
-  return extension === ".html" || extension === ".htm";
 }
 
 function compareCodePoints(left: string, right: string): number {

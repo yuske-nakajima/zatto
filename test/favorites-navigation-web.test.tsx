@@ -69,9 +69,7 @@ test.each(["URL", "stored preference"])(
     mounted.unmount();
     render(<App />);
     await screen.findByTitle("Alpha preview");
-    expect(
-      screen.getByRole("list", { name: "Favorite HTML entries" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Favorite entries" })).toBeTruthy();
     expect(window.localStorage.getItem("zatto:file-panel-view")).toBe(
       "favorites",
     );

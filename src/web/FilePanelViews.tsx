@@ -53,7 +53,7 @@ export function FilePanelViews({
       <button
         ref={searchButtonRef}
         className="search-mode-button"
-        data-status-description="Search HTML files in this session."
+        data-status-description="Search files in this session."
         type="button"
         aria-label={
           !isSearchVisible && hasSearchState

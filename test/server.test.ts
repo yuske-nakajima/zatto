@@ -212,16 +212,18 @@ describe("zatto server", () => {
     await app.close();
   });
 
-  test("ファイル選択でHTMLを追加し、server identityを検証する", async () => {
+  test("ファイル選択でHTMLとMarkdownを追加し、server identityを検証する", async () => {
     const firstPath = path.join(tempDir, "picked.html");
+    const markdownPath = path.join(tempDir, "picked.md");
     const ignoredPath = path.join(tempDir, "ignored.txt");
     await writeFile(firstPath, "<title>Picked</title>", "utf8");
+    await writeFile(markdownPath, "# Notes", "utf8");
     await writeFile(ignoredPath, "ignored", "utf8");
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const pickFiles = vi.fn().mockResolvedValue({
       kind: "selected",
-      paths: [firstPath, ignoredPath],
+      paths: [firstPath, markdownPath, ignoredPath],
     });
     const onSessionChanged = vi.fn();
     const app = await createApp({
@@ -257,9 +259,12 @@ describe("zatto server", () => {
     expect(acceptedResponse.code).toBe(0);
     expect(acceptedResponse.json()).toMatchObject({
       cancelled: false,
-      added: [{ absPath: firstPath, title: "Picked" }],
+      added: [
+        { absPath: firstPath, title: "Picked" },
+        { absPath: markdownPath, title: "Notes" },
+      ],
     });
-    expect(store.getSession().entries).toHaveLength(1);
+    expect(store.getSession().entries).toHaveLength(2);
     expect(onSessionChanged).toHaveBeenCalledOnce();
 
     await app.close();

@@ -80,7 +80,7 @@ describe("search URL navigation", () => {
 
     expect(
       screen
-        .getByRole("searchbox", { name: "Search HTML files" })
+        .getByRole("searchbox", { name: "Search files" })
         .getAttribute("value"),
     ).toBe("alpha");
     expect(fetch).toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe("search URL navigation", () => {
     await act(async () => vi.runAllTimersAsync());
 
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    const input = screen.getByRole("searchbox", { name: "Search HTML files" });
+    const input = screen.getByRole("searchbox", { name: "Search files" });
     fireEvent.change(input, { target: { value: "alpha" } });
     await act(async () => vi.advanceTimersByTimeAsync(250));
     const results = screen.getByRole("region", { name: "Search results" });

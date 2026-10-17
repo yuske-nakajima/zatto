@@ -95,16 +95,16 @@ export function SearchView({
           )}
         </button>
         <label className="search-input-wrap">
-          <span className="visually-hidden">Search HTML files</span>
+          <span className="visually-hidden">Search files</span>
           <span className="search-glyph" aria-hidden="true" />
           <input
             ref={inputRef}
             type="search"
-            data-status-description="Enter text to search every HTML file."
-            aria-label="Search HTML files"
+            data-status-description="Enter text to search every file."
+            aria-label="Search files"
             maxLength={SEARCH_QUERY_MAX_LENGTH}
             value={query}
-            placeholder="Search HTML files"
+            placeholder="Search files"
             onChange={(event) => onQueryChange(event.target.value)}
           />
           {phase === "updating" && (
@@ -170,7 +170,7 @@ function formatLiveStatus(
   result: SearchResponse | null,
 ): string {
   if (!isActive) return "";
-  if (phase === "initial") return "Searching HTML files.";
+  if (phase === "initial") return "Searching files.";
   if (phase === "updating") return "Updating search results.";
   if (phase === "error") return "Search failed.";
   if (result?.totalMatches === 0) return "No matches found.";

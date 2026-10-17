@@ -22,7 +22,7 @@
   <body>
     <main>
       <h1>Getting started</h1>
-      <p class="lead">Open local HTML files together in one browser session.</p>
+      <p class="lead">Open local HTML and Markdown files together in one browser session.</p>
 
       <h2>Start zatto</h2>
       <p>Run zatto without installing it globally. A browser window opens and the local server remains available after the command exits.</p>
@@ -31,8 +31,9 @@
       <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
 
       <h2>Add files</h2>
-      <p>On macOS, use <strong>+ Add</strong>, <strong>Select HTML files</strong>, or <kbd>Command</kbd>+<kbd>O</kbd>. The picker accepts existing <code>.html</code> and <code>.htm</code> files.</p>
-      <p>Use <strong>Add folder…</strong> to add either the HTML files directly inside a folder or all HTML files in its descendants. Symbolic links are ignored, registered paths are not added twice, and files are ordered by relative path.</p>
+      <p>On macOS, use <strong>+ Add</strong>, <strong>Select HTML or Markdown files</strong>, or <kbd>Command</kbd>+<kbd>O</kbd>. The picker accepts existing <code>.html</code>, <code>.htm</code>, <code>.md</code>, and <code>.markdown</code> files.</p>
+      <h2>Markdown</h2><p>Markdown files are shown read-only with GitHub-flavored tables, task lists, and code blocks. Task list checkboxes can be toggled in the preview, which writes only that <code>[ ]</code> or <code>[x]</code> back to the file; if the file changed since it was shown, nothing is written and the latest content is shown. The light or dark theme follows the system setting. A <code>mermaid</code> code block is drawn as a diagram; a diagram with a syntax error shows the error and its source. Relative images and links resolve from the file's folder, and HTML written in Markdown is shown as written. The first level-one heading becomes the title; without one, the file name is used. Themes and the diagram renderer are bundled, so no network connection is needed.</p>
+      <p>Use <strong>Add folder…</strong> to add either the HTML and Markdown files directly inside a folder or all of them in its descendants. Symbolic links are ignored, registered paths are not added twice, and files are ordered by relative path.</p>
 
       <h2>Browse and search</h2>
       <ul>
@@ -40,7 +41,7 @@
         <li>Folder rows show the number of open files in their subtree.</li>
         <li>Use the trash button in the preview header to remove the selected file from the session.</li>
         <li>Drag the file-panel divider to resize it; double-click the divider to restore its default width.</li>
-        <li>Use Search to find fixed text across the HTML source of every session entry.</li>
+        <li>Use Search to find fixed text across the source of every session entry, including Markdown source.</li>
         <li>Changes to an open file refresh its preview and search results.</li>
       </ul>
       <p class="note">Removing an entry or folder row only changes the zatto session. It never deletes files or folders from disk.</p>

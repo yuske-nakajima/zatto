@@ -14,7 +14,12 @@ describe("native file picker", () => {
     });
     expect(runCommand).toHaveBeenCalledWith(
       "/usr/bin/osascript",
-      expect.arrayContaining(["-e", expect.stringContaining("choose file")]),
+      expect.arrayContaining([
+        "-e",
+        expect.stringContaining(
+          'of type {"public.html", "net.daringfireball.markdown"}',
+        ),
+      ]),
     );
   });
 

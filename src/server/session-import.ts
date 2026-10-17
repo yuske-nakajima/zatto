@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import type { Entry } from "./session.js";
+import { viewableKind } from "./viewable-file.js";
 
 /** Indicates that imported session paths cannot be restored safely. */
 export class SessionImportValidationError extends Error {
@@ -64,9 +65,9 @@ function normalizeImportedPath(inputPath: string): string {
     );
   }
   const absPath = path.resolve(inputPath);
-  if (![".htm", ".html"].includes(path.extname(absPath).toLowerCase())) {
+  if (viewableKind(absPath) === null) {
     throw new SessionImportValidationError(
-      `HTML ファイルを指定してください: ${absPath}`,
+      `HTML または Markdown ファイルを指定してください: ${absPath}`,
     );
   }
   return absPath;

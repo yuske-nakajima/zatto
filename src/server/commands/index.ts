@@ -9,6 +9,7 @@ import {
   createCommandContext,
 } from "./context.js";
 import { CommandError, domainError } from "./errors.js";
+import { markdownCommands } from "./markdown.js";
 import { pickerCommands } from "./pickers.js";
 import { queryCommands } from "./queries.js";
 import { type CommandHandlers, sessionCommands } from "./session.js";
@@ -36,6 +37,7 @@ export function createCommands(options: CommandOptions): Commands {
     ...pickerCommands(context),
     ...workspaceCommands(context),
     ...queryCommands(context),
+    ...markdownCommands(context),
   };
   return {
     has: isCommandMethod,

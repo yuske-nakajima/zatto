@@ -50,7 +50,7 @@ describe("session action shelf layout", () => {
     const scrollRegion = actions.previousElementSibling;
     expect(scrollRegion?.classList).toContain("sidebar-scroll-region");
     expect(scrollRegion?.querySelector(".entry-list")).toBe(
-      screen.getByRole("list", { name: "HTML entries" }),
+      screen.getByRole("list", { name: "Entries" }),
     );
     expect(scrollRegion?.querySelector(".empty-list")).toBeTruthy();
   });
@@ -73,7 +73,7 @@ describe("session action shelf layout", () => {
 
     expect(
       screen
-        .getByRole("navigation", { name: "HTML entries by folder" })
+        .getByRole("navigation", { name: "Entries by folder" })
         .closest(".sidebar-scroll-region"),
     ).toBeTruthy();
   });

@@ -97,11 +97,11 @@ describe("HTML search behavior", () => {
     const searchButton = screen.getByRole("button", { name: "Search" });
 
     fireEvent.click(searchButton);
-    const input = screen.getByRole("searchbox", { name: "Search HTML files" });
+    const input = screen.getByRole("searchbox", { name: "Search files" });
     const liveStatus = screen.getByRole("status", { name: "Search status" });
     expect(document.activeElement).toBe(input);
     fireEvent.change(input, { target: { value: "alpha" } });
-    expect(liveStatus.textContent).toBe("Searching HTML files.");
+    expect(liveStatus.textContent).toBe("Searching files.");
     await act(async () => vi.advanceTimersByTimeAsync(250));
 
     expect(liveStatus.textContent).toBe("2 matches in 1 file.");
@@ -161,10 +161,9 @@ describe("HTML search behavior", () => {
     render(<App />);
     await act(async () => vi.runAllTimersAsync());
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    fireEvent.change(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
-      { target: { value: "alpha" } },
-    );
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "alpha" },
+    });
     await act(async () => vi.advanceTimersByTimeAsync(250));
 
     act(() => {
@@ -178,7 +177,7 @@ describe("HTML search behavior", () => {
       screen.getByRole("button", { name: "Open first.html at line 2" }),
     );
     expect(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
     ).toBeTruthy();
     expect(window.location.href).toBe(urlAfterRemoval);
     await act(async () => vi.advanceTimersByTimeAsync(250));

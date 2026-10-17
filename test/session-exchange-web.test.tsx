@@ -131,7 +131,7 @@ describe("session exchange web UI", () => {
     await user.click(screen.getByRole("button", { name: "Folders" }));
     await user.click(screen.getByRole("button", { name: "Search" }));
     await user.type(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
       "needle",
     );
     const exchange = {
@@ -239,7 +239,7 @@ describe("session exchange web UI", () => {
     await user.click(screen.getByRole("button", { name: "Open Bravo" }));
     await user.click(screen.getByRole("button", { name: "Search" }));
     await user.type(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
       "needle",
     );
     const historyBefore = window.history.state;

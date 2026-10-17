@@ -63,7 +63,7 @@ test("switching clears search, selects available entries, and sends clear to the
   await screen.findByTitle("One preview");
   await user.click(screen.getByRole("button", { name: "Search" }));
   await user.type(
-    screen.getByRole("searchbox", { name: "Search HTML files" }),
+    screen.getByRole("searchbox", { name: "Search files" }),
     "needle",
   );
   await user.selectOptions(
@@ -112,7 +112,9 @@ test.each([false, true])(
     const user = userEvent.setup();
     render(<App />);
     await screen.findByTitle("One preview");
-    await user.click(screen.getByRole("button", { name: "Add HTML files" }));
+    await user.click(
+      screen.getByRole("button", { name: "Add HTML or Markdown files" }),
+    );
     update("research");
     await screen.findByTitle("Two preview");
     if (returnToOriginal) {

@@ -60,7 +60,7 @@ export function DirectoryTree({
   }
 
   return (
-    <nav className="entry-list" aria-label="HTML entries by folder">
+    <nav className="entry-list" aria-label="Entries by folder">
       <ul className="directory-tree">
         {buildDirectoryTree(entries).map((node) => (
           <DirectoryBranch

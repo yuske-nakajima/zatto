@@ -9,6 +9,7 @@ import { useCopyPath } from "./useCopyPath.js";
 import { useDocsNavigation } from "./useDocsNavigation.js";
 import { useEntryReordering } from "./useEntryReordering.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
+import { useMarkdownTaskBridge } from "./useMarkdownTaskBridge.js";
 import { useNativeEntryPicker } from "./useNativeEntryPicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
@@ -51,6 +52,11 @@ export function App() {
     fileCapability: filePicker,
     directoryCapability: directoryPicker,
     selectEntry,
+    setErrorMessage,
+  });
+  useMarkdownTaskBridge({
+    workspaceId,
+    selectedEntryId: selectedId,
     setErrorMessage,
   });
   const search = useSearchNavigation(searchVersion);

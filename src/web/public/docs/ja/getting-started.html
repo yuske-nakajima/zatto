@@ -22,7 +22,7 @@
   <body>
     <main>
       <h1>はじめに</h1>
-      <p class="lead">複数のローカルHTMLファイルを、1つのブラウザーセッションで閲覧します。</p>
+      <p class="lead">複数のローカルHTMLとMarkdownのファイルを、1つのブラウザーセッションで閲覧します。</p>
 
       <h2>zattoを起動する</h2>
       <p>グローバルインストールせずに起動できます。ブラウザーが開き、コマンドの終了後もローカルサーバーは動作を続けます。</p>
@@ -31,8 +31,9 @@
       <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
 
       <h2>ファイルを追加する</h2>
-      <p>macOSでは、<strong>+ Add</strong>、<strong>Select HTML files</strong>、または<kbd>Command</kbd>+<kbd>O</kbd>を使います。既存の<code>.html</code>ファイルと<code>.htm</code>ファイルを選択できます。</p>
-      <p><strong>Add folder…</strong>では、選択フォルダー直下または子孫を含むHTMLファイルを追加できます。シンボリックリンクは無視し、登録済みパスは重複追加せず、相対パス順に追加します。</p>
+      <p>macOSでは、<strong>+ Add</strong>、<strong>Select HTML or Markdown files</strong>、または<kbd>Command</kbd>+<kbd>O</kbd>を使います。既存の<code>.html</code>、<code>.htm</code>、<code>.md</code>、<code>.markdown</code>ファイルを選択できます。</p>
+      <h2>Markdown</h2><p>Markdownファイルは閲覧専用で表示し、GitHub形式の表、タスクリスト、コードブロックに対応します。タスクリストのチェックだけはプレビューで切り替えられ、ファイルの<code>[ ]</code>または<code>[x]</code>だけを書き換えます。表示後にファイルが変更されていた場合は書き込まず、最新の内容を表示し直します。ライト・ダークのテーマはシステムの設定に従います。<code>mermaid</code>のコードブロックは図として描画し、構文エラーのある図にはエラーとソースを表示します。相対パスの画像とリンクはファイルのフォルダーを基点に解決し、Markdown内に書いたHTMLはそのまま表示します。最初のレベル1見出しをタイトルにし、見出しがない場合はファイル名を使います。テーマと図の描画処理は同梱しているため、通信は不要です。</p>
+      <p><strong>Add folder…</strong>では、選択フォルダー直下または子孫を含むHTMLとMarkdownのファイルを追加できます。シンボリックリンクは無視し、登録済みパスは重複追加せず、相対パス順に追加します。</p>
 
       <h2>閲覧・検索する</h2>
       <ul>
@@ -40,7 +41,7 @@
         <li>フォルダー行には、子孫を含めて開いているファイル数を表示します。</li>
         <li>プレビュー上部のゴミ箱ボタンで、選択中のファイルをセッションから外せます。</li>
         <li>ファイルパネルの区切りをドラッグすると幅を変更できます。ダブルクリックすると既定の幅へ戻ります。</li>
-        <li>Searchでは、セッション内の全HTMLソースから固定文字列を検索できます。</li>
+        <li>Searchでは、セッション内の全ファイルのソース（Markdownは原文）から固定文字列を検索できます。</li>
         <li>開いているファイルの変更は、プレビューと検索結果へ反映されます。</li>
       </ul>
       <p class="note">エントリやフォルダー行を削除しても、zattoのセッションから外れるだけです。ディスク上のファイルやフォルダーは削除しません。</p>

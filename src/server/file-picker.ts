@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 const CANCELLED_OUTPUT = "__ZATTO_CANCELLED__";
 const FILE_PICKER_SCRIPT = `set cancelToken to "${CANCELLED_OUTPUT}"
 try
-  set selectedFiles to choose file with prompt "Select HTML files" of type {"public.html"} with multiple selections allowed
+  set selectedFiles to choose file with prompt "Select HTML or Markdown files" of type {"public.html", "net.daringfireball.markdown"} with multiple selections allowed
   set pathText to ""
   repeat with selectedFile in selectedFiles
     if pathText is not "" then set pathText to pathText & (character id 0)
@@ -15,7 +15,7 @@ on error number -128
 end try`;
 const DIRECTORY_PICKER_SCRIPT = `set cancelToken to "${CANCELLED_OUTPUT}"
 try
-  set selectedDirectory to choose folder with prompt "Select a folder containing HTML files"
+  set selectedDirectory to choose folder with prompt "Select a folder containing HTML or Markdown files"
   return POSIX path of selectedDirectory
 on error number -128
   return cancelToken
