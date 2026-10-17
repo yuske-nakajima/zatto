@@ -42,7 +42,11 @@ describe("SessionStore bulk removal", () => {
     expect(writeSessionFile).toHaveBeenCalledOnce();
     expect(store.getSession()).toEqual({ entries: [entries[1]] });
     const persisted = JSON.parse(await readFile(sessionFilePath, "utf8"));
-    expect(persisted).toEqual({ entries: [entries[1]] });
+    expect(persisted).toEqual({
+      version: 2,
+      activeWorkspaceId: "default",
+      workspaces: [{ id: "default", name: "Default", entries: [entries[1]] }],
+    });
   });
 
   test.each([

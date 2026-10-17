@@ -3,8 +3,11 @@ import type { Entry } from "../server/session.js";
 import { prepareEntryDrag } from "./entry-drag.js";
 import { moveEntry } from "./file-panel-model.js";
 import { requestSessionChange } from "./session-change.js";
+import { workspaceHeaders } from "./workspace-request.js";
 
 interface EntryReorderingOptions {
+  workspaceId?: string | null;
+  isCurrentWorkspace?: (id: string | null) => boolean;
   entries: Entry[];
   setEntries: React.Dispatch<React.SetStateAction<Entry[]>>;
   setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
@@ -17,6 +20,8 @@ interface EntryReorderingOptions {
  * @returns Drag state and event handlers for the file panel
  */
 export function useEntryReordering({
+  workspaceId,
+  isCurrentWorkspace,
   entries,
   setEntries,
   setErrorMessage,
@@ -48,11 +53,19 @@ export function useEntryReordering({
     resetDragState();
     const reordered = await requestSessionChange("/api/session/order", {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...workspaceHeaders(workspaceId),
+      },
       body: JSON.stringify({ ids: reorderedEntries.map((entry) => entry.id) }),
     });
-    if (!reordered) {
-      setEntries(previousEntries);
+    if (
+      !reordered &&
+      (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
+    ) {
+      setEntries((current) =>
+        current === reorderedEntries ? previousEntries : current,
+      );
       setErrorMessage("Could not reorder the entries.");
     }
   }

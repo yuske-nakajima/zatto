@@ -28,6 +28,22 @@ that folder and its descendants. Files and folders remain on disk.
 Each folder row shows the number of open files in that subtree. The preview
 header also removes the selected file from the session.
 
+## Workspaces
+
+Use **Workspace** above the file list to keep separate named collections.
+**New workspace** creates and selects an empty collection; **Rename** changes
+its name. **Delete** asks for confirmation and leaves files on disk. At least
+one workspace must remain.
+
+Each workspace remembers its files and drag-and-drop List order across server
+restarts. Existing sessions become **Default**. The active workspace is shared
+by every browser tab and CLI connected to the server: `zatto file.html` adds to
+that workspace. Switching resets search and selects the first available file.
+List/Folders, panel visibility, and panel width remain browser preferences.
+Import/export and agent context operate on the active workspace; exchange
+files retain the version 1 single-collection format.
+
+
 ## Usage
 
 Open the viewer without adding a file from the command line.

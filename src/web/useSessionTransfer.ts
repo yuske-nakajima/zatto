@@ -5,12 +5,15 @@ import {
   type SessionExchange,
   sortSessionExchangeEntriesByPath,
 } from "../shared/session-exchange.js";
+import { workspaceHeaders } from "./workspace-request.js";
 
 export type SessionTransferPending = "import" | "export" | null;
 export type SessionImportMode = "replace" | "merge";
 export type SessionExportOrder = "keep" | "sort";
 
 interface SessionTransferOptions {
+  workspaceId?: string | null;
+  isCurrentWorkspace?: (id: string | null) => boolean;
   instanceId: string | null;
   applyImportedEntries: (entries: Entry[], mode: SessionImportMode) => void;
   resetSearch: () => void;
@@ -37,14 +40,27 @@ export function useSessionTransfer(options: SessionTransferOptions) {
       const exchange = parseSessionExchange(
         JSON.parse(await file.text()) as unknown,
       );
+      if (
+        options.isCurrentWorkspace &&
+        !options.isCurrentWorkspace(options.workspaceId ?? null)
+      )
+        return;
       const response = await fetch(`/api/session?mode=${mode}`, {
         method: "PUT",
-        headers: importHeaders(options.instanceId),
+        headers: {
+          ...importHeaders(options.instanceId),
+          ...workspaceHeaders(options.workspaceId),
+        },
         body: JSON.stringify(exchange),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const session = (await response.json()) as { entries?: unknown };
       if (!isEntryArray(session.entries)) throw new Error("Invalid session");
+      if (
+        options.isCurrentWorkspace &&
+        !options.isCurrentWorkspace(options.workspaceId ?? null)
+      )
+        return;
       options.applyImportedEntries(session.entries, mode);
       if (mode === "replace") options.resetSearch();
     } catch {
@@ -58,7 +74,11 @@ export function useSessionTransfer(options: SessionTransferOptions) {
     if (!beginTransfer("export")) return;
     options.setErrorMessage(null);
     try {
-      const response = await fetch("/api/session/export");
+      const response = await (options.workspaceId
+        ? fetch("/api/session/export", {
+            headers: workspaceHeaders(options.workspaceId),
+          })
+        : fetch("/api/session/export"));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const exchange = parseSessionExchange((await response.json()) as unknown);
       downloadSessionExchange(

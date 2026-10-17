@@ -47,6 +47,7 @@
       <h2>直接のGUI操作がないAPI</h2>
       <p><code>POST /api/session/add</code>は、CLIが位置引数のパスを追加するときに使います。<code>GET /api/health</code>は互換サーバーの識別、<code>POST /api/shutdown</code>は停止コマンドで使います。</p>
       <p class="note">Docsは組み込みコンテンツです。セッションエントリにはならず、List、Folders、HTML検索、インポート、エクスポート、削除、並べ替えの対象外です。</p>
+      <h2>ワークスペース操作</h2><p>Workspaceは<code>GET /api/session</code>のワークスペース情報を読み、<code>PUT /api/workspaces/:id/activate</code>で選択します。New workspaceは<code>POST /api/workspaces</code>で作成後に選択します。Renameは<code>PATCH /api/workspaces/:id</code>、確認後の削除は<code>DELETE /api/workspaces/:id</code>です。WebSocketで全タブの選択・ファイル群・順序を同期します。ブラウザーは表示中のIDを送信し、切り替え前の操作を拒否できるようにします。</p>
     </main>
   </body>
 </html>

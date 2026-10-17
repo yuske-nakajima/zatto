@@ -42,7 +42,9 @@ describe("session merge API", () => {
     expect(entries[0]).toEqual(existing);
     expect(entries[1]).toMatchObject({ absPath: addedPath, title: "Added" });
     expect(JSON.parse(await readFile(sessionFilePath, "utf8"))).toEqual({
-      entries,
+      version: 2,
+      activeWorkspaceId: "default",
+      workspaces: [{ id: "default", name: "Default", entries }],
     });
     await app.close();
   });

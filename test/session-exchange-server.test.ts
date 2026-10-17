@@ -90,10 +90,13 @@ describe("session exchange API", () => {
     expect(broadcast).toHaveBeenCalledOnce();
     expect(broadcast).toHaveBeenCalledWith({
       type: "session:update",
+      ...store.getWorkspaceState(),
       entries,
     });
     expect(JSON.parse(await readFile(sessionFilePath, "utf8"))).toEqual({
-      entries,
+      version: 2,
+      activeWorkspaceId: "default",
+      workspaces: [{ id: "default", name: "Default", entries }],
     });
     await app.close();
   });

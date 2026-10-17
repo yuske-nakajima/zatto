@@ -67,6 +67,7 @@ describe("DELETE /api/session/entries", () => {
     expect(broadcast).toHaveBeenCalledOnce();
     expect(message).toEqual({
       type: "session:update",
+      ...store.getWorkspaceState(),
       entries: [entries[1], entries[3]],
     });
     await Promise.all(htmlPaths.map((htmlPath) => access(htmlPath)));

@@ -51,6 +51,23 @@ describe("EntryWatcher", () => {
     expect(fakeWatcher.removed).toEqual([[firstPath]]);
   });
 
+  test("switching workspace cancels pending notifications for another entry at the same path", async () => {
+    vi.useFakeTimers();
+    const fakeWatcher = new FakeWatcher();
+    const notify = vi.fn();
+    const watcher = new EntryWatcher(notify, fakeWatcher);
+    const htmlPath = path.resolve("/tmp/shared.html");
+    watcher.sync([entry("workspace-one", htmlPath)]);
+    fakeWatcher.emit("change", htmlPath);
+    watcher.sync([entry("workspace-two", htmlPath)]);
+    await vi.advanceTimersByTimeAsync(WATCH_DEBOUNCE_MS);
+    expect(notify).not.toHaveBeenCalled();
+    fakeWatcher.emit("change", htmlPath);
+    await vi.advanceTimersByTimeAsync(WATCH_DEBOUNCE_MS);
+    expect(notify).toHaveBeenCalledExactlyOnceWith("workspace-two");
+    await watcher.close();
+  });
+
   test("変更通知を200ms debounceして対象IDを返す", async () => {
     vi.useFakeTimers();
     const fakeWatcher = new FakeWatcher();

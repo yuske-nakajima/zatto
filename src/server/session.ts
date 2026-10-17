@@ -1,25 +1,24 @@
-import { access, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { writeFileAtomically } from "../shared/atomic-file.js";
+import { extractTitle, fileExists } from "./session-files.js";
 import { createImportedEntries } from "./session-import.js";
+import { WorkspaceStore } from "./workspace-store.js";
 
-export type Entry = {
+export { extractTitle, fileExists } from "./session-files.js";
+/** A registered local file with stable identity and display metadata. */
+export interface Entry {
   id: string;
   absPath: string;
   title: string;
   addedAt: number;
-};
-
-export type Session = {
+}
+/** Ordered entries belonging to the active workspace. */
+export interface Session {
   entries: Entry[];
-};
-
-type PersistedSession = {
-  entries?: Entry[];
-};
-
+}
+/** Default durable workspace storage location. */
 export const DEFAULT_SESSION_FILE = path.join(
   os.homedir(),
   ".config",
@@ -27,202 +26,156 @@ export const DEFAULT_SESSION_FILE = path.join(
   "session.json",
 );
 
-export async function fileExists(targetPath: string): Promise<boolean> {
-  try {
-    await access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function extractTitle(absPath: string): Promise<string> {
-  const html = await readFile(absPath, "utf8");
-  const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
-  const rawTitle = titleMatch?.[1]?.replace(/\s+/g, " ").trim();
-  return rawTitle && rawTitle.length > 0 ? rawTitle : path.basename(absPath);
-}
-
-export class SessionStore {
-  private session: Session = { entries: [] };
-
+/** Maintains files in named workspaces with serialized, atomic persistence. */
+export class SessionStore extends WorkspaceStore {
   constructor(
-    private readonly sessionFilePath = DEFAULT_SESSION_FILE,
-    private readonly writeSessionFile = writeFileAtomically,
-  ) {}
-
-  async load(): Promise<Session> {
-    if (!(await fileExists(this.sessionFilePath))) {
-      this.session = { entries: [] };
-      return this.getSession();
-    }
-    const fileContent = await readFile(this.sessionFilePath, "utf8");
-    const parsed = JSON.parse(fileContent) as PersistedSession;
-    const entries = parsed.entries ?? [];
-    const existingEntries: Entry[] = [];
-    for (const entry of entries) {
-      if (await fileExists(entry.absPath)) {
-        existingEntries.push(entry);
-      }
-    }
-    const nextSession = { entries: existingEntries };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return this.getSession();
-  }
-
-  getSession(): Session {
-    return {
-      entries: [...this.session.entries],
-    };
-  }
-
-  getEntry(id: string): Entry | undefined {
-    return this.session.entries.find((entry) => entry.id === id);
-  }
-
-  async addEntries(inputPaths: string[]): Promise<Entry[]> {
-    const addedEntries: Entry[] = [];
-    const knownPaths = new Set(
-      this.session.entries.map((entry) => entry.absPath),
-    );
-    for (const absPath of inputPaths) {
-      if (knownPaths.has(absPath)) continue;
-      if (!(await fileExists(absPath))) {
-        continue;
-      }
-      const entry: Entry = {
-        id: nanoid(),
-        absPath,
-        title: await extractTitle(absPath),
-        addedAt: Date.now(),
-      };
-      addedEntries.push(entry);
-      knownPaths.add(absPath);
-    }
-    if (addedEntries.length > 0) {
-      const nextSession = {
-        entries: [...this.session.entries, ...addedEntries],
-      };
-      await this.persistSession(nextSession);
-      this.session = nextSession;
-    }
-    return addedEntries;
-  }
-
-  async replaceEntries(inputPaths: string[]): Promise<Session> {
-    const entries = await createImportedEntries(inputPaths, extractTitle);
-    const nextSession = { entries };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return this.getSession();
+    sessionFilePath = DEFAULT_SESSION_FILE,
+    writeSessionFile = writeFileAtomically,
+  ) {
+    super(sessionFilePath, writeSessionFile);
   }
 
   /**
-   * Adds validated unregistered paths while preserving existing entries.
-   *
+   * Adds accessible paths to the workspace selected when the operation begins.
+   * @param inputPaths - Absolute file paths
+   * @param workspaceId - Target workspace ID
+   * @returns Added entries
+   * @throws When reading or persistence fails, or the workspace was deleted
+   */
+  async addEntries(
+    inputPaths: string[],
+    workspaceId = this.activeId(),
+  ): Promise<Entry[]> {
+    return this.updateEntries(workspaceId, async (entries) => {
+      const known = new Set(entries.map((entry) => entry.absPath));
+      const added: Entry[] = [];
+      for (const absPath of inputPaths) {
+        if (known.has(absPath) || !(await fileExists(absPath))) continue;
+        added.push({
+          id: nanoid(),
+          absPath,
+          title: await extractTitle(absPath),
+          addedAt: Date.now(),
+        });
+        known.add(absPath);
+      }
+      return {
+        entries: added.length ? [...entries, ...added] : undefined,
+        result: added,
+      };
+    });
+  }
+  /**
+   * Replaces a workspace with validated imported files.
+   * @param inputPaths - Ordered absolute HTML paths
+   * @param workspaceId - Target workspace ID
+   * @returns Replaced collection
+   * @throws When validation or persistence fails
+   */
+  async replaceEntries(
+    inputPaths: string[],
+    workspaceId = this.activeId(),
+  ): Promise<Session> {
+    return this.updateEntries(workspaceId, async () => {
+      const entries = await createImportedEntries(inputPaths, extractTitle);
+      return { entries, result: { entries: structuredClone(entries) } };
+    });
+  }
+  /**
+   * Adds validated unregistered paths while preserving existing order.
    * @param inputPaths - Absolute HTML paths in import order
-   * @returns The complete merged session
-   * @throws {SessionImportValidationError} When any path cannot be imported
+   * @param workspaceId - Target workspace ID
+   * @returns Complete merged collection
+   * @throws When validation or persistence fails
    */
-  async mergeEntries(inputPaths: string[]): Promise<Session> {
-    const importedEntries = await createImportedEntries(
-      inputPaths,
-      extractTitle,
-    );
-    const knownPaths = new Set(
-      this.session.entries.map((entry) => path.resolve(entry.absPath)),
-    );
-    const newEntries = importedEntries.filter(
-      (entry) => !knownPaths.has(entry.absPath),
-    );
-    if (newEntries.length === 0) return this.getSession();
-    const nextSession = {
-      entries: [...this.session.entries, ...newEntries],
-    };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return this.getSession();
+  async mergeEntries(
+    inputPaths: string[],
+    workspaceId = this.activeId(),
+  ): Promise<Session> {
+    return this.updateEntries(workspaceId, async (entries) => {
+      const imported = await createImportedEntries(inputPaths, extractTitle);
+      const known = new Set(
+        entries.map((entry) => path.resolve(entry.absPath)),
+      );
+      const added = imported.filter((entry) => !known.has(entry.absPath));
+      const merged = [...entries, ...added];
+      return {
+        entries: added.length ? merged : undefined,
+        result: { entries: structuredClone(merged) },
+      };
+    });
   }
-
-  async removeEntry(id: string): Promise<boolean> {
-    const nextEntries = this.session.entries.filter((entry) => entry.id !== id);
-    if (nextEntries.length === this.session.entries.length) {
-      return false;
-    }
-    const nextSession = { entries: nextEntries };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return true;
-  }
-
   /**
-   * Removes a complete set of known entries in one persisted session update.
-   *
-   * @param ids - Unique, non-empty entry IDs to remove
-   * @returns Whether every ID was valid and the entries were removed
-   * @throws When session persistence fails
+   * Removes an entry from its workspace without deleting its file.
+   * @param id - Entry ID
+   * @param workspaceId - Target workspace ID
+   * @returns Whether the entry existed
+   * @throws When persistence fails
    */
-  async removeEntries(ids: string[]): Promise<boolean> {
-    if (
-      ids.length === 0 ||
-      ids.some((id) => id.length === 0) ||
-      new Set(ids).size !== ids.length
-    ) {
-      return false;
-    }
-    const entriesById = new Set(this.session.entries.map((entry) => entry.id));
-    if (ids.some((id) => !entriesById.has(id))) {
-      return false;
-    }
-    const idsToRemove = new Set(ids);
-    const nextSession = {
-      entries: this.session.entries.filter(
-        (entry) => !idsToRemove.has(entry.id),
-      ),
-    };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return true;
+  async removeEntry(
+    id: string,
+    workspaceId = this.activeId(),
+  ): Promise<boolean> {
+    return this.removeEntries([id], workspaceId);
   }
-
-  async reorderEntries(ids: string[]): Promise<boolean> {
-    if (
-      ids.length !== this.session.entries.length ||
-      new Set(ids).size !== ids.length
-    ) {
-      return false;
-    }
-    const entriesById = new Map(
-      this.session.entries.map((entry) => [entry.id, entry]),
-    );
-    const reorderedEntries: Entry[] = [];
-    for (const id of ids) {
-      const entry = entriesById.get(id);
-      if (!entry) {
-        return false;
-      }
-      reorderedEntries.push(entry);
-    }
-    const nextSession = { entries: reorderedEntries };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
-    return true;
+  /**
+   * Removes a complete set of known entries in one durable update.
+   * @param ids - Unique, nonempty entry IDs
+   * @param workspaceId - Target workspace ID
+   * @returns Whether every ID was valid and removed
+   * @throws When persistence fails
+   */
+  async removeEntries(
+    ids: string[],
+    workspaceId = this.activeId(),
+  ): Promise<boolean> {
+    return this.updateEntries(workspaceId, (entries) => {
+      const known = new Set(entries.map((entry) => entry.id));
+      if (
+        !ids.length ||
+        new Set(ids).size !== ids.length ||
+        ids.some((id) => !known.has(id))
+      )
+        return { result: false };
+      const removed = new Set(ids);
+      return {
+        entries: entries.filter((entry) => !removed.has(entry.id)),
+        result: true,
+      };
+    });
   }
-
-  async clear(): Promise<void> {
-    if (this.session.entries.length === 0) {
-      return;
-    }
-    const nextSession: Session = { entries: [] };
-    await this.persistSession(nextSession);
-    this.session = nextSession;
+  /**
+   * Persists the exact List order of a workspace.
+   * @param ids - All entry IDs in desired order
+   * @param workspaceId - Target workspace ID
+   * @returns Whether IDs form a complete permutation
+   * @throws When persistence fails
+   */
+  async reorderEntries(
+    ids: string[],
+    workspaceId = this.activeId(),
+  ): Promise<boolean> {
+    return this.updateEntries(workspaceId, (entries) => {
+      const byId = new Map(entries.map((entry) => [entry.id, entry]));
+      if (
+        ids.length !== entries.length ||
+        new Set(ids).size !== ids.length ||
+        ids.some((id) => !byId.has(id))
+      )
+        return { result: false };
+      return { entries: ids.map((id) => byId.get(id) as Entry), result: true };
+    });
   }
-
-  private async persistSession(session: Session): Promise<void> {
-    await this.writeSessionFile(
-      this.sessionFilePath,
-      `${JSON.stringify(session, null, 2)}\n`,
-    );
+  /**
+   * Clears the target workspace without deleting files.
+   * @param workspaceId - Target workspace ID
+   * @returns Nothing
+   * @throws When persistence fails
+   */
+  async clear(workspaceId = this.activeId()): Promise<void> {
+    return this.updateEntries(workspaceId, (entries) => ({
+      entries: entries.length ? [] : undefined,
+      result: undefined,
+    }));
   }
 }
