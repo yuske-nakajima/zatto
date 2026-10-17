@@ -76,7 +76,6 @@ export function updateRelease(repository, release, sha, changes) {
         input: JSON.stringify({
           ...changes,
           tag_name: release.tag_name,
-          target_commitish: sha,
         }),
         encoding: "utf8",
       },

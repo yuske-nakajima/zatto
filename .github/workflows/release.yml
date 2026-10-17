@@ -80,7 +80,7 @@ jobs:
         run: pnpm exec vitest run test/release-policy.test.ts test/release-workflow.test.ts
       - name: Stage release workflow tools outside the package
         run: |
-          echo "ZATTO_RELEASE_NODE=$(command -v node)" >> "$GITHUB_ENV"
+          echo "ZATTO_RELEASE_NODE=$(node --print process.execPath)" >> "$GITHUB_ENV"
           node scripts/release/stage.mjs
       - name: Checkout immutable release commit
         uses: actions/checkout@v4
