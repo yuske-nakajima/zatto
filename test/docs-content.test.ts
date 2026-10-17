@@ -10,6 +10,7 @@ const SLUGS = [
   "cli",
   "api",
   "gui-api-mapping",
+  "changelog",
 ] as const;
 const RPC_OPERATIONS = [
   "server.health",
@@ -67,7 +68,7 @@ const GUI_OPERATIONS = [
 ] as const;
 
 describe("組み込みドキュメント本文", () => {
-  test("英語と日本語に同じ4ページがそろう", async () => {
+  test("英語と日本語に同じ5ページがそろう", async () => {
     for (const locale of LOCALES) {
       const fileNames = (await readdir(path.join(DOCS_ROOT, locale)))
         .filter((fileName) => fileName.endsWith(".html"))

@@ -328,8 +328,17 @@ runtime records, and reports migration steps without killing the process.
 Saved workspaces, stars, List order and exchange files are retained.
 For an old server on a custom port without a runtime record, add `--port <detected-port>` to that stop command.
 
+Built-in Docs include an offline Changelog from GitHub Releases; the logo shows the installed version.
 See [architecture and extension guidance](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md) for shared Commands and RPC contracts.
 Agents follow `AGENTS.md` and `.claude/rules/`. Discuss architecture changes with the user before implementing them.
+
+### Refreshing the bundled Changelog
+
+Run `node scripts/update-changelog.mjs --refresh` with an authenticated GitHub CLI to capture all published releases.
+Commit the snapshot in `scripts/changelog/releases.json` and both generated language pages.
+`node scripts/update-changelog.mjs` regenerates pages offline from that snapshot.
+Keep unpublished notes separate in `scripts/changelog/pending.json`; published release bodies retain their original language.
+Refresh the snapshot before cutting a release. Ordinary builds and installed Zatto do not require GitHub access.
 
 ## Debugging
 

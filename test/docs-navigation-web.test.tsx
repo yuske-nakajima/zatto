@@ -87,6 +87,26 @@ describe("built-in documentation navigation", () => {
     expect(window.location.search).not.toContain("lang=");
   });
 
+  test("Changelogを開き、言語と履歴を復元する", async () => {
+    window.history.replaceState(null, "", "/?entry=a&doc=api&lang=ja");
+    render(<App />);
+    await act(async () => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByRole("button", { name: "Changelog" }));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/ja/changelog.html");
+    const savedUrl = relativeUrl();
+    const savedState = window.history.state;
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/en/changelog.html");
+    act(() => dispatchHistory(savedUrl, savedState));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/ja/changelog.html");
+  });
+
   test("不正なDocs URLをGetting startedと英語へreplace正規化する", async () => {
     window.history.replaceState(
       { marker: "invalid" },

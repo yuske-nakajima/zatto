@@ -30,10 +30,12 @@ const bundledDocumentationPaths = [
   "dist/web/docs/en/cli.html",
   "dist/web/docs/en/api.html",
   "dist/web/docs/en/gui-api-mapping.html",
+  "dist/web/docs/en/changelog.html",
   "dist/web/docs/ja/getting-started.html",
   "dist/web/docs/ja/cli.html",
   "dist/web/docs/ja/api.html",
   "dist/web/docs/ja/gui-api-mapping.html",
+  "dist/web/docs/ja/changelog.html",
 ];
 
 describe("npmパッケージ", () => {
@@ -169,7 +171,7 @@ describe("npmパッケージ", () => {
     );
 
     expect(verifierSource).toContain('["en", "ja"]');
-    for (const documentationPath of bundledDocumentationPaths.slice(0, 4)) {
+    for (const documentationPath of bundledDocumentationPaths.slice(0, 5)) {
       const page = path.basename(documentationPath, ".html");
       expect(verifierSource).toContain(`"${page}"`);
     }

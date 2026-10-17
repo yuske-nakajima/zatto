@@ -89,6 +89,12 @@ describe("App", () => {
     const firstFrame = await screen.findByTitle("Alpha preview");
     expect(firstFrame.getAttribute("src")).toBe("/f/a/");
     expect(screen.getByRole("img", { name: "zatto" })).toBeTruthy();
+    const version = JSON.parse(
+      readFileSync(resolve("package.json"), "utf8"),
+    ).version;
+    expect(container.querySelector(".app-version")?.textContent).toBe(
+      `v${version}`,
+    );
     expect(container.querySelector(".connection-dot")).toBeNull();
     expect(container.querySelector(".window-controls")).toBeNull();
 

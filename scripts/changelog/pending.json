@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "en": {
+    "items": [
+      "Web UI, CLI, and internal MCP communication use 21 shared Commands through JSON-RPC 2.0 at POST /rpc. REST operation endpoints are removed.",
+      "Workspace and server identity checks, validation, errors, and update notifications share one command layer. Existing file serving and WebSocket updates remain available.",
+      "Published release history is bundled for offline reading, and the file panel shows the package version.",
+      "Update dependencies, including major versions, while retaining Node.js 22 or later support."
+    ],
+    "upgrade": [
+      "Stop the running server before updating: zatto --stop",
+      "If already updated, stop the old server with: npx --yes @yuske-nakajima/zatto@1.2.0 --stop",
+      "Install the released version, then start zatto again. The new CLI does not automatically kill an old server."
+    ]
+  },
+  "ja": {
+    "items": [
+      "Web UI、CLI、MCP内部通信を、POST /rpcのJSON-RPC 2.0と共通Commandsの21操作へ統一します。REST操作エンドポイントは廃止します。",
+      "入力検証、ワークスペースとサーバー識別子の照合、エラー、更新通知をCommandsへ集約します。ファイル配信とWebSocket更新は維持します。",
+      "公開済みのリリース履歴をオフライン閲覧用に同梱し、ファイルパネルへパッケージのバージョンを表示します。",
+      "メジャー更新を含む依存性更新を行い、Node.js 22以降への対応を維持します。"
+    ],
+    "upgrade": [
+      "更新前に起動中のサーバーを停止: zatto --stop",
+      "更新済みの場合は旧サーバーを停止: npx --yes @yuske-nakajima/zatto@1.2.0 --stop",
+      "公開版をインストールし、zattoを起動します。新CLIは旧サーバーを自動終了しません。"
+    ]
+  }
+}

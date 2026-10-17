@@ -308,9 +308,18 @@ workflowは品質チェックとパッケージ検証を実行します。
 保存済みワークスペース、星、並び順と交換ファイルは引き継ぎます。
 runtime recordがなく旧サーバーが独自ポートを使う場合は、停止コマンドへ`--port <検出したポート>`を付けます。
 
+アプリ内DocsのChangelogにGitHub Releasesの公開履歴を同梱し、ロゴの下にはインストール済みの版を表示します。
 設計と機能追加の手順は[アーキテクチャ](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md)にまとめています。
 エージェントは`AGENTS.md`から`.claude/rules/`を読み、共通Commandsと共有RPC契約を使って拡張します。
 アーキテクチャの選定を変える場合は、実装前にユーザーとの壁打ちで合意します。
+
+### 同梱Changelogの更新
+
+認証済みGitHub CLIで`node scripts/update-changelog.mjs --refresh`を実行すると、公開済みの全履歴を取得します。
+`scripts/changelog/releases.json`の原本と、生成した英日ページをコミットします。
+`node scripts/update-changelog.mjs`は原本からオフラインで再生成します。
+未公開の内容は`scripts/changelog/pending.json`に分け、公開済みの本文は原文を維持します。
+リリース前に履歴を更新してください。通常のビルドとインストール済みzattoはGitHubへの接続を必要としません。
 
 ## デバッグ
 

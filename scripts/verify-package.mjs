@@ -14,6 +14,7 @@ const documentationPages = [
   "cli",
   "api",
   "gui-api-mapping",
+  "changelog",
 ];
 const documentationPaths = documentationLanguages.flatMap((language) =>
   documentationPages.map((page) => `/docs/${language}/${page}.html`),

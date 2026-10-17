@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Changelog | zatto</title>
+<style>
+:root { color-scheme: light dark; font: 16px/1.65 system-ui, sans-serif; }
+body { margin: 0; color: CanvasText; background: Canvas; }
+main { max-width: 820px; margin: auto; padding: 32px 24px 64px; }
+h1 { margin: 0 0 8px; font-size: 2rem; } h2 { font-size: 1.35rem; } h3 { font-size: 1.1rem; }
+article { margin-top: 32px; padding-top: 24px; border-top: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }
+.metadata, .lead { color: color-mix(in srgb, CanvasText 72%, Canvas); }
+a { color: LinkText; overflow-wrap: anywhere; }
+code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); overflow-wrap: anywhere; }
+pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; } pre code { padding: 0; background: transparent; }
+.pending { margin-top: 24px; padding: 16px 20px; border: 1px solid color-mix(in srgb, CanvasText 25%, Canvas); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; } th, td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; }
+@media (max-width: 620px) { main { padding: 24px 18px 48px; } }
+</style></head>
+<body><main><h1>Changelog</h1><p class="lead">Published GitHub Releases are bundled for offline reading. Release bodies retain their original language. Opening source links requires a connection.</p><section class="pending" data-unreleased="2.0.0"><h2>2.0.0 — Unreleased</h2><p>This section is not a published release.</p><ul><li>Web UI, CLI, and internal MCP communication use 21 shared Commands through JSON-RPC 2.0 at POST /rpc. REST operation endpoints are removed.</li><li>Workspace and server identity checks, validation, errors, and update notifications share one command layer. Existing file serving and WebSocket updates remain available.</li><li>Published release history is bundled for offline reading, and the file panel shows the package version.</li><li>Update dependencies, including major versions, while retaining Node.js 22 or later support.</li></ul><h3>Upgrade steps</h3><ol><li><code>Stop the running server before updating: zatto --stop</code></li><li><code>If already updated, stop the old server with: npx --yes @yuske-nakajima/zatto@1.2.0 --stop</code></li><li><code>Install the released version, then start zatto again. The new CLI does not automatically kill an old server.</code></li></ol></section><section aria-label="Published releases"><article data-release="v1.2.0"><header><h2>v1.2.0</h2><p class="metadata"><code>v1.2.0</code> · <time datetime="2026-10-17T02:30:44Z">2026-10-17</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v1.2.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat(cli): 指定ファイルのタイトルと直接URLを表示する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/74" target="_blank" rel="noopener noreferrer">#74</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v1.1.0...v1.2.0" target="_blank" rel="noopener noreferrer"><code>v1.1.0...v1.2.0</code></a></p></div></article>
+<article data-release="v1.1.0"><header><h2>v1.1.0</h2><p class="metadata"><code>v1.1.0</code> · <time datetime="2026-10-17T02:08:11Z">2026-10-17</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v1.1.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat(favorites): 星付きファイルの保存と一覧表示を追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/73" target="_blank" rel="noopener noreferrer">#73</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v1.0.0...v1.1.0" target="_blank" rel="noopener noreferrer"><code>v1.0.0...v1.1.0</code></a></p></div></article>
+<article data-release="v1.0.0"><header><h2>v1.0.0</h2><p class="metadata"><code>v1.0.0</code> · <time datetime="2026-10-17T01:29:59Z">2026-10-17</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v1.0.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat(workspaces): ワークスペースを追加し1.0.0へ更新する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/72" target="_blank" rel="noopener noreferrer">#72</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.6.1...v1.0.0" target="_blank" rel="noopener noreferrer"><code>v0.6.1...v1.0.0</code></a></p></div></article>
+<article data-release="v0.6.1"><header><h2>v0.6.1</h2><p class="metadata"><code>v0.6.1</code> · <time datetime="2026-09-15T00:35:30Z">2026-09-15</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.6.1" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: add bilingual zatto promotional videos by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/60" target="_blank" rel="noopener noreferrer">#60</a></li>
+<li>chore(deps): 依存性を更新し脆弱性 GHSA 12件を解消 by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/62" target="_blank" rel="noopener noreferrer">#62</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.6.0...v0.6.1" target="_blank" rel="noopener noreferrer"><code>v0.6.0...v0.6.1</code></a></p></div></article>
+<article data-release="v0.6.0"><header><h2>v0.6.0</h2><p class="metadata"><code>v0.6.0</code> · <time datetime="2026-08-18T09:11:18Z">2026-08-18</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.6.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: フォルダーとプレビューのファイル操作を統一する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/56" target="_blank" rel="noopener noreferrer">#56</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.5.0...v0.6.0" target="_blank" rel="noopener noreferrer"><code>v0.5.0...v0.6.0</code></a></p></div></article>
+<article data-release="v0.5.0"><header><h2>v0.5.0</h2><p class="metadata"><code>v0.5.0</code> · <time datetime="2026-08-15T11:49:01Z">2026-08-15</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.5.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: AIエージェント向けコンテキストCLIとMCPを追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/53" target="_blank" rel="noopener noreferrer">#53</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.4.0...v0.5.0" target="_blank" rel="noopener noreferrer"><code>v0.4.0...v0.5.0</code></a></p></div></article>
+<article data-release="v0.4.0"><header><h2>v0.4.0</h2><p class="metadata"><code>v0.4.0</code> · <time datetime="2026-08-15T07:58:28Z">2026-08-15</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.4.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: 組み込みドキュメントを英語と日本語で表示する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/51" target="_blank" rel="noopener noreferrer">#51</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.3.0...v0.4.0" target="_blank" rel="noopener noreferrer"><code>v0.3.0...v0.4.0</code></a></p></div></article>
+<article data-release="v0.3.0"><header><h2>v0.3.0</h2><p class="metadata"><code>v0.3.0</code> · <time datetime="2026-08-14T12:11:08Z">2026-08-14</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.3.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: フォルダー配下のHTMLを範囲指定して追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/49" target="_blank" rel="noopener noreferrer">#49</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.2.0...v0.3.0" target="_blank" rel="noopener noreferrer"><code>v0.2.0...v0.3.0</code></a></p></div></article>
+<article data-release="v0.2.0"><header><h2>v0.2.0</h2><p class="metadata"><code>v0.2.0</code> · <time datetime="2026-08-14T07:35:22Z">2026-08-14</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.2.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: フォルダー配下のセッション項目を一括削除する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/47" target="_blank" rel="noopener noreferrer">#47</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.7...v0.2.0" target="_blank" rel="noopener noreferrer"><code>v0.1.7...v0.2.0</code></a></p></div></article>
+<article data-release="v0.1.7"><header><h2>v0.1.7</h2><p class="metadata"><code>v0.1.7</code> · <time datetime="2026-08-12T04:41:25Z">2026-08-12</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.7" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>fix: ページ内検索のIME対応とversion方針を整備する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/45" target="_blank" rel="noopener noreferrer">#45</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.6...v0.1.7" target="_blank" rel="noopener noreferrer"><code>v0.1.6...v0.1.7</code></a></p></div></article>
+<article data-release="v0.1.6"><header><h2>v0.1.6</h2><p class="metadata"><code>v0.1.6</code> · <time datetime="2026-08-12T03:22:46Z">2026-08-12</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.6" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: セッションJSONのインポートとエクスポートを追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/42" target="_blank" rel="noopener noreferrer">#42</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.5...v0.1.6" target="_blank" rel="noopener noreferrer"><code>v0.1.5...v0.1.6</code></a></p></div></article>
+<article data-release="v0.1.5"><header><h2>v0.1.5</h2><p class="metadata"><code>v0.1.5</code> · <time datetime="2026-08-08T05:37:34Z">2026-08-08</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.5" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: 操作説明ステータスバーとWebアプリアイコンを追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/39" target="_blank" rel="noopener noreferrer">#39</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.4...v0.1.5" target="_blank" rel="noopener noreferrer"><code>v0.1.4...v0.1.5</code></a></p></div></article>
+<article data-release="v0.1.4"><header><h2>v0.1.4</h2><p class="metadata"><code>v0.1.4</code> · <time datetime="2026-08-08T03:51:23Z">2026-08-08</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.4" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: HTML検索と履歴ナビゲーションを追加する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/36" target="_blank" rel="noopener noreferrer">#36</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.3...v0.1.4" target="_blank" rel="noopener noreferrer"><code>v0.1.3...v0.1.4</code></a></p></div></article>
+<article data-release="v0.1.3"><header><h2>v0.1.3</h2><p class="metadata"><code>v0.1.3</code> · <time datetime="2026-08-05T08:49:34Z">2026-08-05</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.3" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: publish the server entry point by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/35" target="_blank" rel="noopener noreferrer">#35</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.2...v0.1.3" target="_blank" rel="noopener noreferrer"><code>v0.1.2...v0.1.3</code></a></p></div></article>
+<article data-release="v0.1.2"><header><h2>v0.1.2</h2><p class="metadata"><code>v0.1.2</code> · <time datetime="2026-08-04T07:21:48Z">2026-08-04</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.2" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: macOSのブラウザー画面からHTMLファイルを追加できるようにする by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/31" target="_blank" rel="noopener noreferrer">#31</a></li>
+<li>feat: サイドバーの幅を調整できるようにする by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/33" target="_blank" rel="noopener noreferrer">#33</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.1...v0.1.2" target="_blank" rel="noopener noreferrer"><code>v0.1.1...v0.1.2</code></a></p></div></article>
+<article data-release="v0.1.1"><header><h2>v0.1.1</h2><p class="metadata"><code>v0.1.1</code> · <time datetime="2026-07-31T10:26:30Z">2026-07-31</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.1" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>Coordinate one zatto server per OS user by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/28" target="_blank" rel="noopener noreferrer">#28</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/compare/v0.1.0...v0.1.1" target="_blank" rel="noopener noreferrer"><code>v0.1.0...v0.1.1</code></a></p></div></article>
+<article data-release="v0.1.0"><header><h2>v0.1.0</h2><p class="metadata"><code>v0.1.0</code> · <time datetime="2026-07-31T09:02:23Z">2026-07-31</time> · <a href="https://github.com/yuske-nakajima/zatto/releases/tag/v0.1.0" target="_blank" rel="noopener noreferrer">View release on GitHub</a></p></header><div class="release-body"><h2>What&#39;s Changed</h2>
+<ul>
+<li>feat: add server foundation by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/6" target="_blank" rel="noopener noreferrer">#6</a></li>
+<li>feat: add CLI entrypoint by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/7" target="_blank" rel="noopener noreferrer">#7</a></li>
+<li>feat: add web viewer and live reload by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/8" target="_blank" rel="noopener noreferrer">#8</a></li>
+<li>feat: add file panel views and ordering by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/11" target="_blank" rel="noopener noreferrer">#11</a></li>
+<li>feat: apply web UI branding and English copy by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/12" target="_blank" rel="noopener noreferrer">#12</a></li>
+<li>chore: add CI and dependency management by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/13" target="_blank" rel="noopener noreferrer">#13</a></li>
+<li>feat: add file panel utilities by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/18" target="_blank" rel="noopener noreferrer">#18</a></li>
+<li>Web UIのデザインとドラッグプレビューを更新する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/21" target="_blank" rel="noopener noreferrer">#21</a></li>
+<li>選択中のエントリをURLに保持する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/22" target="_blank" rel="noopener noreferrer">#22</a></li>
+<li>フォルダービューを折りたたみ可能なディレクトリツリーにする by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/25" target="_blank" rel="noopener noreferrer">#25</a></li>
+<li>npmパッケージとして配布できる構成を整備する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/24" target="_blank" rel="noopener noreferrer">#24</a></li>
+<li>npm公開時にCLIエントリが削除されないようにする by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/26" target="_blank" rel="noopener noreferrer">#26</a></li>
+<li>npmパッケージをユーザースコープで公開する by <a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> in <a href="https://github.com/yuske-nakajima/zatto/pull/27" target="_blank" rel="noopener noreferrer">#27</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li><a href="https://github.com/yuske-nakajima" target="_blank" rel="noopener noreferrer">@yuske-nakajima</a> made their first contribution in <a href="https://github.com/yuske-nakajima/zatto/pull/6" target="_blank" rel="noopener noreferrer">#6</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/yuske-nakajima/zatto/commits/v0.1.0" target="_blank" rel="noopener noreferrer">https://github.com/yuske-nakajima/zatto/commits/v0.1.0</a></p></div></article></section></main></body>
+</html>

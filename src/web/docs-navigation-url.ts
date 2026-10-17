@@ -2,7 +2,7 @@ import { activateMainView, NAVIGATION_PARAMETERS } from "./main-view-url.js";
 
 /** A built-in documentation page exposed by the application. */
 export interface DocPage {
-  slug: "getting-started" | "cli" | "api" | "gui-api-mapping";
+  slug: "getting-started" | "cli" | "api" | "gui-api-mapping" | "changelog";
   label: string;
 }
 
@@ -22,6 +22,7 @@ export const DOC_PAGES: readonly DocPage[] = [
   { slug: "cli", label: "CLI" },
   { slug: "api", label: "API" },
   { slug: "gui-api-mapping", label: "GUI / API mapping" },
+  { slug: "changelog", label: "Changelog" },
 ];
 
 /**
