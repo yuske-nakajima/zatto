@@ -179,6 +179,25 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
 
+MCPクライアントへ一度登録して使います。
+グローバルにインストールした場合は、`npx -y @yuske-nakajima/zatto`の代わりに`zatto`を使います。
+
+```sh
+# Claude Code
+claude mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve
+# Codex
+codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve
+```
+
+stdioサーバーを起動できるほかのクライアントでは、次のコマンドと引数を設定します。
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@yuske-nakajima/zatto", "mcp", "serve"]
+}
+```
+
 ローカルパスには個人情報が含まれる場合があります。
 タイトルとHTMLは信頼できない入力として扱い、本文を外部サービスへ送信する前にユーザーの承認を得てください。
 
