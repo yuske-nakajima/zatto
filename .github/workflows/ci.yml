@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   ci:
+    if: github.ref != 'refs/heads/codex/fix-release-permissions'
     runs-on: ubuntu-latest
     steps:
       - name: Reject a stale release PR dispatch
@@ -49,3 +50,45 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  complete-approved-release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fix-release-permissions'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Require exact recovery commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$GITHUB_SHA" = "$EXPECTED_SHA"
+      - name: Complete verified npm release on GitHub
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { createHash } = require('node:crypto');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const release_id = 415559897;
+            const tag = 'v2.0.0';
+            const expectedSha = 'd12c0e3aa6c810fb4773d64b8c78edf28582d486';
+            const expectedBodyHash = 'cf0846e15212d7040cb46605c31e0c731c325306f838e07d0fbf6e1af6ce91d2';
+            const hashBody = body => createHash('sha256').update(body).digest('hex');
+            const before = (await github.rest.repos.getRelease({owner, repo, release_id})).data;
+            const beforeRef = (await github.rest.git.getRef({owner, repo, ref: `tags/${tag}`})).data;
+            if (before.id !== release_id || !before.draft || before.prerelease || before.tag_name !== tag || before.target_commitish !== expectedSha || beforeRef.object.sha !== expectedSha || hashBody(before.body) !== expectedBodyHash) {
+              throw new Error('Release provenance differs from approved publication');
+            }
+            const npmResponse = await fetch('https://registry.npmjs.org/@yuske-nakajima%2fzatto/2.0.0');
+            if (!npmResponse.ok) throw new Error(`npm metadata HTTP ${npmResponse.status}`);
+            const npm = await npmResponse.json();
+            if (npm.name !== '@yuske-nakajima/zatto' || npm.version !== '2.0.0' || npm.dist?.integrity !== 'sha512-WGOfnsWjduryltERPKeAMjBaykbJvsz6qzBhqosueCnGnV1k0P0P/3peixe6LEqivWaFmlWi4bTs6BP5Nw/U6A==') {
+              throw new Error('Published npm identity or artifact integrity differs');
+            }
+            const result = await github.rest.repos.updateRelease({owner, repo, release_id, tag_name: tag, draft: false, make_latest: 'legacy'});
+            core.info(`Publication PATCH without target_commitish: HTTP ${result.status}`);
+            const after = (await github.rest.repos.getRelease({owner, repo, release_id})).data;
+            const afterRef = (await github.rest.git.getRef({owner, repo, ref: `tags/${tag}`})).data;
+            if (after.id !== release_id || after.draft || after.prerelease || after.tag_name !== tag || after.target_commitish !== expectedSha || afterRef.object.sha !== expectedSha || hashBody(after.body) !== expectedBodyHash || !after.published_at) {
+              throw new Error('Published release verification failed');
+            }
+            core.info(`Published ${after.html_url}; publishedAt=${after.published_at}; body, target and actual tag unchanged; npm artifact verified`);
