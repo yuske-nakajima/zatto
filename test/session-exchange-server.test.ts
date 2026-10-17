@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("session exchange API", () => {
   let tempDir: string;
@@ -33,12 +34,9 @@ describe("session exchange API", () => {
     await store.reorderEntries([second.id, first.id]);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/session/export",
-    });
+    const response = await rpc(app, "session.export", {});
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({
       format: "zatto-session",
       version: 1,
@@ -61,18 +59,16 @@ describe("session exchange API", () => {
       serverIdentity: { instanceId: "managed", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      headers: { "x-zatto-instance-id": "managed" },
-      payload: {
+    const response = await rpc(app, "session.import", {
+      exchange: {
         format: "zatto-session",
         version: 1,
         entries: [{ path: secondPath }, { path: firstPath }],
       },
+      instanceId: "managed",
     });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     const entries = response.json().entries as Array<{
       id: string;
       absPath: string;
@@ -109,18 +105,16 @@ describe("session exchange API", () => {
       serverIdentity: { instanceId: "managed", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      headers: { "x-zatto-instance-id": "other" },
-      payload: { format: "zatto-session", version: 1, entries: [] },
+    const response = await rpc(app, "session.import", {
+      exchange: { format: "zatto-session", version: 1, entries: [] },
+      instanceId: "other",
     });
 
-    expect(response.statusCode).toBe(409);
+    expect(response.code).toBe(1003);
     await app.close();
   });
 
-  test("不正なJSONでは既存セッションを変更しない", async () => {
+  test("不正なexchangeでは既存セッションを変更しない", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [previous] = await store.addEntries([firstPath]);
@@ -128,14 +122,9 @@ describe("session exchange API", () => {
     const onSessionChanged = vi.fn();
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      headers: { "content-type": "application/json" },
-      payload: "{broken",
-    });
+    const response = await rpc(app, "session.import", { exchange: "{broken" });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     expect(onSessionChanged).not.toHaveBeenCalled();
@@ -188,13 +177,11 @@ describe("session exchange API", () => {
     const onSessionChanged = vi.fn();
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      payload: createPayload(),
+    const response = await rpc(app, "session.import", {
+      exchange: createPayload(),
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     expect(onSessionChanged).not.toHaveBeenCalled();

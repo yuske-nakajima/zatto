@@ -5,6 +5,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture, rpcMethod, rpcRequest } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -52,16 +53,18 @@ describe("session exchange web UI", () => {
       version: 1,
       entries: [{ path: "/work/a.html" }, { path: "/work/b.html" }],
     };
-    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
-      if (input === "/api/session") {
-        return Response.json({
-          entries: initialEntries,
-          serverIdentity: { instanceId: "managed" },
-        });
-      }
-      if (input === "/api/session/export") return Response.json(exchange);
-      return Response.json({});
-    });
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async (input) => {
+        if (input === "session.get") {
+          return Response.json({
+            entries: initialEntries,
+            serverIdentity: { instanceId: "managed" },
+          });
+        }
+        if (input === "session.export") return Response.json(exchange);
+        return Response.json({});
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<App />);
@@ -83,10 +86,16 @@ describe("session exchange web UI", () => {
     );
     await user.click(exportButton);
 
-    expect(fetch).not.toHaveBeenCalledWith("/api/session/export");
+    expect(fetch).not.toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.export", {}),
+    );
     await user.click(screen.getByRole("button", { name: "Export" }));
 
-    expect(fetch).toHaveBeenCalledWith("/api/session/export");
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.export", {}),
+    );
     expect(createObjectUrl).toHaveBeenCalledOnce();
     expect(anchorClick).toHaveBeenCalledOnce();
   });
@@ -100,18 +109,20 @@ describe("session exchange web UI", () => {
     const pendingImport = new Promise<Response>((resolve) => {
       resolveImport = resolve;
     });
-    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
-      if (input === "/api/session?mode=replace" && init?.method === "PUT") {
-        return pendingImport;
-      }
-      if (input === "/api/session") {
-        return Response.json({
-          entries: initialEntries,
-          serverIdentity: { instanceId: "managed" },
-        });
-      }
-      return Response.json({ files: [], totalMatches: 0, truncated: false });
-    });
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async (input) => {
+        if (input === "session.import") {
+          return pendingImport;
+        }
+        if (input === "session.get") {
+          return Response.json({
+            entries: initialEntries,
+            serverIdentity: { instanceId: "managed" },
+          });
+        }
+        return Response.json({ files: [], totalMatches: 0, truncated: false });
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<App />);
@@ -139,8 +150,8 @@ describe("session exchange web UI", () => {
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        "/api/session?mode=replace",
-        expect.objectContaining({ method: "PUT" }),
+        "/rpc",
+        rpcRequest("session.import", { mode: "replace" }),
       );
     });
     const importLabel = screen.getByText("Importing…").closest("label");
@@ -164,21 +175,18 @@ describe("session exchange web UI", () => {
     ).toBe("true");
     expect(window.location.search).not.toContain("needle");
     expect(fetch).toHaveBeenCalledWith(
-      "/api/session?mode=replace",
-      expect.objectContaining({
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          "x-zatto-instance-id": "managed",
-        },
-        body: JSON.stringify(exchange),
+      "/rpc",
+      rpcRequest("session.import", {
+        mode: "replace",
+        exchange: exchange,
+        instanceId: "managed",
       }),
     );
   });
 
   test("不正なJSONを送信せず既存セッションを維持する", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
-      Response.json({ entries: initialEntries }),
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async () => Response.json({ entries: initialEntries })),
     );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
@@ -198,7 +206,9 @@ describe("session exchange web UI", () => {
     expect(screen.getByTitle("Alpha preview")).toBeTruthy();
     await waitFor(() =>
       expect(
-        fetch.mock.calls.filter(([input]) => input !== "/api/agent/context"),
+        fetch.mock.calls.filter(
+          ([, init]) => rpcMethod(init) !== "agentContext.set",
+        ),
       ).toHaveLength(1),
     );
   });
@@ -208,18 +218,20 @@ describe("session exchange web UI", () => {
       ...initialEntries,
       entry("c", "Charlie", "/work/c.html"),
     ];
-    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
-      if (input === "/api/session?mode=merge" && init?.method === "PUT") {
-        return Response.json({ entries: mergedEntries });
-      }
-      if (input === "/api/session") {
-        return Response.json({
-          entries: initialEntries,
-          serverIdentity: { instanceId: "managed" },
-        });
-      }
-      return Response.json({ files: [], totalMatches: 0, truncated: false });
-    });
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async (input) => {
+        if (input === "session.import") {
+          return Response.json({ entries: mergedEntries });
+        }
+        if (input === "session.get") {
+          return Response.json({
+            entries: initialEntries,
+            serverIdentity: { instanceId: "managed" },
+          });
+        }
+        return Response.json({ files: [], totalMatches: 0, truncated: false });
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<App />);

@@ -3,7 +3,8 @@ import type {
   AgentContextView,
   BrowserAgentContext,
 } from "../shared/agent-context.js";
-import { workspaceHeaders } from "./workspace-request.js";
+import { rpcCall } from "../shared/rpc-client.js";
+import { workspaceParams } from "./workspace-request.js";
 
 interface AgentContextSyncOptions {
   workspaceId?: string | null;
@@ -22,13 +23,9 @@ export function useAgentContextSync({
     if (!enabled) return;
     const context: BrowserAgentContext = { activeEntryId, view };
     const syncContext = () => {
-      void fetch("/api/agent/context", {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          ...workspaceHeaders(workspaceId),
-        },
-        body: JSON.stringify(context),
+      void rpcCall("agentContext.set", {
+        ...context,
+        ...workspaceParams(workspaceId),
       }).catch(() => undefined);
     };
     syncContext();

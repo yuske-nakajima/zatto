@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class Socket extends EventTarget {
   close() {}
@@ -13,18 +14,20 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", Socket);
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      Response.json({
-        entries: [
-          {
-            id: "a",
-            title: "Alpha",
-            absPath: "/a.html",
-            addedAt: 1,
-            favorite: true,
-          },
-        ],
-      }),
+    vi.fn(
+      rpcFixture(async () =>
+        Response.json({
+          entries: [
+            {
+              id: "a",
+              title: "Alpha",
+              absPath: "/a.html",
+              addedAt: 1,
+              favorite: true,
+            },
+          ],
+        }),
+      ),
     ),
   );
 });

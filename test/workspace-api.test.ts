@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 let dir: string;
 let store: SessionStore;
@@ -20,54 +21,33 @@ test("workspace API switches isolated entries and refuses stale clear requests",
   const file = path.join(dir, "one.html");
   await writeFile(file, "<title>One</title>");
   await store.addEntries([file]);
-  const initial = (await app.inject("/api/session")).json();
-  const created = await app.inject({
-    method: "POST",
-    url: "/api/workspaces",
-    payload: { name: "Research" },
+  const initial = (await rpc(app, "session.get", {})).json();
+  const created = await rpc(app, "workspaces.create", {
+    ...{ name: "Research" },
   });
-  expect(created.statusCode).toBe(201);
+  expect(created.code).toBe(0);
   const id = created.json().id;
   expect(
-    (
-      await app.inject({ method: "PUT", url: `/api/workspaces/${id}/activate` })
-    ).json().entries,
+    (await rpc(app, "workspaces.activate", { id: id })).json().entries,
   ).toEqual([]);
   expect(
     (
-      await app.inject({
-        method: "DELETE",
-        url: "/api/session",
-        headers: { "x-zatto-workspace-id": initial.activeWorkspaceId },
+      await rpc(app, "session.clear", {
+        workspaceId: initial.activeWorkspaceId,
       })
-    ).statusCode,
-  ).toBe(409);
-  await app.inject({
-    method: "PUT",
-    url: `/api/workspaces/${initial.activeWorkspaceId}/activate`,
-  });
+    ).code,
+  ).toBe(1002);
+  await rpc(app, "workspaces.activate", { id: initial.activeWorkspaceId });
   expect(store.getSession().entries).toHaveLength(1);
   expect(
-    (
-      await app.inject({
-        method: "PATCH",
-        url: `/api/workspaces/${id}`,
-        payload: { name: "Renamed" },
-      })
-    ).statusCode,
-  ).toBe(200);
+    (await rpc(app, "workspaces.rename", { id: id, ...{ name: "Renamed" } }))
+      .code,
+  ).toBe(0);
+  expect((await rpc(app, "workspaces.delete", { id: id })).code).toBe(0);
   expect(
-    (await app.inject({ method: "DELETE", url: `/api/workspaces/${id}` }))
-      .statusCode,
-  ).toBe(200);
-  expect(
-    (
-      await app.inject({
-        method: "DELETE",
-        url: `/api/workspaces/${initial.activeWorkspaceId}`,
-      })
-    ).statusCode,
-  ).toBe(409);
+    (await rpc(app, "workspaces.delete", { id: initial.activeWorkspaceId }))
+      .code,
+  ).toBe(1002);
   await app.close();
 });
 test("a native picker started in a workspace adds only to that workspace after switching", async () => {
@@ -89,16 +69,12 @@ test("a native picker started in a workspace adds only to that workspace after s
   });
   const initial = store.getWorkspaceState().activeWorkspaceId;
   const other = await store.createWorkspace("Other");
-  const picking = app.inject({
-    method: "POST",
-    url: "/api/session/pick",
-    headers: { "x-zatto-instance-id": "server" },
-  });
+  const picking = rpc(app, "session.pickFiles", { instanceId: "server" });
   void picking.then(() => {});
   await ready;
   await store.switchWorkspace(other.id);
   finish({ kind: "selected", paths: [file] });
-  expect((await picking).statusCode).toBe(201);
+  expect((await picking).code).toBe(0);
   expect(store.getSession().entries).toEqual([]);
   await store.switchWorkspace(initial);
   expect(store.getSession().entries[0].absPath).toBe(file);
@@ -135,14 +111,10 @@ test("a clear queued behind an addition publishes the empty committed collection
   const app = await createApp({ sessionStore: localStore, realtimeHub: hub });
   const file = path.join(dir, "queued.html");
   await writeFile(file, "<title>Queued</title>");
-  const adding = app.inject({
-    method: "POST",
-    url: "/api/session/add",
-    payload: { paths: [file] },
-  });
+  const adding = rpc(app, "session.add", { ...{ paths: [file] } });
   void adding.then(() => {});
   await started;
-  const clearing = app.inject({ method: "DELETE", url: "/api/session" });
+  const clearing = rpc(app, "session.clear", {});
   void clearing.then(() => {});
   await new Promise((resolve) => setImmediate(resolve));
   finishWrite();

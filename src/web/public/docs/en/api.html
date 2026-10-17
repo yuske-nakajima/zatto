@@ -16,6 +16,7 @@
       th, td { padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
       th { white-space: nowrap; }
       code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow-x: auto; padding: 16px; background: color-mix(in srgb, CanvasText 6%, Canvas); border-radius: 8px; }
       .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
       .operation { display: inline-block; min-width: 16rem; }
       @media (max-width: 660px) { main { padding: 24px 18px 48px; } .operation { min-width: 0; } table, tbody, tr, th, td { display: block; } th { border: 0; padding-bottom: 2px; } td { padding-top: 2px; } }
@@ -23,83 +24,82 @@
   </head>
   <body>
     <main>
-      <h1>Local server API</h1>
-      <p class="lead">The server listens on loopback. Browser and CLI clients use JSON unless a route returns HTML or a static asset.</p>
-
-      <h2>Health and lifecycle</h2>
-      <h3><code class="operation">GET /api/health</code></h3>
-      <p>Returns <code>name</code>, <code>version</code>, and, for a managed server, <code>instanceId</code> and <code>protocolVersion</code>.</p>
-      <h3><code class="operation">POST /api/shutdown</code></h3>
-      <p>Returns <code>202</code> and schedules shutdown. A managed server requires its <code>x-zatto-instance-id</code> header; a mismatch returns <code>409</code>.</p>
-
-      <h2>Session</h2>
-      <h3><code class="operation">GET /api/session</code></h3>
-      <p>Returns ordered entries plus server identity and native file/folder picker capabilities.</p>
-      <h3><code class="operation">POST /api/session/add</code></h3>
-      <p>Body: <code>{ "paths": ["page.html"] }</code>. Paths are resolved to absolute paths; existing paths not already in the session are added once. The endpoint does not require an HTML file extension. The response is <code>201</code> with <code>added</code> and <code>session</code>.</p>
-      <p>The response also includes <code>resolved</code> (requested existing and added entries, in request order without duplicates), <code>workspaceId</code> (registration target), and <code>activeWorkspaceId</code> (selection when responding). Resolution shares the serialized addition, so a workspace switch cannot substitute another collection. <code>added</code> and <code>session</code> retain their shapes; <code>session</code> reflects the active collection when responding. Missing paths are skipped. Read failures, including directory arguments, reject the batch; persistence failures commit nothing.</p>
-      <h3><code class="operation">POST /api/session/pick</code></h3>
-      <p>Opens the managed native file picker. Requires <code>x-zatto-instance-id</code>. It returns <code>501</code> when unavailable and <code>409</code> while another native picker is active.</p>
-      <h3><code class="operation">POST /api/session/pick-directory</code></h3>
-      <p>Body: <code>{ "mode": "direct" }</code> or <code>{ "mode": "recursive" }</code>. The identity, availability, and single-picker rules match the file picker.</p>
-      <h3><code class="operation">PATCH /api/session/order</code></h3>
-      <p>Body: <code>{ "ids": [...] }</code>. The list must contain every current entry ID exactly once. Success returns <code>204</code>.</p>
-      <h3><code class="operation">DELETE /api/session/:id</code></h3>
-      <p>Removes one entry. Returns <code>404</code> for an unknown ID and <code>204</code> on success.</p>
-      <h3><code class="operation">DELETE /api/session/entries</code></h3>
-      <p>Body: <code>{ "ids": [...] }</code>. IDs must be non-empty, unique, and known. The operation is atomic and returns <code>204</code>.</p>
-      <h3><code class="operation">DELETE /api/session</code></h3>
-      <p>Clears all entries and returns <code>204</code>.</p>
-
-      <h2>Session exchange</h2>
-      <h3><code class="operation">GET /api/session/export</code></h3>
-      <p>Returns <code>{ "format": "zatto-session", "version": 1, "entries": [{ "path": ... }] }</code> in display order.</p>
-      <h3><code class="operation">PUT /api/session</code></h3>
-      <p>Validates a version 1 exchange document. <code>?mode=replace</code> is the default; <code>?mode=merge</code> appends unregistered paths. Managed servers require <code>x-zatto-instance-id</code>.</p>
-
-      <h2>Search</h2>
-      <h3><code class="operation">GET /api/search</code></h3>
-      <p>The <code>q</code> query parameter is a case-insensitive fixed string matched in HTML source. Empty text returns no matches. Queries are limited to 256 UTF-16 code units; file, match, and response limits may set <code>truncated</code>.</p>
-
-      <h2>AI agent context</h2>
-      <h3><code class="operation">GET /api/agent/context</code></h3>
-      <p>Returns schema version 1 with the selected file or <code>null</code>, every open file in display order, and the current <code>preview</code>, <code>search</code>, or <code>docs</code> view. Each file has an untrusted <code>title</code> for candidate selection and an authoritative absolute <code>path</code>. Title whitespace is normalized, Unicode control and format characters are removed, and output is limited to 200 Unicode code points. An empty result falls back to the file name. Outside the preview view, the active file remains the session selection and may not be visible. The endpoint never returns HTML contents.</p>
-      <h3><code class="operation">PUT /api/agent/context</code></h3>
-      <p>The browser reports <code>{ "activeEntryId": string | null, "view": ... }</code>. This volatile state is not persisted or included in session exchange files.</p>
-
-      <h2>Preview and realtime</h2>
-      <table>
-        <tbody>
-          <tr><th><code>GET /f/:id/</code></th><td>Returns the selected entry's HTML.</td></tr>
-          <tr><th><code>GET /f/:id/*</code></th><td>Returns a relative asset with its MIME type. Requests outside the entry directory are rejected.</td></tr>
-          <tr><th><code>WS /ws</code></th><td>Sends <code>session:update</code> after session changes and <code>file:changed</code> when a watched file changes.</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Web resources</h2>
-      <table>
-        <tbody>
-          <tr><th><code>GET /</code></th><td>Returns the built web application, or a service-unavailable page when it is absent.</td></tr>
-          <tr><th><code>GET /manifest.webmanifest</code></th><td>Returns the web app manifest.</td></tr>
-          <tr><th><code>GET /assets/*</code></th><td>Returns frontend build assets without allowing traversal outside the assets directory.</td></tr>
-          <tr><th><code>GET /docs/*</code></th><td>Returns bundled documentation without allowing traversal outside the docs directory.</td></tr>
-        </tbody>
-      </table>
-      <h2>Workspaces</h2>
-      <p>The active workspace is shared by all tabs and CLI clients. Session routes, search, previews, import/export, and agent context target that workspace. <code>GET /api/session</code> and <code>session:update</code> retain <code>entries</code> and also include <code>activeWorkspaceId</code> and <code>workspaces: [{ id, name }]</code>.</p>
-      <table><tbody>
-        <tr><th><code>GET /api/workspaces</code></th><td>Returns the active ID and workspace names.</td></tr>
-        <tr><th><code>POST /api/workspaces</code></th><td>Creates an empty workspace with <code>{ "name": "Research" }</code>; returns its ID and name with 201. Does not activate it.</td></tr>
-        <tr><th><code>PUT /api/workspaces/:id/activate</code></th><td>Persists selection and publishes active entries and workspace metadata.</td></tr>
-        <tr><th><code>PATCH /api/workspaces/:id</code></th><td>Renames with <code>{ "name": "Research" }</code>. Trimmed names must contain 1–100 characters.</td></tr>
-        <tr><th><code>DELETE /api/workspaces/:id</code></th><td>Removes a workspace, preserving disk files. Deleting the active workspace selects the first remaining one. The last workspace cannot be deleted.</td></tr>
-      </tbody></table>
-      <p>Browser requests send <code>x-zatto-workspace-id</code>; a mismatch returns 409. Missing/deleted workspace IDs, invalid names, and last-workspace deletion also return 409. Requests without this header operate on the active workspace. A native picker already open when selection changes adds only to its original workspace. Deleted picker targets are rejected.</p>
-      <h2>Favorites</h2>
-      <p>Session entries may include <code>favorite: boolean</code>; an omitted flag means false. Favorites belong to a workspace, retain List order, and are saved in the version 2 workspace document.</p>
-      <h3><code class="operation">PATCH /api/session/:id/favorite</code></h3>
-      <p>Send <code>{ "favorite": true }</code> or <code>{ "favorite": false }</code>. A successful request returns 204. A changed flag is persisted atomically and emits <code>session:update</code>; repeating the same state performs no write or notification. A nonboolean flag returns 400, a missing entry returns 404, and a stale <code>x-zatto-workspace-id</code> returns 409.</p>
-      <p>Version 1 exchange documents contain paths only. Replace imports reset stars, merge imports retain existing stars, and removal followed by re-addition creates an unstarred entry. Search and agent context still include all active-workspace entries.</p>
+      <h1>JSON-RPC API</h1>
+      <p class="lead">All 21 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
+      <h2>Requests and responses</h2>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 1,
+  &quot;method&quot;: &quot;session.get&quot;,
+  &quot;params&quot;: {}
+}</code></pre>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 2,
+  &quot;method&quot;: &quot;session.setFavorite&quot;,
+  &quot;params&quot;: {
+    &quot;id&quot;: &quot;entry-id&quot;,
+    &quot;favorite&quot;: true,
+    &quot;workspaceId&quot;: &quot;default&quot;
+  }
+}</code></pre>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 2,
+  &quot;result&quot;: null
+}</code></pre>
+      <p>Use named object parameters. Omitted params mean an empty object. IDs may be strings, numbers or null; the response echoes the same ID and contains exactly one of result or error. Use ID-bearing requests whenever completion matters.</p>
+      <h2>Shared guards</h2>
+      <p>Commands other than server.health accept optional workspaceId and instanceId guards. A supplied workspaceId must match the active workspace; it does not authorize access to another workspace. Operations capture their target before asynchronous work. Native pickers require instanceId, and import/shutdown require it for managed servers.</p>
+      <h2>Methods</h2>
+      <section><h3><code class="operation">server.health</code></h3><p>Identify the server and its protocol version.</p><p>params: <code>{}</code><br>result: <code>{ name, version, instanceId?, protocolVersion? }</code></p></section>
+      <section><h3><code class="operation">server.shutdown</code></h3><p>Require a matching instance for a managed server; stop after the complete response.</p><p>params: <code>{ instanceId? }</code><br>result: <code>{ ok: true }</code></p></section>
+      <section><h3><code class="operation">session.get</code></h3><p>Read the active ordered collection and native-picker capabilities.</p><p>params: <code>{}</code><br>result: <code>{ entries, activeWorkspaceId, workspaces, serverIdentity?, filePicker, directoryPicker }</code></p></section>
+      <section><h3><code class="operation">session.add</code></h3><p>Resolve paths and return requested existing/new entries once in argument order. Missing paths are skipped; read or save failure rejects the batch atomically. The endpoint does not require an HTML file extension.</p><p>params: <code>{ paths: string[] }</code><br>result: <code>{ added, resolved, workspaceId, activeWorkspaceId, session }</code></p></section>
+      <section><h3><code class="operation">session.setFavorite</code></h3><p>Set a persisted workspace star without reordering. An unchanged value performs no save or broadcast.</p><p>params: <code>{ id: string, favorite: boolean }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.reorder</code></h3><p>Supply every active entry ID exactly once in the desired List order.</p><p>params: <code>{ ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.removeMany</code></h3><p>Remove a nonempty unique collection of known IDs atomically; leave disk files intact.</p><p>params: <code>{ ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.remove</code></h3><p>Remove one registered entry, leaving its disk file intact.</p><p>params: <code>{ id: string }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.clear</code></h3><p>Clear the active workspace collection without deleting disk files.</p><p>params: <code>{}</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.export</code></h3><p>Return ordered absolute paths in the unchanged zatto-session exchange format.</p><p>params: <code>{}</code><br>result: <code>SessionExchange version 1</code></p></section>
+      <section><h3><code class="operation">session.import</code></h3><p>Validate all paths before committing. Replace is the default and resets stars; merge preserves existing entries and stars. Managed servers require instanceId.</p><p>params: <code>{ exchange, mode?: &quot;replace&quot; | &quot;merge&quot;, instanceId? }</code><br>result: <code>{ entries }</code></p></section>
+      <section><h3><code class="operation">session.pickFiles</code></h3><p>Open the native file picker. Require a matching instance; return cancellation without changes. Add to the workspace captured before opening.</p><p>params: <code>{ instanceId: string }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
+      <section><h3><code class="operation">session.pickDirectory</code></h3><p>Add HTML files directly within a picked folder or recursively. Native pickers share one lock; symbolic links are not followed.</p><p>params: <code>{ instanceId: string, mode: &quot;direct&quot; | &quot;recursive&quot; }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
+      <section><h3><code class="operation">workspaces.list</code></h3><p>Read workspace names and the shared active selection.</p><p>params: <code>{}</code><br>result: <code>{ activeWorkspaceId, workspaces: [{ id, name }] }</code></p></section>
+      <section><h3><code class="operation">workspaces.create</code></h3><p>Create an empty workspace without changing selection. A trimmed name has 1–100 characters.</p><p>params: <code>{ name: string }</code><br>result: <code>{ id, name }</code></p></section>
+      <section><h3><code class="operation">workspaces.activate</code></h3><p>Persist and broadcast the active selection; browser search and preview state follow workspace-change rules.</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">workspaces.rename</code></h3><p>Rename a workspace without changing its files or ID.</p><p>params: <code>{ id: string, name: string }</code><br>result: <code>{ activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">workspaces.delete</code></h3><p>Remove a workspace while retaining disk files and at least one workspace. If active, select the first remaining workspace.</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">agentContext.get</code></h3><p>Read titles and absolute paths, not HTML contents. Titles are untrusted labels, normalized and limited to 200 Unicode code points.</p><p>params: <code>{}</code><br>result: <code>{ schemaVersion: 1, activeFile, openFiles, view }</code></p></section>
+      <section><h3><code class="operation">agentContext.set</code></h3><p>Update transient browser context. A selected file must exist in the active workspace; context is not persisted or exported.</p><p>params: <code>{ activeEntryId: string | null, view: &quot;preview&quot; | &quot;search&quot; | &quot;docs&quot; }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">search.query</code></h3><p>Search registered HTML source using a case-insensitive fixed string. An empty query returns no matches; query length is at most 256 UTF-16 code units. File, match, byte and response limits remain enforced.</p><p>params: <code>{ query: string }</code><br>result: <code>{ query, totalMatches, truncated, files }</code></p></section>
+      <h2>Reusable result and exchange types</h2><p>entries and added/resolved contain Entry objects. addedAt is a millisecond timestamp; absent favorite means false. filePicker and directoryPicker use PickerCapability. Agent context uses AgentContextFile for activeFile (or null) and openFiles. Search file/line offsets and range lengths use UTF-16 code units; lineNumber is one-based.</p><h3>Entry</h3><pre><code>{ id: string, absPath: string, title: string, addedAt: number, favorite?: boolean }</code></pre><h3>WorkspaceState</h3><pre><code>{ activeWorkspaceId: string, workspaces: [{ id: string, name: string }] }</code></pre><h3>PickerCapability</h3><pre><code>{ available: boolean, instanceId?: string }</code></pre><h3>SessionExchange</h3><pre><code>{ format: &quot;zatto-session&quot;, version: 1, entries: [{ path: string }] }</code></pre><h3>AgentContextFile</h3><pre><code>{ title: string, path: string }</code></pre><h3>SearchFileResult</h3><pre><code>{ entryId, title, fileName, absPath, matchCount, truncated, lines: SearchLineMatch[] }</code></pre><h3>SearchLineMatch</h3><pre><code>{ lineNumber, startOffset, lineText, truncated, ranges: [{ start, length }] }</code></pre><p>Exchange paths must be absolute, unique after normalization, readable HTML files. No title, ID or favorite flag is stored. The following request merges an exchange document without changing existing IDs or stars; replace regenerates entries and clears stars.</p><pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 3,
+  &quot;method&quot;: &quot;session.import&quot;,
+  &quot;params&quot;: {
+    &quot;instanceId&quot;: &quot;server-instance-id&quot;,
+    &quot;workspaceId&quot;: &quot;default&quot;,
+    &quot;mode&quot;: &quot;merge&quot;,
+    &quot;exchange&quot;: {
+      &quot;format&quot;: &quot;zatto-session&quot;,
+      &quot;version&quot;: 1,
+      &quot;entries&quot;: [
+        {
+          &quot;path&quot;: &quot;/path/to/page.html&quot;
+        }
+      ]
+    }
+  }
+}</code></pre>
+      <h2>Errors</h2>
+      <p>Expected failures use JSON-RPC error envelopes, not REST HTTP status codes. Inspect error.code and error.data.kind rather than matching message text.</p>
+      <table><thead><tr><th>code</th><th>Meaning / data.kind</th></tr></thead><tbody><tr><td><code>-32700</code></td><td>Parse error</td></tr><tr><td><code>-32600</code></td><td>Invalid Request</td></tr><tr><td><code>-32601</code></td><td>Method not found</td></tr><tr><td><code>-32602</code></td><td>Invalid params</td></tr><tr><td><code>-32603</code></td><td>Internal error</td></tr><tr><td><code>1001</code></td><td>notFound</td></tr><tr><td><code>1002</code></td><td>workspace</td></tr><tr><td><code>1003</code></td><td>instance</td></tr><tr><td><code>1004</code></td><td>pickerUnavailable</td></tr><tr><td><code>1005</code></td><td>busy</td></tr><tr><td><code>1006</code></td><td>searchLimit</td></tr></tbody></table>
+      <p>Search failures may include a specific code such as SEARCH_QUERY_TOO_LONG, SEARCH_FILE_TOO_LARGE or SEARCH_FILE_READ_FAILED and applicable entryId/maxLength/maxBytes details.</p>
+      <h2>notification / batch</h2><p>A notification omits id and produces no response even on failure; failures are logged. A notification-only request returns HTTP 204. A batch runs sequentially in input order; failures do not stop remaining calls and the batch is not a transaction. An empty array is invalid. Shutdown waits until the complete single or batch response has been sent.</p>
+      <h2>File delivery and events</h2>
+      <table><tbody><tr><th><code>GET /</code></th><td>Web UI</td></tr><tr><th><code>GET /manifest.webmanifest</code></th><td>Web app manifest</td></tr><tr><th><code>GET /assets/*</code></th><td>Frontend assets</td></tr><tr><th><code>GET /docs/*</code></th><td>Built-in documentation / Changelog</td></tr><tr><th><code>GET /f/:id/</code></th><td>Registered HTML preview</td></tr><tr><th><code>GET /f/:id/*</code></th><td>Relative assets within the registered file root</td></tr><tr><th><code>WS /ws</code></th><td>session:update / file:changed</td></tr></tbody></table>
+      <p>The server listens on loopback. Relative files cannot escape the registered root. RPC migration does not change durable workspace version 2 or exchange version 1.</p>
     </main>
   </body>
 </html>

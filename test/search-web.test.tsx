@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { SearchResponse } from "../src/shared/search.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -67,12 +68,14 @@ describe("HTML search view", () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) => {
-        if (input === "/api/session") {
-          return Response.json({ entries });
-        }
-        return Response.json(searchResponse);
-      }),
+      vi.fn(
+        rpcFixture(async (input) => {
+          if (input === "session.get") {
+            return Response.json({ entries });
+          }
+          return Response.json(searchResponse);
+        }),
+      ),
     );
     render(<App />);
     await act(async () => vi.runAllTimersAsync());
@@ -124,22 +127,24 @@ describe("HTML search view", () => {
   test("更新中は結果を保持し、失敗時に再試行できる", async () => {
     vi.useFakeTimers();
     let searchAttempt = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      if (input === "/api/session") {
-        return Response.json({ entries });
-      }
-      if (input === "/api/agent/context") {
-        return new Response(null, { status: 204 });
-      }
-      searchAttempt += 1;
-      if (searchAttempt === 2) {
-        throw new Error("read failed");
-      }
-      return Response.json({
-        ...searchResponse,
-        query: searchAttempt === 1 ? "alpha" : "beta",
-      });
-    });
+    const fetchMock = vi.fn(
+      rpcFixture(async (input: RequestInfo | URL) => {
+        if (input === "session.get") {
+          return Response.json({ entries });
+        }
+        if (input === "agentContext.set") {
+          return new Response(null, { status: 204 });
+        }
+        searchAttempt += 1;
+        if (searchAttempt === 2) {
+          throw new Error("read failed");
+        }
+        return Response.json({
+          ...searchResponse,
+          query: searchAttempt === 1 ? "alpha" : "beta",
+        });
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
     await act(async () => vi.runAllTimersAsync());

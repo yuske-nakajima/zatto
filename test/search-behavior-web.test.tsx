@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { SearchResponse } from "../src/shared/search.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   static instance: FakeWebSocket | null = null;
@@ -82,10 +83,12 @@ describe("HTML search behavior", () => {
   test("iframeを維持しながらfocusと検索状態を往復する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries })
-          : Response.json({ ...result, truncated: true }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries })
+            : Response.json({ ...result, truncated: true }),
+        ),
       ),
     );
     render(<App />);
@@ -133,20 +136,27 @@ describe("HTML search behavior", () => {
     let searchCalls = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) => {
-        if (input === "/api/session") {
-          return Response.json({ entries });
-        }
-        if (input === "/api/agent/context") {
-          return new Response(null, { status: 204 });
-        }
-        searchCalls += 1;
-        return Response.json(
-          searchCalls === 1
-            ? result
-            : { query: "alpha", totalMatches: 0, truncated: false, files: [] },
-        );
-      }),
+      vi.fn(
+        rpcFixture(async (input) => {
+          if (input === "session.get") {
+            return Response.json({ entries });
+          }
+          if (input === "agentContext.set") {
+            return new Response(null, { status: 204 });
+          }
+          searchCalls += 1;
+          return Response.json(
+            searchCalls === 1
+              ? result
+              : {
+                  query: "alpha",
+                  totalMatches: 0,
+                  truncated: false,
+                  files: [],
+                },
+          );
+        }),
+      ),
     );
     render(<App />);
     await act(async () => vi.runAllTimersAsync());

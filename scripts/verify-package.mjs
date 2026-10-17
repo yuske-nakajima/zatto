@@ -7,9 +7,14 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "1.2.0";
+const expectedVersion = "2.0.0";
 const documentationLanguages = ["en", "ja"];
-const documentationPages = ["getting-started", "cli", "api", "gui-api-mapping"];
+const documentationPages = [
+  "getting-started",
+  "cli",
+  "api",
+  "gui-api-mapping",
+];
 const documentationPaths = documentationLanguages.flatMap((language) =>
   documentationPages.map((page) => `/docs/${language}/${page}.html`),
 );
@@ -175,16 +180,26 @@ try {
   }
 
   const runtime = JSON.parse(await readFile(runtimePath, "utf8"));
-  const healthResponse = await fetch(
-    `http://127.0.0.1:${runtime.port}/api/health`,
-  );
+  const healthResponse = await fetch(`http://127.0.0.1:${runtime.port}/rpc`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "server.health",
+      params: {},
+    }),
+  });
   const pageResponse = await fetch(`http://127.0.0.1:${runtime.port}/`);
   const documentationResponses = await Promise.all(
     documentationPaths.map((documentationPath) =>
       fetch(`http://127.0.0.1:${runtime.port}${documentationPath}`),
     ),
   );
-  const health = await healthResponse.json();
+  const envelope = await healthResponse.json();
+  if (envelope.jsonrpc !== "2.0" || envelope.id !== 1 || envelope.error)
+    throw new Error("パッケージのRPC応答が不正です");
+  const health = envelope.result;
   const session = await readFile(sessionPath, "utf8");
   const documentationIsAvailable = documentationResponses.every(
     (response) =>

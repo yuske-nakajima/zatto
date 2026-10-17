@@ -10,6 +10,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
 import { initial, publish, Socket, setup } from "./favorites-web-fixture.js";
+import { rpcRequest } from "./rpc-client-fixture.js";
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
@@ -48,14 +49,11 @@ test("Favorites follows List order without drag handles, keeps preview after uns
   await user.click(screen.getByRole("button", { name: "Open Beta" }));
   await user.click(screen.getByRole("button", { name: "Favorite Beta" }));
   expect(fetch).toHaveBeenCalledWith(
-    "/api/session/b/favorite",
-    expect.objectContaining({
-      method: "PATCH",
-      body: JSON.stringify({ favorite: false }),
-      headers: {
-        "content-type": "application/json",
-        "x-zatto-workspace-id": "default",
-      },
+    "/rpc",
+    rpcRequest("session.setFavorite", {
+      id: "b",
+      favorite: false,
+      workspaceId: "default",
     }),
   );
   publish(
@@ -84,8 +82,8 @@ test("keyboard toggles stars in List and Folders while copy and remove remain av
   button.focus();
   await user.keyboard(" ");
   expect(fetch).toHaveBeenCalledWith(
-    "/api/session/a/favorite",
-    expect.objectContaining({ body: JSON.stringify({ favorite: true }) }),
+    "/rpc",
+    rpcRequest("session.setFavorite", { id: "a", favorite: true }),
   );
   publish(
     initial.map((entry) =>
@@ -101,16 +99,16 @@ test("keyboard toggles stars in List and Folders while copy and remove remain av
   folderStar.focus();
   await user.keyboard("{Enter}");
   expect(fetch).toHaveBeenCalledWith(
-    "/api/session/a/favorite",
-    expect.objectContaining({ body: JSON.stringify({ favorite: false }) }),
+    "/rpc",
+    rpcRequest("session.setFavorite", { id: "a", favorite: false }),
   );
   expect(
     screen.getByRole("button", { name: "Copy file path /docs/a.html" }),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Remove Gamma" }));
   expect(fetch).toHaveBeenCalledWith(
-    "/api/session/c",
-    expect.objectContaining({ method: "DELETE" }),
+    "/rpc",
+    rpcRequest("session.remove", { id: "c" }),
   );
 });
 test("Favorites with no starred entries explains how to populate it", async () => {
@@ -125,19 +123,39 @@ test("Favorites with no starred entries explains how to populate it", async () =
   ).toBeTruthy();
   expect(screen.queryByText("Add HTML files from the CLI")).toBeNull();
 });
-test("failed star updates show an error without changing the displayed favorite state", async () => {
-  const fetch = setup();
-  const user = userEvent.setup();
-  render(<App />);
-  await screen.findByTitle("Alpha preview");
-  fetch.mockImplementationOnce(async () => new Response(null, { status: 500 }));
-  await user.click(screen.getByRole("button", { name: "Favorite Alpha" }));
-  expect(
-    await screen.findByText("Could not update the favorite."),
-  ).toBeTruthy();
-  expect(
-    screen
-      .getByRole("button", { name: "Favorite Alpha" })
-      .getAttribute("aria-pressed"),
-  ).toBe("false");
-});
+test.each(["http", "rpc"])(
+  "failed star updates (%s) show an error without changing the displayed favorite state",
+  async (failure) => {
+    const fetch = setup();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByTitle("Alpha preview");
+    const original = fetch.getMockImplementation();
+    if (!original) throw new Error("Missing initial session fixture");
+    fetch.mockImplementation(async (input, init) => {
+      const request = JSON.parse(String(init?.body));
+      if (request.method !== "session.setFavorite")
+        return original(input, init);
+      return failure === "http"
+        ? new Response(null, { status: 500 })
+        : Response.json({
+            jsonrpc: "2.0",
+            id: request.id,
+            error: {
+              code: 1002,
+              message: "Workspace changed",
+              data: { kind: "workspace" },
+            },
+          });
+    });
+    await user.click(screen.getByRole("button", { name: "Favorite Alpha" }));
+    expect(
+      await screen.findByText("Could not update the favorite."),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Favorite Alpha" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  },
+);

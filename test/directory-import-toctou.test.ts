@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { enumerateHtmlFiles } from "../src/server/directory-import.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 const raceHooks = vi.hoisted(() => ({
   afterLstat: undefined as ((targetPath: string) => Promise<void>) | undefined,
@@ -96,14 +97,12 @@ describe("directory import filesystem changes", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "recursive" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "recursive" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.code).toBe(-32603);
     expect(store.getSession()).toEqual({ entries: [] });
     expect(addEntries).not.toHaveBeenCalled();
     expect(onSessionChanged).not.toHaveBeenCalled();

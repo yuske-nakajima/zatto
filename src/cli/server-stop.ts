@@ -1,9 +1,15 @@
 import {
   readServerRecord,
   removeOwnedServerRecord,
+  SERVER_PROTOCOL_VERSION,
   type ServerRecord,
+  serverProcessIsAlive,
 } from "../server/runtime.js";
-import { probeHealth, requestShutdown } from "./server-api.js";
+import {
+  legacyServerMessage,
+  probeHealth,
+  requestShutdown,
+} from "./server-api.js";
 import {
   recoverRecordFromLock,
   type ServerClientDependencies,
@@ -27,10 +33,9 @@ export async function stopRecordedServer(
     (await recoverRecordFromLock(dependencies));
   if (record) {
     const probe = await probeHealth(record.port, dependencies.fetch, record);
-    if (
-      probe.kind === "compatible" ||
-      probe.kind === "same-instance-incompatible"
-    ) {
+    if (probe.kind === "legacy" || probe.kind === "same-instance-incompatible")
+      throw new Error(legacyServerMessage(record.port));
+    if (probe.kind === "compatible") {
       await requestShutdown(record.port, dependencies.fetch, record.instanceId);
       await waitForStopped(record, dependencies);
       return { port: record.port, stopped: true };
@@ -40,6 +45,11 @@ export async function stopRecordedServer(
         `記録された zatto サーバーと互換性を確認できませんでした (${record.port})`,
       );
     }
+    if (
+      record.protocolVersion !== SERVER_PROTOCOL_VERSION &&
+      serverProcessIsAlive(record.pid)
+    )
+      throw new Error(legacyServerMessage(record.port));
     await removeOwnedServerRecord(
       dependencies.runtimeFilePath,
       record.instanceId,
@@ -52,6 +62,11 @@ export async function stopRecordedServer(
     dependencies.fetch,
   );
   if (!unmanaged) return { port: preferredPort, stopped: false };
+  if (
+    unmanaged.probe.kind === "legacy" ||
+    unmanaged.probe.kind === "same-instance-incompatible"
+  )
+    throw new Error(legacyServerMessage(unmanaged.port));
   const instanceId =
     "identity" in unmanaged.probe &&
     typeof unmanaged.probe.identity.instanceId === "string"

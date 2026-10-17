@@ -6,8 +6,9 @@ import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
+import { rpc } from "./rpc-server-helper.js";
 
-describe("DELETE /api/session/entries", () => {
+describe("session.removeMany", () => {
   let tempDir: string;
   let sessionFilePath: string;
 
@@ -51,14 +52,12 @@ describe("DELETE /api/session/entries", () => {
       socket.once("message", (data) => resolve(data.toString()));
     });
 
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/session/entries",
-      payload: { ids: [entries[0].id, entries[2].id] },
+    const response = await rpc(app, "session.removeMany", {
+      ...{ ids: [entries[0].id, entries[2].id] },
     });
     const message = JSON.parse(await updatePromise);
 
-    expect(response.statusCode).toBe(204);
+    expect(response.code).toBe(0);
     expect(store.getSession()).toEqual({ entries: [entries[1], entries[3]] });
     expect(onSessionChanged).toHaveBeenCalledOnce();
     expect(onSessionChanged).toHaveBeenCalledWith({
@@ -83,7 +82,7 @@ describe("DELETE /api/session/entries", () => {
     ["空文字", { ids: [""] }],
     ["文字列以外", { ids: [1] }],
     ["重複", { ids: ["entry-id", "entry-id"] }],
-  ])("%sを400で拒否する", async (_name, payload) => {
+  ])("%sを不正なparamsとして拒否する", async (_name, payload) => {
     const htmlPath = path.join(tempDir, "entry.html");
     await writeFile(htmlPath, "<title>Entry</title>", "utf8");
     const store = new SessionStore(sessionFilePath);
@@ -98,19 +97,17 @@ describe("DELETE /api/session/entries", () => {
           }
         : payload;
 
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/session/entries",
-      payload: normalizedPayload,
+    const response = await rpc(app, "session.removeMany", {
+      ...normalizedPayload,
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [entry] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     await app.close();
   });
 
-  test("不明なIDを含む集合を404で拒否し、全エントリを維持する", async () => {
+  test("不明なIDを含む集合を拒否し、全エントリを維持する", async () => {
     const htmlPath = path.join(tempDir, "entry.html");
     await writeFile(htmlPath, "<title>Entry</title>", "utf8");
     const store = new SessionStore(sessionFilePath);
@@ -119,19 +116,17 @@ describe("DELETE /api/session/entries", () => {
     const persistedBefore = await readFile(sessionFilePath, "utf8");
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/session/entries",
-      payload: { ids: [entry.id, "missing"] },
+    const response = await rpc(app, "session.removeMany", {
+      ...{ ids: [entry.id, "missing"] },
     });
 
-    expect(response.statusCode).toBe(404);
+    expect(response.code).toBe(1001);
     expect(store.getSession()).toEqual({ entries: [entry] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     await app.close();
   });
 
-  test("永続化失敗を500で返し、sessionと通知を変更しない", async () => {
+  test("永続化失敗を内部エラーとして返し、sessionと通知を変更しない", async () => {
     const htmlPath = path.join(tempDir, "entry.html");
     await writeFile(htmlPath, "<title>Entry</title>", "utf8");
     let rejectWrites = false;
@@ -152,13 +147,11 @@ describe("DELETE /api/session/entries", () => {
       onSessionChanged,
     });
 
-    const response = await app.inject({
-      method: "DELETE",
-      url: "/api/session/entries",
-      payload: { ids: [entry.id] },
+    const response = await rpc(app, "session.removeMany", {
+      ...{ ids: [entry.id] },
     });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.code).toBe(-32603);
     expect(store.getSession()).toEqual({ entries: [entry] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     expect(onSessionChanged).not.toHaveBeenCalled();

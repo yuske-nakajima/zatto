@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -29,10 +30,12 @@ describe("built-in documentation navigation", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries })
-          : Response.json({ query: "alpha", files: [], totalMatches: 0 }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries })
+            : Response.json({ query: "alpha", files: [], totalMatches: 0 }),
+        ),
       ),
     );
   });

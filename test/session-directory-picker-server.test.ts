@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
-describe("POST /api/session/pick-directory", () => {
+describe("session.pickDirectory", () => {
   let tempDir: string;
   let sessionFilePath: string;
   let selectedDirectory: string;
@@ -40,17 +41,14 @@ describe("POST /api/session/pick-directory", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const available = await app.inject({ method: "GET", url: "/api/session" });
+    const available = await rpc(app, "session.get", {});
     expect(available.json()).toMatchObject({
       directoryPicker: { available: true, instanceId: "managed-instance" },
     });
     await app.close();
 
     const unavailableApp = await createApp({ sessionStore: store });
-    const unavailable = await unavailableApp.inject({
-      method: "GET",
-      url: "/api/session",
-    });
+    const unavailable = await rpc(unavailableApp, "session.get", {});
     expect(unavailable.json()).toMatchObject({
       directoryPicker: { available: false },
     });
@@ -78,11 +76,9 @@ describe("POST /api/session/pick-directory", () => {
         serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
       });
 
-      const response = await app.inject({
-        method: "POST",
-        url: "/api/session/pick-directory",
-        headers: { "x-zatto-instance-id": "managed-instance" },
-        payload: { mode },
+      const response = await rpc(app, "session.pickDirectory", {
+        ...{ mode },
+        instanceId: "managed-instance",
       });
       const expectedPaths = [
         path.join(selectedDirectory, "alpha.htm"),
@@ -92,7 +88,7 @@ describe("POST /api/session/pick-directory", () => {
           : []),
       ];
 
-      expect(response.statusCode).toBe(201);
+      expect(response.code).toBe(0);
       expect(response.json()).toMatchObject({
         cancelled: false,
         added: expectedPaths.map((absPath) => ({ absPath })),
@@ -109,7 +105,7 @@ describe("POST /api/session/pick-directory", () => {
     },
   );
 
-  test("キャンセル時は200を返し、セッションを変更しない", async () => {
+  test("キャンセル結果を返し、セッションを変更しない", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const addEntries = vi.spyOn(store, "addEntries");
@@ -121,14 +117,12 @@ describe("POST /api/session/pick-directory", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "recursive" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "recursive" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({ cancelled: true, added: [] });
     expect(addEntries).not.toHaveBeenCalled();
     expect(onSessionChanged).not.toHaveBeenCalled();
@@ -136,10 +130,10 @@ describe("POST /api/session/pick-directory", () => {
   });
 
   test.each([
-    ["識別子不一致", "other-instance", { mode: "direct" }, 409],
-    ["mode無し", "managed-instance", {}, 400],
-    ["不明なmode", "managed-instance", { mode: "nested" }, 400],
-  ])("%sを拒否する", async (_name, instanceId, payload, statusCode) => {
+    ["識別子不一致", "other-instance", { mode: "direct" }, 1003],
+    ["mode無し", "managed-instance", {}, -32602],
+    ["不明なmode", "managed-instance", { mode: "nested" }, -32602],
+  ])("%sを拒否する", async (_name, instanceId, payload, errorCode) => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const pickDirectory = vi.fn();
@@ -149,19 +143,17 @@ describe("POST /api/session/pick-directory", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": instanceId },
-      payload,
+    const response = await rpc(app, "session.pickDirectory", {
+      ...payload,
+      instanceId: instanceId,
     });
 
-    expect(response.statusCode).toBe(statusCode);
+    expect(response.code).toBe(errorCode);
     expect(pickDirectory).not.toHaveBeenCalled();
     await app.close();
   });
 
-  test("利用できない環境では501を返す", async () => {
+  test("利用できない環境ではpickerUnavailableを返す", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const app = await createApp({
@@ -169,14 +161,12 @@ describe("POST /api/session/pick-directory", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "direct" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "direct" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(501);
+    expect(response.code).toBe(1004);
     await app.close();
   });
 });

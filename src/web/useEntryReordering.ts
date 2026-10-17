@@ -3,7 +3,7 @@ import type { Entry } from "../server/session.js";
 import { prepareEntryDrag } from "./entry-drag.js";
 import { moveEntry } from "./file-panel-model.js";
 import { requestSessionChange } from "./session-change.js";
-import { workspaceHeaders } from "./workspace-request.js";
+import { workspaceParams } from "./workspace-request.js";
 
 interface EntryReorderingOptions {
   workspaceId?: string | null;
@@ -51,13 +51,9 @@ export function useEntryReordering({
     const reorderedEntries = moveEntry(entries, draggedId, targetId);
     setEntries(reorderedEntries);
     resetDragState();
-    const reordered = await requestSessionChange("/api/session/order", {
-      method: "PATCH",
-      headers: {
-        "content-type": "application/json",
-        ...workspaceHeaders(workspaceId),
-      },
-      body: JSON.stringify({ ids: reorderedEntries.map((entry) => entry.id) }),
+    const reordered = await requestSessionChange("session.reorder", {
+      ids: reorderedEntries.map((entry) => entry.id),
+      ...workspaceParams(workspaceId),
     });
     if (
       !reordered &&

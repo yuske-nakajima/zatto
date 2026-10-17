@@ -1,60 +1,16 @@
-import type { FastifyInstance } from "fastify";
 import type { SearchFileResult, SearchResponse } from "../shared/search.js";
 import { SEARCH_LIMITS } from "./search-constants.js";
-import { SearchFileFailure } from "./search-file.js";
 import { searchEntry } from "./search-matcher.js";
-import type { Entry, SessionStore } from "./session.js";
-
-interface SearchQuery {
-  q?: string | string[];
-}
+import type { Entry } from "./session.js";
 
 /**
- * Registers search that can only read entries exposed by the supplied store.
- *
- * @param app - Fastify application that receives the route
- * @param sessionStore - Authority for every searchable file path
- * @returns Nothing
+ * Searches an authorized entry snapshot within bounded resource limits.
+ * @param entries - Registered entries to search
+ * @param query - Validated fixed-string query
+ * @returns Bounded search results
+ * @throws SearchFileFailure when an entry cannot be read safely
  */
-export function registerSearchRoute(
-  app: FastifyInstance,
-  sessionStore: SessionStore,
-): void {
-  app.get<{ Querystring: SearchQuery }>(
-    "/api/search",
-    async (request, reply) => {
-      const query = request.query.q ?? "";
-      if (typeof query !== "string") {
-        return reply.code(400).send({ message: "`q` must be a string." });
-      }
-      if (query.length > SEARCH_LIMITS.queryLength) {
-        return reply.code(400).send({
-          code: "SEARCH_QUERY_TOO_LONG",
-          message: "The search text is too long.",
-          maxLength: SEARCH_LIMITS.queryLength,
-        });
-      }
-
-      try {
-        return await searchEntries(sessionStore.getSession().entries, query);
-      } catch (error) {
-        if (error instanceof SearchFileFailure) {
-          return reply.code(error.statusCode).send({
-            code: error.code,
-            message: error.message,
-            entryId: error.entryId,
-            ...(error.code === "SEARCH_FILE_TOO_LARGE"
-              ? { maxBytes: SEARCH_LIMITS.fileBytes }
-              : {}),
-          });
-        }
-        throw error;
-      }
-    },
-  );
-}
-
-async function searchEntries(
+export async function searchEntries(
   entries: Entry[],
   query: string,
 ): Promise<SearchResponse> {

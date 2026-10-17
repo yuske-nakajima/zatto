@@ -50,17 +50,27 @@ export async function verifyPublicServer(options) {
 
   try {
     const runtime = await waitForRuntime(runtimePath, child, () => stderr);
-    const response = await fetch(
-      `http://127.0.0.1:${runtime.port}/api/health`,
-      { signal: AbortSignal.timeout(START_TIMEOUT_MS) },
-    );
-    const health = await response.json();
+    const response = await fetch(`http://127.0.0.1:${runtime.port}/rpc`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "server.health",
+        params: {},
+      }),
+      signal: AbortSignal.timeout(START_TIMEOUT_MS),
+    });
+    const envelope = await response.json();
+    if (envelope.jsonrpc !== "2.0" || envelope.id !== 1 || envelope.error)
+      throw new Error("公開サーバーのRPC応答が不正です");
+    const health = envelope.result;
     if (
       !response.ok ||
       health.name !== "zatto" ||
       health.version !== options.expectedVersion ||
       health.instanceId !== instanceId ||
-      health.protocolVersion !== 2
+      health.protocolVersion !== 3
     ) {
       throw new Error("公開サーバーエントリーのhealthが不正です");
     }

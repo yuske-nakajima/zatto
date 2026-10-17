@@ -10,6 +10,7 @@ import {
   collectDirectoryEntryIds,
   type DirectoryTreeNode,
 } from "../src/web/directory-tree-model.js";
+import { rpcFixture, rpcMethod, rpcRequest } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -132,11 +133,10 @@ describe("folder session removal", () => {
     await user.click(getFolderRemovalButton("/workspace/reports", 2));
 
     await waitFor(() => expect(deleteRequests(fetchMock)).toHaveLength(1));
-    expect(fetchMock).toHaveBeenCalledWith("/api/session/entries", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids: ["report", "daily"] }),
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.removeMany", { ids: ["report", "daily"] }),
+    );
     expect(confirm).toHaveBeenCalledWith("Remove 2 files from this session?");
   });
 
@@ -162,12 +162,14 @@ describe("folder session removal", () => {
 });
 
 function mockSessionFetch(bulkRequestSucceeds = true) {
-  const fetchMock = vi.fn(async (input: string | URL | Request) => {
-    if (input === "/api/session") {
-      return Response.json({ entries: folderEntries });
-    }
-    return new Response(null, { status: bulkRequestSucceeds ? 204 : 500 });
-  });
+  const fetchMock = vi.fn(
+    rpcFixture(async (input: string | URL | Request) => {
+      if (input === "session.get") {
+        return Response.json({ entries: folderEntries });
+      }
+      return new Response(null, { status: bulkRequestSucceeds ? 204 : 500 });
+    }),
+  );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -203,5 +205,7 @@ function getFolderRemovalButton(directory: string, count: number) {
 }
 
 function deleteRequests(fetchMock: ReturnType<typeof vi.fn>) {
-  return fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE");
+  return fetchMock.mock.calls.filter(
+    ([, init]) => rpcMethod(init) === "session.removeMany",
+  );
 }

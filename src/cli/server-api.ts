@@ -3,6 +3,7 @@ import {
   SERVER_PROTOCOL_VERSION,
   type ServerRecord,
 } from "../server/runtime.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import {
   parseSessionExchange,
   type SessionExchange,
@@ -29,23 +30,35 @@ export async function probeHealth(
   fetchFn: typeof globalThis.fetch,
   expected?: ServerRecord,
 ): Promise<HealthProbe> {
-  let response: Response;
-  try {
-    response = await fetchFn(`${serverUrl(port)}api/health`, {
-      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
-    });
-  } catch {
-    return { kind: "unreachable" };
-  }
-  if (!response.ok) {
-    return { kind: "other" };
-  }
-
   let identity: HealthIdentity;
   try {
-    identity = (await response.json()) as HealthIdentity;
+    identity = await rpcCall(
+      "server.health",
+      {},
+      {
+        endpoint: `${serverUrl(port)}rpc`,
+        fetch: fetchFn,
+        signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+      },
+    );
   } catch {
-    return { kind: "other" };
+    try {
+      const legacy = await fetchFn(`${serverUrl(port)}api/health`, {
+        signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+      });
+      if (!legacy.ok) return { kind: "other" };
+      identity = (await legacy.json()) as HealthIdentity;
+      if (identity.name !== APP_NAME) return { kind: "other" };
+      if (
+        expected &&
+        typeof identity.instanceId === "string" &&
+        identity.instanceId !== expected.instanceId
+      )
+        return { kind: "different-instance", identity };
+      return { kind: "legacy" };
+    } catch {
+      return { kind: "unreachable" };
+    }
   }
   if (identity.name !== APP_NAME) {
     return { kind: "other" };
@@ -68,15 +81,14 @@ export async function requestShutdown(
   fetchFn: typeof globalThis.fetch,
   instanceId?: string,
 ): Promise<void> {
-  const response = await fetchFn(`${serverUrl(port)}api/shutdown`, {
-    method: "POST",
-    ...(instanceId
-      ? { headers: { "x-zatto-instance-id": instanceId } }
-      : undefined),
-  });
-  if (!response.ok) {
-    throw new Error(`サーバーの停止に失敗しました (HTTP ${response.status})`);
-  }
+  await rpcCall(
+    "server.shutdown",
+    { ...(instanceId ? { instanceId } : {}) },
+    {
+      endpoint: `${serverUrl(port)}rpc`,
+      fetch: fetchFn,
+    },
+  );
 }
 
 /**
@@ -93,17 +105,14 @@ export async function importSession(
   exchange: SessionExchange,
   fetchFn: typeof globalThis.fetch,
 ): Promise<void> {
-  const response = await fetchFn(`${serverUrl(record.port)}api/session`, {
-    method: "PUT",
-    headers: {
-      "content-type": "application/json",
-      "x-zatto-instance-id": record.instanceId,
+  await rpcCall(
+    "session.import",
+    { exchange, instanceId: record.instanceId },
+    {
+      endpoint: `${serverUrl(record.port)}rpc`,
+      fetch: fetchFn,
     },
-    body: JSON.stringify(exchange),
-  });
-  if (!response.ok) {
-    throw new Error(await responseError(response, "セッションのインポート"));
-  }
+  );
 }
 
 /**
@@ -118,24 +127,21 @@ export async function exportSession(
   record: ServerRecord,
   fetchFn: typeof globalThis.fetch,
 ): Promise<SessionExchange> {
-  const response = await fetchFn(`${serverUrl(record.port)}api/session/export`);
-  if (!response.ok) {
-    throw new Error(await responseError(response, "セッションのエクスポート"));
-  }
-  return parseSessionExchange((await response.json()) as unknown);
+  return parseSessionExchange(
+    await rpcCall(
+      "session.export",
+      { instanceId: record.instanceId },
+      {
+        endpoint: `${serverUrl(record.port)}rpc`,
+        fetch: fetchFn,
+      },
+    ),
+  );
 }
 
-async function responseError(
-  response: Response,
-  operation: string,
-): Promise<string> {
-  try {
-    const body = (await response.json()) as { message?: unknown };
-    if (typeof body.message === "string") return body.message;
-  } catch {
-    return `${operation}に失敗しました (HTTP ${response.status})`;
-  }
-  return `${operation}に失敗しました (HTTP ${response.status})`;
+/** Migration instructions never invoke legacy write operations from this client. */
+export function legacyServerMessage(port: number): string {
+  return `旧 zatto サーバーが起動しています (${port})。更新前の zatto --port ${port} --stop、または npx --yes @yuske-nakajima/zatto@1.2.0 --port ${port} --stop で停止してから、新版を起動してください。`;
 }
 
 export function serverUrl(port: number): string {

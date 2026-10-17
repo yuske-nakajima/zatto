@@ -3,6 +3,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -27,10 +28,12 @@ describe("session transfer availability", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn<typeof globalThis.fetch>(
-        () =>
-          new Promise<Response>((resolve) => {
-            resolveSession = resolve;
-          }),
+        rpcFixture(
+          () =>
+            new Promise<Response>((resolve) => {
+              resolveSession = resolve;
+            }),
+        ),
       ),
     );
     render(<App />);

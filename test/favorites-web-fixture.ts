@@ -1,6 +1,7 @@
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 /** Controllable WebSocket boundary for favorite UI scenarios. */
 export class Socket extends EventTarget {
@@ -56,14 +57,16 @@ export function publish(entries: Entry[]) {
  * @throws Never
  */
 export function setup(entries = initial) {
-  const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
-    input === "/api/session"
-      ? Response.json({
-          entries,
-          activeWorkspaceId: "default",
-          workspaces: [{ id: "default", name: "Default" }],
-        })
-      : Response.json({}),
+  const fetch = vi.fn<typeof globalThis.fetch>(
+    rpcFixture(async (input) =>
+      input === "session.get"
+        ? Response.json({
+            entries,
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
+          })
+        : Response.json({}),
+    ),
   );
   vi.stubGlobal("fetch", fetch);
   return fetch;

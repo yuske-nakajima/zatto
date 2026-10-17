@@ -318,6 +318,19 @@ gh workflow run release.yml --ref main
 The workflow runs the quality checks and package verification.
 After they pass, it publishes to npm, creates the version tag, and creates a GitHub Release.
 
+## Updating to 2.0.0 and extending Zatto
+
+2.0.0 removes REST operation APIs. CLI, Web UI and internal MCP calls use JSON-RPC.
+Stop the server with `zatto --stop` before updating. If already updated, use
+`npx --yes @yuske-nakajima/zatto@1.2.0 --stop` to stop the old server, then run the new `zatto`.
+When the new CLI detects an old server it refuses registration or spawning, preserves
+runtime records, and reports migration steps without killing the process.
+Saved workspaces, stars, List order and exchange files are retained.
+For an old server on a custom port without a runtime record, add `--port <detected-port>` to that stop command.
+
+See [architecture and extension guidance](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md) for shared Commands and RPC contracts.
+Agents follow `AGENTS.md` and `.claude/rules/`. Discuss architecture changes with the user before implementing them.
+
 ## Debugging
 
 Build the web application and Node.js code.
@@ -342,69 +355,35 @@ ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node bin/zatto.js --no-open page.html
 ```
 
-Check server health and inspect the session.
+Operations use JSON-RPC 2.0 over HTTP. REST operation routes are not provided.
+Read the connected port from the runtime file, then send named parameters.
 
 ```bash
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
-ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
-curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
-curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
-curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"server.health","params":{}}'
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":2,"method":"session.get","params":{}}'
 ```
 
-Add an HTML file through the API.
+Use `session.add` with `{ "paths": [...] }` to register files and `session.reorder`
+with every entry ID to reorder them. `session.removeMany` removes known IDs atomically
+without deleting files. Native pickers, import and shutdown validate `instanceId` in
+params. Pass `workspaceId` when an operation depends on the active selection.
+Successful calls return `result`; failures return `error.code` and `error.data`.
+The built-in API documentation describes all 21 methods, parameters, results and errors.
+
+Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 
 ```bash
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   -H 'content-type: application/json' \
-  --data "{\"paths\":[\"$PWD/page.html\"]}"
-```
-
-Open the native folder picker and add HTML files from the selected folder.
-Use `direct` for direct children only or `recursive` for the complete folder
-tree. This endpoint is available when the managed server provides the macOS
-folder picker.
-
-```bash
-# Direct children only
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  --data '{"jsonrpc":"2.0","id":3,"method":"session.pickDirectory","params":{"instanceId":"<server-instance-id>","mode":"direct"}}'
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data '{"mode":"direct"}'
-
-# Complete folder tree
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
-  -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data '{"mode":"recursive"}'
-```
-
-Reorder entries by sending every ID from `GET /api/session` in display order.
-
-```bash
-curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
-  -H 'content-type: application/json' \
-  --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
-```
-
-Remove multiple entries in one atomic session update.
-
-```bash
-curl -X DELETE "http://127.0.0.1:${ZATTO_PORT}/api/session/entries" \
-  -H 'content-type: application/json' \
-  --data '{"ids":["<entry-id-1>","<entry-id-2>"]}'
-```
-
-Import a validated session document. The server identity prevents a browser or
-CLI connected to a stale server from replacing another server's session.
-Add `?mode=merge` to preserve existing entries and append unregistered paths.
-Omitting `mode` replaces the session for CLI compatibility.
-
-```bash
-curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
-  -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data "$(cat saved-session.json)"
+  --data '{"jsonrpc":"2.0","id":4,"method":"session.pickDirectory","params":{"instanceId":"<server-instance-id>","mode":"recursive"}}'
 ```
 
 Stop the managed server.

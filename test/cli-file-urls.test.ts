@@ -7,6 +7,7 @@ import {
   SERVER_PROTOCOL_VERSION,
   writeServerRecord,
 } from "../src/server/runtime.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -25,14 +26,29 @@ async function invoke(body: unknown, files: string[]) {
   });
   const fetch = vi
     .fn<typeof globalThis.fetch>()
-    .mockResolvedValueOnce(
-      Response.json({
-        name: "zatto",
-        instanceId: "running",
-        protocolVersion: SERVER_PROTOCOL_VERSION,
-      }),
+    .mockImplementationOnce(
+      rpcFixture(async () =>
+        Response.json({
+          name: "zatto",
+          version: "2.0.0",
+          instanceId: "running",
+          protocolVersion: SERVER_PROTOCOL_VERSION,
+        }),
+      ),
     )
-    .mockResolvedValueOnce(Response.json(body, { status: 201 }));
+    .mockImplementationOnce(
+      rpcFixture(async () =>
+        Response.json(
+          {
+            workspaceId: "default",
+            activeWorkspaceId: "default",
+            session: { entries: [] },
+            ...(body as object),
+          },
+          { status: 201 },
+        ),
+      ),
+    );
   const stdout = vi.fn(),
     stderr = vi.fn(),
     openBrowser = vi.fn();
@@ -65,19 +81,19 @@ test("prints the top URL followed by ordered, unique title/direct URL pairs usin
   expect(result.stderr).not.toHaveBeenCalled();
   expect(result.openBrowser).not.toHaveBeenCalled();
 });
-test("resolves existing entries from an older server session response without confusing unrelated files", async () => {
-  const target = entry("existing", "Existing", "a.html");
+test("rejects a session-only response instead of applying a legacy fallback", async () => {
   const result = await invoke(
     {
       added: [],
-      session: { entries: [entry("other", "Other", "b.html"), target] },
+      session: { entries: [entry("existing", "Existing", "a.html")] },
     },
     ["a.html"],
   );
-  expect(result.stdout.mock.calls.flat().join("\n")).toContain(
-    "Existing\nhttp://127.0.0.1:7345/?entry=existing",
+  expect(result.code).toBe(1);
+  expect(result.stdout).not.toHaveBeenCalled();
+  expect(result.stderr).toHaveBeenCalledWith(
+    expect.stringContaining("Invalid JSON-RPC response"),
   );
-  expect(result.stdout.mock.calls.flat().join("\n")).not.toContain("Other");
 });
 test("reports skipped paths to stderr while retaining the successful-add exit contract", async () => {
   const result = await invoke(
@@ -92,9 +108,13 @@ test("reports skipped paths to stderr while retaining the successful-add exit co
 });
 test("keeps full titles on one safe terminal line and URL-encodes entry IDs", async () => {
   const title = `Title\n\r\t\u001b[31m\u0007\u0085\u2028\u202e${"長".repeat(500)}`;
-  const result = await invoke({ added: [entry("id /?", title, "a.html")] }, [
-    "a.html",
-  ]);
+  const result = await invoke(
+    {
+      added: [entry("id /?", title, "a.html")],
+      resolved: [entry("id /?", title, "a.html")],
+    },
+    ["a.html"],
+  );
   const output = result.stdout.mock.calls.flat().join("\n");
   expect(output).toContain("長".repeat(500));
   expect(output.split("\n")).toHaveLength(4);
@@ -121,10 +141,12 @@ test("warns when the active workspace changes after registration", async () => {
   );
   expect(result.stdout.mock.calls.flat().join("\n")).toContain("?entry=one");
 });
-test("prefers the added entry over a switched workspace snapshot from an older server", async () => {
+test("resolves the captured workspace result when the active snapshot has another ID", async () => {
+  const registered = entry("registered-in-a", "Registered", "a.html");
   const result = await invoke(
     {
-      added: [entry("registered-in-a", "Registered", "a.html")],
+      added: [registered],
+      resolved: [registered],
       session: {
         entries: [entry("same-path-in-b", "Other workspace", "a.html")],
       },
@@ -137,7 +159,10 @@ test("prefers the added entry over a switched workspace snapshot from an older s
 });
 test("uses the file path when a title contains only terminal control characters", async () => {
   const result = await invoke(
-    { added: [entry("one", "\u001b\u202e", "a.html")] },
+    {
+      added: [entry("one", "\u001b\u202e", "a.html")],
+      resolved: [entry("one", "\u001b\u202e", "a.html")],
+    },
     ["a.html"],
   );
   expect(result.stdout.mock.calls.flat().join("\n")).toContain(

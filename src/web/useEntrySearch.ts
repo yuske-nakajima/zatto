@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { rpcCall } from "../shared/rpc-client.js";
 import type { SearchResponse } from "../shared/search.js";
 
 type SearchPhase = "idle" | "initial" | "updating" | "error";
@@ -50,14 +51,11 @@ export function useEntrySearch(
     setPhase(resultRef.current === null ? "initial" : "updating");
     const timer = window.setTimeout(async () => {
       try {
-        const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query)}`,
+        const nextResult = await rpcCall(
+          "search.query",
+          { query },
           { signal: controller.signal },
         );
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const nextResult = (await response.json()) as SearchResponse;
         if (requestVersionRef.current !== requestVersion) {
           return;
         }

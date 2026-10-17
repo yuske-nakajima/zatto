@@ -1,48 +1,69 @@
+// @vitest-environment jsdom
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 const DOCS_ROOT = path.resolve("src/web/public/docs");
 const LOCALES = ["en", "ja"] as const;
-const SLUGS = ["getting-started", "cli", "api", "gui-api-mapping"] as const;
+const SLUGS = [
+  "getting-started",
+  "cli",
+  "api",
+  "gui-api-mapping",
+] as const;
+const RPC_OPERATIONS = [
+  "server.health",
+  "server.shutdown",
+  "session.get",
+  "session.add",
+  "session.setFavorite",
+  "session.reorder",
+  "session.removeMany",
+  "session.remove",
+  "session.clear",
+  "session.import",
+  "session.export",
+  "session.pickFiles",
+  "session.pickDirectory",
+  "workspaces.list",
+  "workspaces.create",
+  "workspaces.activate",
+  "workspaces.rename",
+  "workspaces.delete",
+  "agentContext.get",
+  "agentContext.set",
+  "search.query",
+] as const;
 const HTTP_OPERATIONS = [
+  "POST /rpc",
   "GET /",
   "GET /manifest.webmanifest",
   "GET /assets/*",
   "GET /docs/*",
-  "GET /api/health",
-  "GET /api/session",
-  "GET /api/session/export",
-  "PUT /api/session",
-  "GET /api/search",
-  "GET /api/agent/context",
-  "PUT /api/agent/context",
-  "POST /api/session/pick",
-  "POST /api/session/pick-directory",
-  "POST /api/session/add",
-  "PATCH /api/session/order",
-  "DELETE /api/session/entries",
-  "DELETE /api/session/:id",
-  "DELETE /api/session",
-  "POST /api/shutdown",
   "GET /f/:id/",
   "GET /f/:id/*",
+  "WS /ws",
 ] as const;
 const GUI_OPERATIONS = [
-  "GET /api/session",
+  "session.get",
   "GET /f/:id/",
   "GET /docs/*",
   "WS /ws",
-  "GET /api/search",
-  "POST /api/session/pick",
-  "POST /api/session/pick-directory",
-  "PATCH /api/session/order",
-  "DELETE /api/session/:id",
-  "DELETE /api/session/entries",
-  "DELETE /api/session",
-  "PUT /api/session",
-  "GET /api/session/export",
-  "PUT /api/agent/context",
+  "search.query",
+  "session.pickFiles",
+  "session.pickDirectory",
+  "session.reorder",
+  "session.remove",
+  "session.removeMany",
+  "session.clear",
+  "session.import",
+  "session.export",
+  "agentContext.set",
+  "session.setFavorite",
+  "workspaces.create",
+  "workspaces.activate",
+  "workspaces.rename",
+  "workspaces.delete",
 ] as const;
 
 describe("組み込みドキュメント本文", () => {
@@ -65,20 +86,34 @@ describe("組み込みドキュメント本文", () => {
         expect(html).toContain('name="viewport"');
         expect(html).toContain("<main");
         expect(html).toContain("<style>");
-        expect(html).not.toMatch(/<script\b/i);
-        expect(html).not.toMatch(/<(?:link|img|iframe)\b/i);
-        expect(html).not.toMatch(/(?:https?:)?\/\//i);
+        const document = new DOMParser().parseFromString(html, "text/html");
+        expect(
+          document.querySelector(
+            "script, link, img, iframe, object, embed, audio, video, source, meta[http-equiv]",
+          ),
+        ).toBeNull();
+        expect(document.querySelector("[src], [srcset], [poster]")).toBeNull();
+        for (const style of document.querySelectorAll("style")) {
+          expect(style.textContent).not.toMatch(/url\s*\(|@import/i);
+        }
+        for (const anchor of document.querySelectorAll("a[href]")) {
+          const href = anchor.getAttribute("href") ?? "";
+          const target = new URL(href, "https://zatto.invalid/");
+          expect(target.protocol).toBe("https:");
+          expect(target.username).toBe("");
+          expect(target.password).toBe("");
+        }
         expect(html).not.toMatch(/(?:\/Users\/|[A-Z]:\\|Figma)/i);
       }
     }
   });
 
-  test("APIページが全21 HTTP routesとWebSocketを記載する", async () => {
-    expect(HTTP_OPERATIONS).toHaveLength(21);
+  test("APIページが全21 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
+    expect(RPC_OPERATIONS).toHaveLength(21);
     for (const locale of LOCALES) {
       const html = await readDoc(locale, "api");
       const codeValues = readCodeValues(html);
-      for (const operation of HTTP_OPERATIONS) {
+      for (const operation of [...RPC_OPERATIONS, ...HTTP_OPERATIONS]) {
         expect(codeValues).toContain(operation);
       }
       expect(codeValues).toContain("WS /ws");

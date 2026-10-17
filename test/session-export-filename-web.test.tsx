@@ -3,6 +3,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { useSessionTransfer } from "../src/web/useSessionTransfer.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 describe("session export filename", () => {
   afterEach(() => {
@@ -16,8 +17,10 @@ describe("session export filename", () => {
     vi.setSystemTime(new Date(2026, 0, 2, 3, 4, 5));
     vi.stubGlobal(
       "fetch",
-      vi.fn<typeof globalThis.fetch>(async () =>
-        Response.json({ format: "zatto-session", version: 1, entries: [] }),
+      vi.fn<typeof globalThis.fetch>(
+        rpcFixture(async () =>
+          Response.json({ format: "zatto-session", version: 1, entries: [] }),
+        ),
       ),
     );
     Object.defineProperty(URL, "createObjectURL", {

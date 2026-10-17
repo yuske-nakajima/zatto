@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { SearchLineMatch, SearchResponse } from "../src/shared/search.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -53,10 +54,12 @@ describe("search preview navigation safety", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries: [entry] })
-          : Response.json(result),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries: [entry] })
+            : Response.json(result),
+        ),
       ),
     );
     window.history.replaceState(
@@ -135,10 +138,12 @@ describe("search preview navigation safety", () => {
     };
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries: [entry] })
-          : Response.json(ambiguousResult),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries: [entry] })
+            : Response.json(ambiguousResult),
+        ),
       ),
     );
     render(<App />);

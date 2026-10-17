@@ -1,5 +1,5 @@
 import { requestSessionChange } from "./session-change.js";
-import { workspaceHeaders } from "./workspace-request.js";
+import { workspaceParams } from "./workspace-request.js";
 
 /**
  * Creates an action that confirms and removes folder entries from the session.
@@ -26,13 +26,9 @@ async function removeFolderEntriesFromSession(
   ) {
     return;
   }
-  const removed = await requestSessionChange("/api/session/entries", {
-    method: "DELETE",
-    headers: {
-      "content-type": "application/json",
-      ...workspaceHeaders(workspaceId),
-    },
-    body: JSON.stringify({ ids }),
+  const removed = await requestSessionChange("session.removeMany", {
+    ids,
+    ...workspaceParams(workspaceId),
   });
   if (!removed) {
     reportError("Could not remove the files from the session.");

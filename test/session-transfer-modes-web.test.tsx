@@ -3,6 +3,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { useSessionTransfer } from "../src/web/useSessionTransfer.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 const exchange = {
   format: "zatto-session" as const,
@@ -20,8 +21,8 @@ describe("session transfer modes", () => {
   test("merge modeをqueryへ渡し、検索をresetしない", async () => {
     const applyImportedEntries = vi.fn();
     const resetSearch = vi.fn();
-    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
-      Response.json({ entries: [] }),
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async () => Response.json({ entries: [] })),
     );
     vi.stubGlobal("fetch", fetch);
     const file = new File([JSON.stringify(exchange)], "session.json");
@@ -40,8 +41,8 @@ describe("session transfer modes", () => {
     await act(() => result.current.importFile(file, "merge"));
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/session?mode=merge",
-      expect.objectContaining({ method: "PUT" }),
+      "/rpc",
+      rpcRequest("session.import", { mode: "merge" }),
     );
     expect(applyImportedEntries).toHaveBeenCalledWith([], "merge");
     expect(resetSearch).not.toHaveBeenCalled();
@@ -51,7 +52,9 @@ describe("session transfer modes", () => {
     let downloadedBlob: Blob | undefined;
     vi.stubGlobal(
       "fetch",
-      vi.fn<typeof globalThis.fetch>(async () => Response.json(exchange)),
+      vi.fn<typeof globalThis.fetch>(
+        rpcFixture(async () => Response.json(exchange)),
+      ),
     );
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,

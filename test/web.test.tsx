@@ -15,6 +15,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App, buildDirectoryTree, moveEntry } from "../src/web/App.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 const webStyles = readFileSync(resolve("src/web/styles.css"), "utf8");
 const hiddenPanelRule =
@@ -71,7 +72,7 @@ describe("App", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ entries: initialEntries })),
+      vi.fn(rpcFixture(async () => Response.json({ entries: initialEntries }))),
     );
   });
 
@@ -99,24 +100,26 @@ describe("App", () => {
 
   test("AddボタンからHTMLを追加して最初の追加項目を表示する", async () => {
     const pickedEntry = entry("picked", "Picked", "/tmp/picked.html");
-    vi.mocked(fetch).mockImplementation(async (input) => {
-      if (input === "/api/session") {
-        return Response.json({
-          entries: initialEntries,
-          filePicker: {
-            available: true,
-            instanceId: "managed-instance",
-          },
-        });
-      }
-      if (input === "/api/session/pick") {
-        return Response.json(
-          { cancelled: false, added: [pickedEntry] },
-          { status: 201 },
-        );
-      }
-      return Response.json({});
-    });
+    vi.mocked(fetch).mockImplementation(
+      rpcFixture(async (input) => {
+        if (input === "session.get") {
+          return Response.json({
+            entries: initialEntries,
+            filePicker: {
+              available: true,
+              instanceId: "managed-instance",
+            },
+          });
+        }
+        if (input === "session.pickFiles") {
+          return Response.json(
+            { cancelled: false, added: [pickedEntry] },
+            { status: 201 },
+          );
+        }
+        return Response.json({});
+      }),
+    );
     const user = userEvent.setup();
     render(<App />);
     await screen.findByTitle("Alpha preview");
@@ -129,23 +132,25 @@ describe("App", () => {
       });
     });
 
-    expect(fetch).toHaveBeenCalledWith("/api/session/pick", {
-      method: "POST",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.pickFiles", { instanceId: "managed-instance" }),
+    );
     expect(screen.getByTitle("Picked preview")).toBeTruthy();
     expect(window.location.search).toBe("?entry=picked");
   });
 
   test("空のセッションでファイル選択を主操作として表示する", async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      Response.json({
-        entries: [],
-        filePicker: {
-          available: true,
-          instanceId: "managed-instance",
-        },
-      }),
+    vi.mocked(fetch).mockImplementation(
+      rpcFixture(async () =>
+        Response.json({
+          entries: [],
+          filePicker: {
+            available: true,
+            instanceId: "managed-instance",
+          },
+        }),
+      ),
     );
 
     render(<App />);
@@ -157,28 +162,30 @@ describe("App", () => {
   });
 
   test("Command+Oでファイル選択を開く", async () => {
-    vi.mocked(fetch).mockImplementation(async (input) => {
-      if (input === "/api/session") {
-        return Response.json({
-          entries: initialEntries,
-          filePicker: {
-            available: true,
-            instanceId: "managed-instance",
-          },
-        });
-      }
-      return Response.json({ cancelled: true, added: [] });
-    });
+    vi.mocked(fetch).mockImplementation(
+      rpcFixture(async (input) => {
+        if (input === "session.get") {
+          return Response.json({
+            entries: initialEntries,
+            filePicker: {
+              available: true,
+              instanceId: "managed-instance",
+            },
+          });
+        }
+        return Response.json({ cancelled: true, added: [] });
+      }),
+    );
     render(<App />);
     await screen.findByTitle("Alpha preview");
 
     fireEvent.keyDown(window, { key: "o", metaKey: true });
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith("/api/session/pick", {
-        method: "POST",
-        headers: { "x-zatto-instance-id": "managed-instance" },
-      });
+      expect(fetch).toHaveBeenCalledWith(
+        "/rpc",
+        rpcRequest("session.pickFiles", { instanceId: "managed-instance" }),
+      );
     });
   });
 
@@ -296,13 +303,15 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Remove Alpha" }));
     await user.click(screen.getByRole("button", { name: "Clear all" }));
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/session/a", {
-      method: "DELETE",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.remove", { id: "a" }),
+    );
     expect(confirm).toHaveBeenCalledWith("Remove all entries?");
-    expect(fetchMock).toHaveBeenCalledWith("/api/session", {
-      method: "DELETE",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.clear", {}),
+    );
   });
 
   test("表示方式を切り替えてブラウザに保存する", async () => {
@@ -583,7 +592,7 @@ describe("App", () => {
   test("未選択時の固定文言にはツールチップを付けない", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ entries: [] })),
+      vi.fn(rpcFixture(async () => Response.json({ entries: [] }))),
     );
     render(<App />);
 
@@ -652,13 +661,15 @@ describe("App", () => {
   test("Foldersの完全なディレクトリパスをコピーする", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          entries: [
-            entry("a", "Alpha", "/work/first/index.html"),
-            entry("b", "Bravo", "/work/second/report.html"),
-          ],
-        }),
+      vi.fn(
+        rpcFixture(async () =>
+          Response.json({
+            entries: [
+              entry("a", "Alpha", "/work/first/index.html"),
+              entry("b", "Bravo", "/work/second/report.html"),
+            ],
+          }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -684,13 +695,15 @@ describe("App", () => {
   test("同名ファイルと同名ディレクトリを完全なパスで区別してコピーする", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          entries: [
-            entry("a", "Index", "/work/a/src/index.html"),
-            entry("b", "Index", "/work/b/src/index.html"),
-          ],
-        }),
+      vi.fn(
+        rpcFixture(async () =>
+          Response.json({
+            entries: [
+              entry("a", "Index", "/work/a/src/index.html"),
+              entry("b", "Index", "/work/b/src/index.html"),
+            ],
+          }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -742,13 +755,15 @@ describe("App", () => {
   test("フォルダを個別に折りたたんでも選択中のプレビューを維持する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          entries: [
-            entry("a", "Alpha", "/work/project/src/index.html"),
-            entry("b", "Bravo", "/work/project/docs/report.html"),
-          ],
-        }),
+      vi.fn(
+        rpcFixture(async () =>
+          Response.json({
+            entries: [
+              entry("a", "Alpha", "/work/project/src/index.html"),
+              entry("b", "Bravo", "/work/project/docs/report.html"),
+            ],
+          }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -816,13 +831,15 @@ describe("App", () => {
   test("Listとの切り替え後も折りたたみ状態を復元する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          entries: [
-            entry("a", "Alpha", "/work/project/src/index.html"),
-            entry("b", "Bravo", "/work/project/docs/report.html"),
-          ],
-        }),
+      vi.fn(
+        rpcFixture(async () =>
+          Response.json({
+            entries: [
+              entry("a", "Alpha", "/work/project/src/index.html"),
+              entry("b", "Bravo", "/work/project/docs/report.html"),
+            ],
+          }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -856,13 +873,15 @@ describe("App", () => {
   test("再mount後も折りたたみ状態を復元する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          entries: [
-            entry("a", "Alpha", "/work/project/src/index.html"),
-            entry("b", "Bravo", "/work/project/docs/report.html"),
-          ],
-        }),
+      vi.fn(
+        rpcFixture(async () =>
+          Response.json({
+            entries: [
+              entry("a", "Alpha", "/work/project/src/index.html"),
+              entry("b", "Bravo", "/work/project/docs/report.html"),
+            ],
+          }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -1013,15 +1032,16 @@ describe("App", () => {
     expect(removeButton.querySelector('img[data-icon="trash"]')).not.toBeNull();
     await user.click(removeButton);
 
-    expect(fetch).toHaveBeenCalledWith("/api/session/a", {
-      method: "DELETE",
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.remove", { id: "a" }),
+    );
   });
 
   test("ファイル未選択時はパスをコピーできない", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ entries: [] })),
+      vi.fn(rpcFixture(async () => Response.json({ entries: [] }))),
     );
     const user = userEvent.setup();
     writeText = vi.spyOn(window.navigator.clipboard, "writeText");
@@ -1123,11 +1143,10 @@ describe("App", () => {
     fireEvent.dragOver(targetRow as Element, { dataTransfer });
     fireEvent.drop(targetRow as Element, { dataTransfer });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/session/order", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids: ["b", "a"] }),
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.reorder", { ids: ["b", "a"] }),
+    );
   });
 
   test("ドラッグ中はポインター位置を維持したリスト行全体を表示する", async () => {

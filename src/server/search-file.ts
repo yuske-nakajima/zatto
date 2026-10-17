@@ -6,7 +6,6 @@ export class SearchFileFailure extends Error {
   constructor(
     readonly code: "SEARCH_FILE_UNREADABLE" | "SEARCH_FILE_TOO_LARGE",
     readonly entryId: string,
-    readonly statusCode: 413 | 500,
     message: string,
   ) {
     super(message);
@@ -67,7 +66,6 @@ export async function readBoundedHtml(
     throw new SearchFileFailure(
       "SEARCH_FILE_UNREADABLE",
       entry.id,
-      500,
       "An HTML file could not be read.",
     );
   } finally {
@@ -79,7 +77,6 @@ function fileTooLarge(entryId: string): SearchFileFailure {
   return new SearchFileFailure(
     "SEARCH_FILE_TOO_LARGE",
     entryId,
-    413,
     "An HTML file is too large to search.",
   );
 }

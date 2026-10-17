@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("session merge API", () => {
   let tempDir: string;
@@ -31,13 +32,12 @@ describe("session merge API", () => {
     const [existing] = await store.addEntries([existingPath]);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session?mode=merge",
-      payload: exchange([existingPath, addedPath]),
+    const response = await rpc(app, "session.import", {
+      mode: "merge",
+      exchange: exchange([existingPath, addedPath]),
     });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     const entries = response.json().entries;
     expect(entries[0]).toEqual(existing);
     expect(entries[1]).toMatchObject({ absPath: addedPath, title: "Added" });
@@ -57,13 +57,12 @@ describe("session merge API", () => {
     const alias = `${tempDir}${path.sep}sub${path.sep}..${path.sep}added.html`;
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session?mode=merge",
-      payload: exchange([addedPath, alias]),
+    const response = await rpc(app, "session.import", {
+      mode: "merge",
+      exchange: exchange([addedPath, alias]),
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [existing] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     await app.close();
@@ -76,31 +75,37 @@ describe("session merge API", () => {
     const persistedBefore = await readFile(sessionFilePath, "utf8");
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session?mode=merge",
-      payload: exchange([addedPath, path.join(tempDir, "missing.html")]),
+    const response = await rpc(app, "session.import", {
+      mode: "merge",
+      exchange: exchange([addedPath, path.join(tempDir, "missing.html")]),
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [existing] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     await app.close();
   });
 
-  test("未知のmodeを400として拒否する", async () => {
+  test("未知のmodeを不正なparamsとして拒否する", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session?mode=append",
-      payload: exchange([]),
+    const response = await rpc(app, "session.import", {
+      mode: "append",
+      exchange: exchange([]),
     });
 
-    expect(response.statusCode).toBe(400);
-    expect(response.json()).toEqual({ message: "import mode が不正です" });
+    expect(response.code).toBe(-32602);
+    expect(response.json()).toEqual({
+      message: "Invalid params",
+      issues: [
+        {
+          path: ["mode"],
+          message: 'Invalid option: expected one of "replace"|"merge"',
+        },
+      ],
+    });
     await app.close();
   });
 });

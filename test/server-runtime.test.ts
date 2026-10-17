@@ -130,7 +130,16 @@ describe("managed zatto server", () => {
 
     expect(attemptedRecord).toBeDefined();
     await expect(
-      fetch(`http://127.0.0.1:${attemptedRecord?.port}/api/health`),
+      fetch(`http://127.0.0.1:${attemptedRecord?.port}/rpc`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "server.health",
+          params: {},
+        }),
+      }),
     ).rejects.toThrow();
     expect(
       await acquireServerLock(runtimeFilePath, {

@@ -7,6 +7,7 @@ import {
   SERVER_PROTOCOL_VERSION,
   writeServerRecord,
 } from "../src/server/runtime.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, { status });
@@ -74,14 +75,19 @@ describe("session exchange CLI", () => {
     });
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "running-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "running-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse({ entries: [] }));
+      .mockImplementationOnce(
+        rpcFixture(async () => jsonResponse({ entries: [] })),
+      );
     const openBrowser = vi.fn();
     const stdout = vi.fn();
 
@@ -95,15 +101,11 @@ describe("session exchange CLI", () => {
     expect(exitCode).toBe(0);
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      "http://127.0.0.1:7010/api/session",
-      {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          "x-zatto-instance-id": "running-instance",
-        },
-        body: JSON.stringify(exchange),
-      },
+      "http://127.0.0.1:7010/rpc",
+      rpcRequest("session.import", {
+        exchange: exchange,
+        instanceId: "running-instance",
+      }),
     );
     expect(openBrowser).not.toHaveBeenCalled();
     expect(stdout).toHaveBeenCalledWith(
@@ -146,14 +148,17 @@ describe("session exchange CLI", () => {
     });
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "running-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "running-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse(exchange));
+      .mockImplementationOnce(rpcFixture(async () => jsonResponse(exchange)));
     const openBrowser = vi.fn();
     const stdout = vi.fn();
 
@@ -167,7 +172,8 @@ describe("session exchange CLI", () => {
     expect(exitCode).toBe(0);
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      "http://127.0.0.1:7010/api/session/export",
+      "http://127.0.0.1:7010/rpc",
+      rpcRequest("session.export", {}),
     );
     expect(JSON.parse(await readFile(exchangeFilePath, "utf8"))).toEqual(
       exchange,

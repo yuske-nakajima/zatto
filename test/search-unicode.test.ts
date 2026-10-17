@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
 import type { SearchLineMatch, SearchResponse } from "../src/shared/search.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("HTML search Unicode matching", () => {
   let tempDir: string;
@@ -38,14 +39,11 @@ describe("HTML search Unicode matching", () => {
   ])(
     "%sを正規表現として解釈せずUnicode case foldingで検索する",
     async (query, expected) => {
-      const response = await app.inject({
-        method: "GET",
-        url: `/api/search?q=${encodeURIComponent(query)}`,
-      });
+      const response = await rpc(app, "search.query", { query: query });
       const result = response.json<SearchResponse>();
       const lines = result.files.flatMap((file) => file.lines);
 
-      expect(response.statusCode).toBe(200);
+      expect(response.code).toBe(0);
       expect(extractMatches(lines)).toEqual(expected);
       for (const line of lines) {
         for (const range of line.ranges) {

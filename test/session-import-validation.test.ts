@@ -8,6 +8,7 @@ import {
   createImportedEntries,
   SessionImportValidationError,
 } from "../src/server/session-import.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("session import path validation", () => {
   let tempDir: string;
@@ -65,23 +66,21 @@ describe("session import path validation", () => {
     ).rejects.toBeInstanceOf(SessionImportValidationError);
   });
 
-  test("復元不能パスのAPI importは400で既存セッションを維持する", async () => {
+  test("復元不能パスのimportを拒否し、既存セッションを維持する", async () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [previous] = await store.addEntries([htmlPath]);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      payload: {
+    const response = await rpc(app, "session.import", {
+      exchange: {
         format: "zatto-session",
         version: 1,
         entries: [{ path: path.join(htmlPath, "child.html") }],
       },
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
     await app.close();
   });

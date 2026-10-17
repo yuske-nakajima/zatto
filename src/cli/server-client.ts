@@ -3,10 +3,11 @@ import {
   readServerLockState,
   readServerRecord,
   removeOwnedServerRecord,
+  SERVER_PROTOCOL_VERSION,
   type ServerRecord,
   serverProcessIsAlive,
 } from "../server/runtime.js";
-import { probeHealth } from "./server-api.js";
+import { legacyServerMessage, probeHealth } from "./server-api.js";
 import { findUnmanagedServer } from "./server-discovery.js";
 
 const STARTUP_TIMEOUT_MS = 7_000;
@@ -64,6 +65,11 @@ export async function connectOrStartServer(
     dependencies.fetch,
   );
   if (unmanaged) {
+    if (
+      unmanaged.probe.kind === "legacy" ||
+      unmanaged.probe.kind === "same-instance-incompatible"
+    )
+      throw new Error(legacyServerMessage(unmanaged.port));
     throw new Error(
       `runtime recordのない zatto サーバーがポート ${unmanaged.port} で起動しています。` +
         "`zatto --stop` で停止してから再実行してください",
@@ -87,14 +93,18 @@ async function resolveManagedServer(
   if (!record) return recoverRecordFromLock(dependencies);
   const probe = await probeHealth(record.port, dependencies.fetch, record);
   if (probe.kind === "compatible") return record;
-  if (
-    probe.kind === "same-instance-incompatible" ||
-    probe.kind === "different-instance"
-  ) {
+  if (probe.kind === "legacy" || probe.kind === "same-instance-incompatible")
+    throw new Error(legacyServerMessage(record.port));
+  if (probe.kind === "different-instance") {
     throw new Error(
       `記録された zatto サーバーと互換性を確認できませんでした (${record.port})`,
     );
   }
+  if (
+    record.protocolVersion !== SERVER_PROTOCOL_VERSION &&
+    serverProcessIsAlive(record.pid)
+  )
+    throw new Error(legacyServerMessage(record.port));
   await removeOwnedServerRecord(
     dependencies.runtimeFilePath,
     record.instanceId,
@@ -115,10 +125,15 @@ export async function recoverRecordFromLock(
     port: state.port,
     protocolVersion: state.protocolVersion,
   };
-  if (
-    (await probeHealth(record.port, dependencies.fetch, record)).kind !==
-    "compatible"
-  ) {
+  const probe = await probeHealth(record.port, dependencies.fetch, record);
+  if (probe.kind === "legacy" || probe.kind === "same-instance-incompatible")
+    throw new Error(legacyServerMessage(record.port));
+  if (probe.kind !== "compatible") {
+    if (
+      record.protocolVersion !== SERVER_PROTOCOL_VERSION &&
+      serverProcessIsAlive(record.pid)
+    )
+      throw new Error(legacyServerMessage(record.port));
     return null;
   }
   await createServerRecordIfAbsent(dependencies.runtimeFilePath, record);

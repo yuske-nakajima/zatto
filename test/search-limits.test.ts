@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SEARCH_LIMITS } from "../src/server/search.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("HTML search resource limits", () => {
   let tempDir: string;
@@ -19,17 +20,15 @@ describe("HTML search resource limits", () => {
 
   test("検索語長の境界を検証する", async () => {
     const app = await createSearchApp(["<p>ok</p>"]);
-    const accepted = await app.inject({
-      method: "GET",
-      url: `/api/search?q=${"a".repeat(SEARCH_LIMITS.queryLength)}`,
+    const accepted = await rpc(app, "search.query", {
+      query: "a".repeat(SEARCH_LIMITS.queryLength),
     });
-    const rejected = await app.inject({
-      method: "GET",
-      url: `/api/search?q=${"a".repeat(SEARCH_LIMITS.queryLength + 1)}`,
+    const rejected = await rpc(app, "search.query", {
+      query: "a".repeat(SEARCH_LIMITS.queryLength + 1),
     });
 
-    expect(accepted.statusCode).toBe(200);
-    expect(rejected.statusCode).toBe(400);
+    expect(accepted.code).toBe(0);
+    expect(rejected.code).toBe(1006);
     expect(rejected.json().code).toBe("SEARCH_QUERY_TOO_LONG");
     await app.close();
   });
@@ -38,12 +37,9 @@ describe("HTML search resource limits", () => {
     const app = await createSearchApp([
       "x".repeat(SEARCH_LIMITS.fileBytes + 1),
     ]);
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=x",
-    });
+    const response = await rpc(app, "search.query", { query: "x" });
 
-    expect(response.statusCode).toBe(413);
+    expect(response.code).toBe(1006);
     expect(response.json()).toMatchObject({
       code: "SEARCH_FILE_TOO_LARGE",
       maxBytes: SEARCH_LIMITS.fileBytes,
@@ -55,10 +51,7 @@ describe("HTML search resource limits", () => {
     const app = await createSearchApp([
       `${"x\n".repeat(SEARCH_LIMITS.fileMatches)}x`,
     ]);
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=x",
-    });
+    const response = await rpc(app, "search.query", { query: "x" });
     const result = response.json();
 
     expect(result.totalMatches).toBe(SEARCH_LIMITS.fileMatches);
@@ -73,10 +66,7 @@ describe("HTML search resource limits", () => {
   test("全ファイル合計の一致上限で打ち切りを明示する", async () => {
     const file = "x".repeat(SEARCH_LIMITS.fileMatches + 1);
     const app = await createSearchApp(Array.from({ length: 6 }, () => file));
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=x",
-    });
+    const response = await rpc(app, "search.query", { query: "x" });
     const result = response.json();
 
     expect(result.totalMatches).toBe(SEARCH_LIMITS.totalMatches);
@@ -101,11 +91,8 @@ describe("HTML search resource limits", () => {
     const fullEntries = await store.addEntries(fullPaths);
     const app = await createApp({ sessionStore: store });
 
-    const boundary = await app.inject({
-      method: "GET",
-      url: "/api/search?q=z",
-    });
-    expect(boundary.statusCode).toBe(200);
+    const boundary = await rpc(app, "search.query", { query: "z" });
+    expect(boundary.code).toBe(0);
     expect(boundary.json().truncated).toBe(false);
 
     await store.removeEntry(fullEntries.at(-1)?.id ?? "");
@@ -115,8 +102,8 @@ describe("HTML search resource limits", () => {
     await writeFile(overflowPath, Buffer.alloc(2 * 1024 * 1024, 97));
     await store.addEntries([almostPath, overflowPath]);
 
-    const limited = await app.inject({ method: "GET", url: "/api/search?q=z" });
-    expect(limited.statusCode).toBe(200);
+    const limited = await rpc(app, "search.query", { query: "z" });
+    expect(limited.code).toBe(0);
     expect(limited.json()).toMatchObject({ truncated: true, files: [] });
     await app.close();
   });
@@ -124,10 +111,7 @@ describe("HTML search resource limits", () => {
   test("巨大な単一行を上限長のsnippetへ切り詰める", async () => {
     const source = `${"a".repeat(4_000)}needle${"b".repeat(4_000)}`;
     const app = await createSearchApp([source]);
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=needle",
-    });
+    const response = await rpc(app, "search.query", { query: "needle" });
     const line = response.json().files[0].lines[0];
 
     expect(line.lineText.length).toBeLessThanOrEqual(
@@ -146,10 +130,7 @@ describe("HTML search resource limits", () => {
       Math.ceil(SEARCH_LIMITS.responseChars / line.length) + 10,
     );
     const app = await createSearchApp([source]);
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=x",
-    });
+    const response = await rpc(app, "search.query", { query: "x" });
     const result = response.json();
 
     expect(result.truncated).toBe(true);

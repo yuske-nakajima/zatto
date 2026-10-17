@@ -6,6 +6,7 @@ import { APP_VERSION } from "../src/meta.js";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("zatto server", () => {
   let tempDir: string;
@@ -150,39 +151,27 @@ describe("zatto server", () => {
     await store.load();
     const app = await createApp({ sessionStore: store });
 
-    const addResponse = await app.inject({
-      method: "POST",
-      url: "/api/session/add",
-      payload: { paths: [htmlPath] },
+    const addResponse = await rpc(app, "session.add", {
+      ...{ paths: [htmlPath] },
     });
 
-    expect(addResponse.statusCode).toBe(201);
+    expect(addResponse.code).toBe(0);
     const addedId = addResponse.json().added[0].id as string;
 
-    const sessionResponse = await app.inject({
-      method: "GET",
-      url: "/api/session",
-    });
-    expect(sessionResponse.statusCode).toBe(200);
+    const sessionResponse = await rpc(app, "session.get", {});
+    expect(sessionResponse.code).toBe(0);
     expect(sessionResponse.json().entries).toHaveLength(1);
 
-    const deleteResponse = await app.inject({
-      method: "DELETE",
-      url: `/api/session/${addedId}`,
-    });
-    expect(deleteResponse.statusCode).toBe(204);
+    const deleteResponse = await rpc(app, "session.remove", { id: addedId });
+    expect(deleteResponse.code).toBe(0);
 
-    const clearResponse = await app.inject({
-      method: "DELETE",
-      url: "/api/session",
-    });
-    expect(clearResponse.statusCode).toBe(204);
+    const clearResponse = await rpc(app, "session.clear", {});
+    expect(clearResponse.code).toBe(0);
 
     await app.close();
   });
 
   test("healthでserver identityを返し、一致するserverだけを停止する", async () => {
-    vi.useFakeTimers();
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const shutdown = vi.fn();
@@ -195,10 +184,7 @@ describe("zatto server", () => {
       },
     });
 
-    const healthResponse = await app.inject({
-      method: "GET",
-      url: "/api/health",
-    });
+    const healthResponse = await rpc(app, "server.health", {});
     expect(healthResponse.json()).toMatchObject({
       name: "zatto",
       version: APP_VERSION,
@@ -206,21 +192,16 @@ describe("zatto server", () => {
       protocolVersion: 1,
     });
 
-    const rejectedResponse = await app.inject({
-      method: "POST",
-      url: "/api/shutdown",
-      headers: { "x-zatto-instance-id": "other-instance" },
+    const rejectedResponse = await rpc(app, "server.shutdown", {
+      instanceId: "other-instance",
     });
-    expect(rejectedResponse.statusCode).toBe(409);
+    expect(rejectedResponse.code).toBe(1003);
 
-    const acceptedResponse = await app.inject({
-      method: "POST",
-      url: "/api/shutdown",
-      headers: { "x-zatto-instance-id": "managed-instance" },
+    const acceptedResponse = await rpc(app, "server.shutdown", {
+      instanceId: "managed-instance",
     });
-    expect(acceptedResponse.statusCode).toBe(202);
-    await vi.runAllTimersAsync();
-    expect(shutdown).toHaveBeenCalledOnce();
+    expect(acceptedResponse.code).toBe(0);
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce());
 
     await app.close();
   });
@@ -247,10 +228,7 @@ describe("zatto server", () => {
       },
     });
 
-    const sessionResponse = await app.inject({
-      method: "GET",
-      url: "/api/session",
-    });
+    const sessionResponse = await rpc(app, "session.get", {});
     expect(sessionResponse.json()).toMatchObject({
       entries: [],
       filePicker: {
@@ -259,20 +237,16 @@ describe("zatto server", () => {
       },
     });
 
-    const rejectedResponse = await app.inject({
-      method: "POST",
-      url: "/api/session/pick",
-      headers: { "x-zatto-instance-id": "other-instance" },
+    const rejectedResponse = await rpc(app, "session.pickFiles", {
+      instanceId: "other-instance",
     });
-    expect(rejectedResponse.statusCode).toBe(409);
+    expect(rejectedResponse.code).toBe(1003);
     expect(pickFiles).not.toHaveBeenCalled();
 
-    const acceptedResponse = await app.inject({
-      method: "POST",
-      url: "/api/session/pick",
-      headers: { "x-zatto-instance-id": "managed-instance" },
+    const acceptedResponse = await rpc(app, "session.pickFiles", {
+      instanceId: "managed-instance",
     });
-    expect(acceptedResponse.statusCode).toBe(201);
+    expect(acceptedResponse.code).toBe(0);
     expect(acceptedResponse.json()).toMatchObject({
       cancelled: false,
       added: [{ absPath: firstPath, title: "Picked" }],
@@ -297,13 +271,11 @@ describe("zatto server", () => {
       },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick",
-      headers: { "x-zatto-instance-id": "managed-instance" },
+    const response = await rpc(app, "session.pickFiles", {
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toMatchObject({ cancelled: true, added: [] });
     expect(onSessionChanged).not.toHaveBeenCalled();
     await app.close();
@@ -325,21 +297,19 @@ describe("zatto server", () => {
         protocolVersion: 1,
       },
     });
-    const request = {
-      method: "POST" as const,
-      url: "/api/session/pick",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-    };
-
-    const firstResponsePromise = app.inject(request);
+    const firstResponsePromise = rpc(app, "session.pickFiles", {
+      instanceId: "managed-instance",
+    });
     await vi.waitFor(() => {
       expect(pickFiles).toHaveBeenCalledOnce();
     });
-    const secondResponse = await app.inject(request);
+    const secondResponse = await rpc(app, "session.pickFiles", {
+      instanceId: "managed-instance",
+    });
 
-    expect(secondResponse.statusCode).toBe(409);
+    expect(secondResponse.code).toBe(1005);
     finishPicking?.();
-    expect((await firstResponsePromise).statusCode).toBe(200);
+    expect((await firstResponsePromise).code).toBe(0);
     await app.close();
   });
 
@@ -359,42 +329,34 @@ describe("zatto server", () => {
       socket.once("message", (data) => resolve(data.toString()));
     });
 
-    const response = await app.inject({
-      method: "PATCH",
-      url: "/api/session/order",
-      payload: { ids: [second.id, first.id] },
+    const response = await rpc(app, "session.reorder", {
+      ...{ ids: [second.id, first.id] },
     });
     const message = JSON.parse(await updatePromise) as {
       type: string;
       entries: Array<{ id: string }>;
     };
 
-    expect(response.statusCode).toBe(204);
+    expect(response.code).toBe(0);
     expect(message).toEqual({
       type: "session:update",
       ...store.getWorkspaceState(),
       entries: [second, first],
     });
 
-    const duplicateResponse = await app.inject({
-      method: "PATCH",
-      url: "/api/session/order",
-      payload: { ids: [first.id, first.id] },
+    const duplicateResponse = await rpc(app, "session.reorder", {
+      ...{ ids: [first.id, first.id] },
     });
-    const missingResponse = await app.inject({
-      method: "PATCH",
-      url: "/api/session/order",
-      payload: { ids: [first.id] },
+    const missingResponse = await rpc(app, "session.reorder", {
+      ...{ ids: [first.id] },
     });
-    const unknownResponse = await app.inject({
-      method: "PATCH",
-      url: "/api/session/order",
-      payload: { ids: [first.id, "unknown"] },
+    const unknownResponse = await rpc(app, "session.reorder", {
+      ...{ ids: [first.id, "unknown"] },
     });
 
-    expect(duplicateResponse.statusCode).toBe(400);
-    expect(missingResponse.statusCode).toBe(400);
-    expect(unknownResponse.statusCode).toBe(400);
+    expect(duplicateResponse.code).toBe(-32602);
+    expect(missingResponse.code).toBe(-32602);
+    expect(unknownResponse.code).toBe(-32602);
 
     socket.close();
     await app.close();
@@ -473,17 +435,15 @@ describe("zatto server", () => {
       socket.once("message", (data) => resolve(data.toString()));
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/add",
-      payload: { paths: [htmlPath] },
+    const response = await rpc(app, "session.add", {
+      ...{ paths: [htmlPath] },
     });
     const message = JSON.parse(await updatePromise) as {
       type: string;
       entries: Array<{ absPath: string }>;
     };
 
-    expect(response.statusCode).toBe(201);
+    expect(response.code).toBe(0);
     expect(message).toMatchObject({
       type: "session:update",
       ...store.getWorkspaceState(),
@@ -499,16 +459,13 @@ describe("zatto server", () => {
     const deleteUpdatePromise = new Promise<string>((resolve) => {
       socket.once("message", (data) => resolve(data.toString()));
     });
-    const deleteResponse = await app.inject({
-      method: "DELETE",
-      url: `/api/session/${addedId}`,
-    });
+    const deleteResponse = await rpc(app, "session.remove", { id: addedId });
     const deleteMessage = JSON.parse(await deleteUpdatePromise) as {
       type: string;
       entries: unknown[];
     };
 
-    expect(deleteResponse.statusCode).toBe(204);
+    expect(deleteResponse.code).toBe(0);
     expect(deleteMessage).toEqual({
       type: "session:update",
       ...store.getWorkspaceState(),
@@ -590,17 +547,11 @@ describe("zatto server", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const app = await createApp({ sessionStore: store, shutdown });
-    vi.useFakeTimers();
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/shutdown",
-    });
-    expect(response.statusCode).toBe(202);
+    const response = await rpc(app, "server.shutdown", {});
+    expect(response.code).toBe(0);
 
-    vi.runAllTimers();
-    expect(shutdown).toHaveBeenCalledTimes(1);
-    vi.useRealTimers();
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledTimes(1));
 
     await app.close();
   });
@@ -626,12 +577,9 @@ describe("zatto server", () => {
     await store.load();
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/health",
-    });
+    const response = await rpc(app, "server.health", {});
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toMatchObject({
       name: "zatto",
       version: APP_VERSION,

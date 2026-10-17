@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("HTML search API", () => {
   let tempDir: string;
@@ -41,12 +42,9 @@ describe("HTML search API", () => {
     const [first, second] = await store.addEntries([firstPath, secondPath]);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=alpha",
-    });
+    const response = await rpc(app, "search.query", { query: "alpha" });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({
       query: "alpha",
       totalMatches: 3,
@@ -91,10 +89,7 @@ describe("HTML search API", () => {
         },
       ],
     });
-    const unicodeResponse = await app.inject({
-      method: "GET",
-      url: "/api/search?q=x",
-    });
+    const unicodeResponse = await rpc(app, "search.query", { query: "x" });
     expect(unicodeResponse.json().files[0].lines).toEqual([
       {
         lineNumber: 3,
@@ -116,9 +111,9 @@ describe("HTML search API", () => {
     await unlink(htmlPath);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({ method: "GET", url: "/api/search?q=" });
+    const response = await rpc(app, "search.query", { query: "" });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({
       query: "",
       totalMatches: 0,
@@ -137,12 +132,9 @@ describe("HTML search API", () => {
     await unlink(htmlPath);
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=removed",
-    });
+    const response = await rpc(app, "search.query", { query: "removed" });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.code).toBe(-32603);
     expect(response.json()).toEqual({
       code: "SEARCH_FILE_UNREADABLE",
       message: "An HTML file could not be read.",
@@ -156,14 +148,17 @@ describe("HTML search API", () => {
     await store.load();
     const app = await createApp({ sessionStore: store });
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/search?q=one&q=two",
-    });
+    const response = await rpc(app, "search.query", { query: ["one", "two"] });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     expect(response.json()).toEqual({
-      message: "`q` must be a string.",
+      message: "Invalid params",
+      issues: [
+        {
+          path: ["query"],
+          message: "Invalid input: expected string, received array",
+        },
+      ],
     });
     await app.close();
   });

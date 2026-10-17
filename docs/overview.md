@@ -16,17 +16,21 @@ zatto は、ローカルの HTML ファイルを手で集めて ワークスペ�
 ## アーキテクチャ
 
 ```text
-+-------------+        HTTP         +------------------+        HTTP / iframe        +----------------+
-| CLI         | --------------->   | Server           | -------------------------> | Front (SPA)    |
-| - runtime参照|                    | - Session 管理   |                            | - Sidebar      |
-| - 合流      |                    | - HTML / asset   |                            | - Viewer       |
-| - --stop    |                    | - 永続化         |                            | - Live reload  |
-| - exchange   |                    | - 交換形式検証   |                            | - Session I/O   |
-| - Agent/MCP  |                    | - Agent context |                            | - Context sync  |
-|             |                    | - HTML 検索      |                            | - Search       |
-|             |                    |                  |                            | - Status bar   |
-+-------------+                    +------------------+                            +----------------+
+Web UI / CLI / MCP内部クライアント
+              │
+       HTTP JSON-RPC 2.0
+              │
+          RPC受付
+              │
+          Commands ─ Store
+              │
+         WebSocket更新通知
+
+HTML・相対アセット・DocsはHTTPで配信
 ```
+
+責務、拡張手順、通信エラー、更新時の扱いは[アーキテクチャ](./architecture.md)を参照する。
+
 
 ## 既定値と保存先
 
@@ -80,7 +84,7 @@ docs/
 | サーバーの多重起動 | OSユーザーごとに1プロセスとする。サーバーが保持するlockとruntime recordで合流先を決める |
 | ポート競合 | 初回起動時の希望ポートが使用中なら、OSが割り当てたポートをruntime recordへ保存する |
 | CLIからのファイル共有 | トップURLに続けて、指定ファイルのタイトルと直接選択用URLを出力する。実接続ポートと登録済みの識別子を使い、重複引数は指定順に1回だけ表示する。リンクを開くときは登録先のワークスペースを選択する |
-| CLI互換性 | health APIの`protocolVersion`と`instanceId`で接続対象を検証する |
+| CLI互換性 | RPCのhealth結果にある`protocolVersion`と`instanceId`で接続対象を検証する。旧サーバーは診断後に停止手順を案内する |
 | サーバーの公開契約 | Node.jsアプリケーションは`@yuske-nakajima/zatto/server`から実行ファイルと起動APIを解決する |
 | お気に入り | ファイルの星をワークスペースごとに保存する。Favoritesは元のList順で星付きだけを表示し、通常Listの順序とプレビュー選択を変更しない。並べ替えはList、全削除はList/Foldersで操作する |
 | お気に入りと交換形式 | 交換形式version 1はパスだけを保持する。全置換は星を解除し、追加は既存の星を保持する。削除後の再登録は星なしとする |

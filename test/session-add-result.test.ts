@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -20,12 +21,10 @@ test("returns requested existing and added entries in input order without duplic
   await writeFile(b, "<title>B</title>");
   const [first] = await store.addEntries([a]);
   const app = await createApp({ sessionStore: store });
-  const response = await app.inject({
-    method: "POST",
-    url: "/api/session/add",
-    payload: { paths: [b, a, b, path.join(dir, "missing")] },
+  const response = await rpc(app, "session.add", {
+    ...{ paths: [b, a, b, path.join(dir, "missing")] },
   });
-  expect(response.statusCode).toBe(201);
+  expect(response.code).toBe(0);
   expect(response.json()).toMatchObject({
     workspaceId: "default",
     resolved: [{ absPath: b }, { id: first.id }],
