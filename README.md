@@ -13,7 +13,7 @@
   <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
 </p>
 
-Browse local HTML files together without installing anything.
+Browse local HTML and Markdown files together without installing anything.
 
 ```bash
 npx @yuske-nakajima/zatto file.html
@@ -70,11 +70,16 @@ Open the viewer without adding a file from the command line.
 npx @yuske-nakajima/zatto
 ```
 
-On macOS, add individual `.html` or `.htm` files with **+ Add**,
-**Select HTML files**, or <kbd>Command</kbd>+<kbd>O</kbd>. These existing file
-picker controls keep the same behavior.
+On macOS, add individual `.html`, `.htm`, `.md` or `.markdown` files with
+**+ Add**, **Select HTML or Markdown files**, or <kbd>Command</kbd>+<kbd>O</kbd>.
 
-Use the separate **Add folder…** button to add HTML files from a folder. Choose
+Markdown files are shown read-only with GitHub-flavored tables, task lists and
+code blocks. The light or dark theme follows the system setting, and `mermaid`
+code blocks are drawn as diagrams. Relative images and links resolve from the
+file's folder. The themes and the diagram renderer are bundled, so no network
+connection is needed.
+
+Use the separate **Add folder…** button to add HTML and Markdown files from a folder. Choose
 the selected folder only or the selected folder and its subfolders, then select
 a folder in the native macOS dialog. File extensions are matched without
 regard to case, and new entries are added in deterministic relative-path order.

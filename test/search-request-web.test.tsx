@@ -92,7 +92,7 @@ describe("HTML search requests", () => {
     render(<App />);
     await act(async () => vi.runAllTimersAsync());
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    const input = screen.getByRole("searchbox", { name: "Search HTML files" });
+    const input = screen.getByRole("searchbox", { name: "Search files" });
     fireEvent.change(input, { target: { value: "alpha" } });
     await act(async () => vi.advanceTimersByTimeAsync(250));
 

@@ -178,29 +178,32 @@ export function Viewer({
             </span>
             <strong>
               {canPickFiles
-                ? "Open local HTML files"
+                ? "Open local HTML or Markdown files"
                 : "Select a file to preview"}
             </strong>
             {canPickFiles ? (
               <>
                 <p>
-                  Choose one or more HTML files to add them to this session.
+                  Choose one or more HTML or Markdown files to add them to this
+                  session.
                 </p>
                 <button
                   className="empty-viewer-action"
-                  data-status-description="Select HTML files to preview."
+                  data-status-description="Select HTML or Markdown files to preview."
                   type="button"
-                  aria-label="Select HTML files"
+                  aria-label="Select HTML or Markdown files"
                   disabled={isFilePickerOpen}
                   onClick={onPickFiles}
                 >
-                  {isFilePickerOpen ? "Opening…" : "Select HTML files"}
+                  {isFilePickerOpen
+                    ? "Opening…"
+                    : "Select HTML or Markdown files"}
                 </button>
                 <small>Command+O</small>
               </>
             ) : (
               <p>
-                Select any compiled HTML file from the folders on the left to
+                Select any HTML or Markdown file from the folders on the left to
                 render the local live preview inside this frame.
               </p>
             )}

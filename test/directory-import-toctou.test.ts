@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
-import { enumerateHtmlFiles } from "../src/server/directory-import.js";
+import { enumerateViewableFiles } from "../src/server/directory-import.js";
 import { SessionStore } from "../src/server/session.js";
 import { rpc } from "./rpc-server-helper.js";
 
@@ -70,7 +70,7 @@ describe("directory import filesystem changes", () => {
     };
 
     await expect(
-      enumerateHtmlFiles(selectedDirectory, "recursive"),
+      enumerateViewableFiles(selectedDirectory, "recursive"),
     ).rejects.toThrow();
   });
 
@@ -118,7 +118,7 @@ describe("directory import filesystem changes", () => {
     };
 
     await expect(
-      enumerateHtmlFiles(selectedDirectory, "direct"),
+      enumerateViewableFiles(selectedDirectory, "direct"),
     ).rejects.toThrow();
   });
 
@@ -130,7 +130,7 @@ describe("directory import filesystem changes", () => {
     };
 
     await expect(
-      enumerateHtmlFiles(selectedDirectory, "direct"),
+      enumerateViewableFiles(selectedDirectory, "direct"),
     ).rejects.toThrow();
   });
 });

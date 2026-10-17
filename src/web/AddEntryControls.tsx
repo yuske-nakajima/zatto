@@ -14,7 +14,7 @@ interface AddEntryControlsProps {
 }
 
 /**
- * Renders file and folder controls for adding HTML entries.
+ * Renders file and folder controls for adding HTML and Markdown entries.
  *
  * @param props - Picker availability, pending state, and picker callbacks
  * @returns Entry addition controls and the folder scope dialog
@@ -46,9 +46,9 @@ export function AddEntryControls({
       {canPickFiles && (
         <button
           className="add-button"
-          data-status-description="Add HTML files to this session."
+          data-status-description="Add HTML or Markdown files to this session."
           type="button"
-          aria-label="Add HTML files"
+          aria-label="Add HTML or Markdown files"
           disabled={isPending}
           onClick={onPickFiles}
         >
@@ -59,7 +59,7 @@ export function AddEntryControls({
         <button
           ref={triggerRef}
           className="add-button add-folder-button"
-          data-status-description="Add HTML files from a folder to this session."
+          data-status-description="Add HTML or Markdown files from a folder to this session."
           type="button"
           aria-label="Add folder"
           disabled={isPending}
@@ -70,7 +70,7 @@ export function AddEntryControls({
       )}
       {isDialogOpen && (
         <ChoiceDialog
-          title="Add HTML files from a folder"
+          title="Add HTML or Markdown files from a folder"
           description="Choose how deeply zatto should look inside the selected folder."
           options={DIRECTORY_SCOPE_OPTIONS}
           confirmLabel="Choose folder"
@@ -86,11 +86,13 @@ const DIRECTORY_SCOPE_OPTIONS = [
   {
     value: "direct",
     label: "Direct children",
-    description: "Add HTML files directly inside the selected folder.",
+    description:
+      "Add HTML and Markdown files directly inside the selected folder.",
   },
   {
     value: "recursive",
     label: "Entire folder tree",
-    description: "Add HTML files in the selected folder and its subfolders.",
+    description:
+      "Add HTML and Markdown files in the selected folder and its subfolders.",
   },
 ] as const;

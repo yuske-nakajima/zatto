@@ -13,7 +13,7 @@
   <a href="./media/zatto-pv-ja.mp4"><img src="./media/zatto-pv-ja.gif" alt="zattoの20秒動画を見る：ローカルHTMLを、ひとつのタブで。" width="800"></a>
 </p>
 
-インストールせずに、ローカルのHTMLファイルをまとめて閲覧できます。
+インストールせずに、ローカルのHTMLとMarkdownのファイルをまとめて閲覧できます。
 
 ```bash
 npx @yuske-nakajima/zatto file.html
@@ -67,9 +67,13 @@ List/Folders/Favorites、パネル開閉、パネル幅はブラウザーの共�
 npx @yuske-nakajima/zatto
 ```
 
-macOSでファイルを追加する場合は、**+ Add**、**Select HTML files**、または
-<kbd>Command</kbd>+<kbd>O</kbd>から、複数の`.html`または`.htm`ファイルを選択できます。
-既存のファイル選択操作とキーボードショートカットの動作は変わりません。
+macOSでファイルを追加する場合は、**+ Add**、**Select HTML or Markdown files**、または
+<kbd>Command</kbd>+<kbd>O</kbd>から、複数の`.html`、`.htm`、`.md`、`.markdown`ファイルを選択できます。
+
+Markdownファイルは閲覧専用で表示し、GitHub形式の表、タスクリスト、コードブロックに対応します。
+ライト・ダークのテーマはシステムの設定に従い、`mermaid`のコードブロックは図として描画します。
+相対パスの画像とリンクはファイルのフォルダーを基点に解決します。
+テーマと図の描画処理は同梱しているため、通信は不要です。
 
 フォルダーから追加する場合は、独立した**Add folder…**ボタンを使います。
 追加範囲は、選択したフォルダー直下のみ、または子孫フォルダーを含む範囲です。

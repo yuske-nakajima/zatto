@@ -173,7 +173,7 @@ describe("built-in documentation navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
     expect(pushState).toHaveBeenCalledOnce();
     expect(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
     ).toBeTruthy();
     expect(window.location.search).not.toContain("doc=");
     expect(window.location.search).toContain("lang=ja");

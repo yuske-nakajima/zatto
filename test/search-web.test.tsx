@@ -81,10 +81,10 @@ describe("HTML search view", () => {
     await act(async () => vi.runAllTimersAsync());
 
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    const input = screen.getByRole("searchbox", { name: "Search HTML files" });
+    const input = screen.getByRole("searchbox", { name: "Search files" });
     fireEvent.change(input, { target: { value: "alpha" } });
     expect(
-      screen.getByRole("status", { name: "Searching HTML files" }),
+      screen.getByRole("status", { name: "Searching files" }),
     ).toBeTruthy();
 
     await act(async () => vi.advanceTimersByTimeAsync(250));
@@ -116,7 +116,7 @@ describe("HTML search view", () => {
 
     expect(
       screen
-        .getByRole("searchbox", { name: "Search HTML files" })
+        .getByRole("searchbox", { name: "Search files" })
         .getAttribute("value"),
     ).toBe("alpha");
     expect(
@@ -149,7 +149,7 @@ describe("HTML search view", () => {
     render(<App />);
     await act(async () => vi.runAllTimersAsync());
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    const input = screen.getByRole("searchbox", { name: "Search HTML files" });
+    const input = screen.getByRole("searchbox", { name: "Search files" });
     fireEvent.change(input, { target: { value: "alpha" } });
     await act(async () => vi.advanceTimersByTimeAsync(250));
     expect(screen.getByText("2 matches")).toBeTruthy();
@@ -166,9 +166,7 @@ describe("HTML search view", () => {
 
     expect(screen.getByRole("alert").textContent).toContain("Search failed");
     expect(liveStatus.textContent).toBe("Search failed.");
-    expect(
-      screen.getByText("The HTML files could not be searched."),
-    ).toBeTruthy();
+    expect(screen.getByText("The files could not be searched.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await act(async () => vi.advanceTimersByTimeAsync(250));
 

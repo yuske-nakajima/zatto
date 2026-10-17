@@ -53,7 +53,7 @@ export function useNativeEntryPicker({
       if (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
         selectFirstAddedEntry(result, selectEntry);
     } catch {
-      setErrorMessage("Could not open HTML files.");
+      setErrorMessage("Could not open HTML or Markdown files.");
     } finally {
       finishPicker("files");
     }
@@ -70,13 +70,17 @@ export function useNativeEntryPicker({
       if (isCurrentWorkspace && !isCurrentWorkspace(workspaceId ?? null))
         return;
       if (!result.cancelled && result.added.length === 0) {
-        setErrorMessage("No HTML files were added from the selected folder.");
+        setErrorMessage(
+          "No HTML or Markdown files were added from the selected folder.",
+        );
       } else {
         if (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
           selectFirstAddedEntry(result, selectEntry);
       }
     } catch {
-      setErrorMessage("Could not add HTML files from the selected folder.");
+      setErrorMessage(
+        "Could not add HTML or Markdown files from the selected folder.",
+      );
     } finally {
       finishPicker("directory");
     }

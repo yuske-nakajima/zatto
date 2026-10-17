@@ -130,7 +130,9 @@ describe("App", () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
 
-    await user.click(screen.getByRole("button", { name: "Add HTML files" }));
+    await user.click(
+      screen.getByRole("button", { name: "Add HTML or Markdown files" }),
+    );
     act(() => {
       FakeWebSocket.instance?.emitMessage({
         type: "session:update",
@@ -162,9 +164,11 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("button", { name: "Select HTML files" }),
+      await screen.findByRole("button", {
+        name: "Select HTML or Markdown files",
+      }),
     ).toBeTruthy();
-    expect(screen.getByText("Open local HTML files")).toBeTruthy();
+    expect(screen.getByText("Open local HTML or Markdown files")).toBeTruthy();
   });
 
   test("Command+Oでファイル選択を開く", async () => {
@@ -185,7 +189,7 @@ describe("App", () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
     // ショートカットはファイル選択の可否を受け取った後に登録され、同じ描画で追加ボタンが表示される
-    await screen.findByRole("button", { name: "Add HTML files" });
+    await screen.findByRole("button", { name: "Add HTML or Markdown files" });
 
     fireEvent.keyDown(window, { key: "o", metaKey: true });
 

@@ -99,7 +99,7 @@ describe("search preview navigation safety", () => {
         screen.getByRole("button", { name: "Back to search results" }),
       );
       expect(
-        screen.getByRole("searchbox", { name: "Search HTML files" }),
+        screen.getByRole("searchbox", { name: "Search files" }),
       ).toBeTruthy();
     }
 

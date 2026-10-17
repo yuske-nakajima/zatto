@@ -92,7 +92,7 @@ describe("entry URL navigation", () => {
     await act(async () => vi.runAllTimersAsync());
 
     expect(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
     ).toBeTruthy();
     const parameters = new URL(window.location.href).searchParams;
     expect(parameters.get("entry")).toBe("a");
@@ -111,7 +111,7 @@ describe("entry URL navigation", () => {
     const expected = "a".repeat(255);
     expect(
       screen.getByRole<HTMLInputElement>("searchbox", {
-        name: "Search HTML files",
+        name: "Search files",
       }).value,
     ).toBe(expected);
     expect(new URL(window.location.href).searchParams.get("search")).toBe(

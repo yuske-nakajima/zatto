@@ -28,10 +28,10 @@ export function SearchContent({
           !
         </span>
         <strong>Search failed</strong>
-        <p>The HTML files could not be searched.</p>
+        <p>The files could not be searched.</p>
         <button
           type="button"
-          data-status-description="Retry the HTML search."
+          data-status-description="Retry the search."
           onClick={onRetry}
         >
           Retry
@@ -45,8 +45,8 @@ export function SearchContent({
   if (query.length === 0) {
     return (
       <SearchMessage
-        title="Search HTML files"
-        body="Enter text to search the HTML in this session."
+        title="Search files"
+        body="Enter text to search the files in this session."
       />
     );
   }
@@ -73,11 +73,7 @@ export function SearchContent({
 
 function SearchSkeleton() {
   return (
-    <div
-      className="search-skeleton"
-      role="status"
-      aria-label="Searching HTML files"
-    >
+    <div className="search-skeleton" role="status" aria-label="Searching files">
       {[0, 1, 2].map((index) => (
         <span key={index} />
       ))}

@@ -138,7 +138,7 @@ describe("directory picker", () => {
     await user.click(screen.getByRole("button", { name: "Choose folder" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "No HTML files were added from the selected folder.",
+      "No HTML or Markdown files were added from the selected folder.",
     );
     expect(screen.getByTitle("Existing preview")).toBeTruthy();
   });
@@ -166,7 +166,7 @@ describe("directory picker", () => {
     await waitFor(() => expect(nonContextRequests(fetchMock)).toHaveLength(2));
     expect(
       screen
-        .getByRole("button", { name: "Add HTML files" })
+        .getByRole("button", { name: "Add HTML or Markdown files" })
         .hasAttribute("disabled"),
     ).toBe(true);
     await user.keyboard("{Meta>}o{/Meta}");
@@ -176,7 +176,7 @@ describe("directory picker", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("button", { name: "Add HTML files" })
+          .getByRole("button", { name: "Add HTML or Markdown files" })
           .hasAttribute("disabled"),
       ).toBe(false),
     );
@@ -201,7 +201,7 @@ describe("directory picker", () => {
     await user.click(screen.getByRole("button", { name: "Choose folder" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Could not add HTML files from the selected folder.",
+      "Could not add HTML or Markdown files from the selected folder.",
     );
   });
 });

@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { renderMarkdownDocument } from "./markdown-view.js";
 import type { Entry } from "./session.js";
+import { viewableKind } from "./viewable-file.js";
 
 const CONTENT_TYPES = new Map<string, string>([
   [".css", "text/css; charset=utf-8"],
@@ -10,6 +12,8 @@ const CONTENT_TYPES = new Map<string, string>([
   [".jpg", "image/jpeg"],
   [".js", "application/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
+  [".markdown", "text/plain; charset=utf-8"],
+  [".md", "text/plain; charset=utf-8"],
   [".mjs", "application/javascript; charset=utf-8"],
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
@@ -26,7 +30,10 @@ export function contentTypeForPath(filePath: string): string {
 }
 
 export async function renderEntryHtml(entry: Entry): Promise<string> {
-  return readFile(entry.absPath, "utf8");
+  const source = await readFile(entry.absPath, "utf8");
+  return viewableKind(entry.absPath) === "markdown"
+    ? renderMarkdownDocument(source, entry.title)
+    : source;
 }
 
 export function resolveAssetPath(

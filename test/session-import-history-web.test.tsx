@@ -81,10 +81,9 @@ describe("session import search history", () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
     await user.click(screen.getByRole("button", { name: "Search" }));
-    fireEvent.change(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
-      { target: { value: "needle" } },
-    );
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "needle" },
+    });
     const collapse = await screen.findByRole("button", {
       name: "Collapse a.html",
     });

@@ -1,4 +1,5 @@
-import { enumerateHtmlFiles } from "../directory-import.js";
+import { enumerateViewableFiles } from "../directory-import.js";
+import { viewableKind } from "../viewable-file.js";
 import type { CommandContext } from "./context.js";
 import { domainError } from "./errors.js";
 import type { CommandHandlers } from "./session.js";
@@ -42,7 +43,7 @@ export function pickerCommands(context: CommandContext) {
         const result = await picker();
         return result.kind === "cancelled"
           ? null
-          : result.paths.filter((path) => /\.html?$/i.test(path));
+          : result.paths.filter((path) => viewableKind(path) !== null);
       });
     },
     "session.pickDirectory": async ({ instanceId, workspaceId, mode }) => {
@@ -58,7 +59,7 @@ export function pickerCommands(context: CommandContext) {
         const result = await picker();
         return result.kind === "cancelled"
           ? null
-          : enumerateHtmlFiles(result.path, mode);
+          : enumerateViewableFiles(result.path, mode);
       });
     },
   } satisfies Pick<

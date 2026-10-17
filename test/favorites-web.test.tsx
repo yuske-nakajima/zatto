@@ -28,7 +28,7 @@ test("Favorites follows List order without drag handles, keeps preview after uns
   render(<App />);
   await screen.findByTitle("Alpha preview");
   await user.click(screen.getByRole("button", { name: "Favorites" }));
-  const list = screen.getByRole("list", { name: "Favorite HTML entries" });
+  const list = screen.getByRole("list", { name: "Favorite entries" });
   expect(
     within(list)
       .getAllByRole("listitem")
@@ -121,7 +121,9 @@ test("Favorites with no starred entries explains how to populate it", async () =
   expect(
     screen.getByText("Star files in List or Folders to find them here."),
   ).toBeTruthy();
-  expect(screen.queryByText("Add HTML files from the CLI")).toBeNull();
+  expect(
+    screen.queryByText("Add HTML or Markdown files from the CLI"),
+  ).toBeNull();
 });
 test.each(["http", "rpc"])(
   "failed star updates (%s) show an error without changing the displayed favorite state",

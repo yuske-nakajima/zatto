@@ -130,7 +130,7 @@ describe("built-in documentation view integration", () => {
     await user.click(screen.getByRole("button", { name: "Folders" }));
     expect(screen.getByTitle("Getting started documentation")).toBe(docsFrame);
     await user.click(screen.getByRole("button", { name: "List" }));
-    const entryList = screen.getByRole("list", { name: "HTML entries" });
+    const entryList = screen.getByRole("list", { name: "Entries" });
     expect(
       within(entryList).getAllByRole("button", { name: /^Open / }),
     ).toHaveLength(entries.length);

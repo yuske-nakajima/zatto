@@ -124,7 +124,7 @@ describe("file panel URL navigation", () => {
       screen.getByRole("button", { name: "List" }).getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
-      screen.getByRole("searchbox", { name: "Search HTML files" }),
+      screen.getByRole("searchbox", { name: "Search files" }),
     ).toBeTruthy();
     act(() => dispatchHistory(foldersUrl, foldersState));
     expect(
