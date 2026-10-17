@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -7,7 +7,9 @@ import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
 const execFileAsync = promisify(execFile);
-const expectedVersion = "2.0.0";
+const expectedVersion = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 const documentationLanguages = ["en", "ja"];
 const documentationPages = [
   "getting-started",
@@ -243,6 +245,9 @@ try {
     throw new Error(`CLIのversionが${expectedVersion}ではありません`);
   }
 
+  if (process.env.ZATTO_RELEASE_TARBALL) {
+    await copyFile(tarballPath, process.env.ZATTO_RELEASE_TARBALL);
+  }
   console.log(`npmパッケージを検証しました: ${packResult.filename}`);
 } finally {
   if (serverStarted && installedBin) {

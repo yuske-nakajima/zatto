@@ -1,61 +1,90 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to resume (for example v2.0.0)
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  release:
+  prepare:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+    outputs:
+      tag: ${{ steps.target.outputs.tag }}
+      sha: ${{ steps.target.outputs.sha }}
     steps:
-      - name: Checkout repository
+      - uses: actions/checkout@v4
+      - name: Maintain release PR and draft release
+        if: github.event_name == 'push'
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          target-branch: main
+      - name: Validate release PR through explicit CI dispatch
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: node scripts/release/dispatch-ci.mjs
+      - name: Resolve release commit
+        if: steps.release.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch'
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name || inputs.tag }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: node scripts/release/resolve.mjs
+
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.sha != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - name: Select verified package path
+        run: echo "ZATTO_RELEASE_TARBALL=$RUNNER_TEMP/zatto-release.tgz" >> "$GITHUB_ENV"
+      - name: Checkout immutable release commit
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.prepare.outputs.sha }}
           fetch-depth: 0
-
       - name: Set up development tools
         uses: jdx/mise-action@v2
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Validate release provenance and approved notes
+        run: node scripts/release/validate.mjs
+      - name: Generate bundled changelog
+        run: node scripts/update-changelog.mjs
 
       - name: Check
         run: pnpm run check
-
       - name: Test
         run: pnpm run test
-
       - name: Verify package
         run: pnpm run verify:package
-
-      - name: Read version
-        id: version
-        shell: bash
-        run: |
-          version="$(node --print "require('./package.json').version")"
-          tag="v${version}"
-          if git rev-parse "refs/tags/${tag}" >/dev/null 2>&1; then
-            echo "::error::Tag ${tag} already exists"
-            exit 1
-          fi
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-
-      - name: Publish package
-        run: npm publish --access public
-
-      - name: Create tag and GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          git tag "$RELEASE_TAG"
-          git push origin "$RELEASE_TAG"
-          gh release create "$RELEASE_TAG" --generate-notes --title "$RELEASE_TAG"
+      - name: Publish verified package and GitHub Release
+        run: node scripts/release/publish.mjs

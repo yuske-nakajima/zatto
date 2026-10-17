@@ -288,35 +288,21 @@ The generated files are `media/zatto-pv.mp4` (English) and
 
 ## Release
 
-Publish the package from the `main` branch on an npm-authenticated machine for the first release.
+Merging a normal PR into `main` creates or updates a release PR through release-please.
+Review its version and `CHANGELOG.md`, then merge the release PR to publish.
+Ordinary PRs use Conventional Commits and leave the package version unchanged.
+Breaking changes use `!` or `BREAKING CHANGE:`.
 
-```bash
-pnpm verify:package
-npm publish --access public
-```
+The Release workflow creates a draft GitHub Release and tag, validates the tagged package,
+publishes the verified tarball to npm, and publishes the GitHub Release.
+The approved Changelog entry supplies both the release body and the offline app Docs.
+A failed run can be retried against its existing tag without republishing conflicting contents.
 
-After the first release, register GitHub Actions as the npm Trusted Publisher.
-
-```bash
-npm trust github @yuske-nakajima/zatto \
-  --file release.yml \
-  --repo yuske-nakajima/zatto \
-  --allow-publish
-```
-
-For later releases, select the version using the
-[versioning policy](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md),
-update `package.json`, and merge the change into `main`. The manifest is the
-version source of truth, and fixed version expectations in tests and scripts
-must stay synchronized with it.
-Then run the Release workflow manually.
-
-```bash
-gh workflow run release.yml --ref main
-```
-
-The workflow runs the quality checks and package verification.
-After they pass, it publishes to npm, creates the version tag, and creates a GitHub Release.
+GitHub Actions must be allowed to create pull requests. npm must trust `release.yml`
+for this repository as a Trusted Publisher; no personal access token is required.
+See [release operations](https://github.com/yuske-nakajima/zatto/blob/main/docs/releasing.md)
+and the [versioning policy](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)
+for setup, review scope and retry instructions.
 
 ## Updating to 2.0.0 and extending Zatto
 
@@ -328,17 +314,18 @@ runtime records, and reports migration steps without killing the process.
 Saved workspaces, stars, List order and exchange files are retained.
 For an old server on a custom port without a runtime record, add `--port <detected-port>` to that stop command.
 
-Built-in Docs include an offline Changelog from GitHub Releases; the logo shows the installed version.
+Built-in Docs include an offline Changelog; the logo shows the installed version.
 See [architecture and extension guidance](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md) for shared Commands and RPC contracts.
 Agents follow `AGENTS.md` and `.claude/rules/`. Discuss architecture changes with the user before implementing them.
 
-### Refreshing the bundled Changelog
+### Bundled Changelog
 
-Run `node scripts/update-changelog.mjs --refresh` with an authenticated GitHub CLI to capture all published releases.
-Commit the snapshot in `scripts/changelog/releases.json` and both generated language pages.
-`node scripts/update-changelog.mjs` regenerates pages offline from that snapshot.
-Keep unpublished notes separate in `scripts/changelog/pending.json`; published release bodies retain their original language.
-Refresh the snapshot before cutting a release. Ordinary builds and installed Zatto do not require GitHub access.
+`CHANGELOG.md` is the source for release notes and the English/Japanese Docs pages.
+It includes the original notes for all 17 releases through v1.2.0.
+Release PRs add subsequent entries. Both page languages retain the notes' original language.
+`node scripts/update-changelog.mjs` regenerates the pages offline, and builds run this generator.
+There is no separate pending-release text or publication status baked into the app.
+Ordinary builds and installed Zatto do not require GitHub access.
 
 ## Debugging
 

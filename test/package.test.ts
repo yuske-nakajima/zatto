@@ -45,7 +45,9 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("2.0.0");
+    expect(manifest.version).toMatch(
+      /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/,
+    );
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
@@ -188,8 +190,8 @@ describe("npmパッケージ", () => {
     expect(releaseWorkflow).toContain("workflow_dispatch:");
     expect(releaseWorkflow).toContain("id-token: write");
     expect(releaseWorkflow).toContain("pnpm run verify:package");
-    expect(releaseWorkflow).toContain("npm publish --access public");
-    expect(releaseWorkflow).toContain("gh release create");
+    expect(releaseWorkflow).toContain("node scripts/release/publish.mjs");
+    expect(releaseWorkflow).toContain("googleapis/release-please-action@v4");
     expect(releaseWorkflow).not.toContain("NPM_TOKEN");
   });
 });

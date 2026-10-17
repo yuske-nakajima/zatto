@@ -272,32 +272,20 @@ pnpm video:render
 
 ## リリース
 
-初回公開は、npmへログインした端末の`main`ブランチから実行します。
+通常PRを`main`へマージすると、release-pleaseがリリース用PRを作成・更新します。
+そのPRのバージョンと`CHANGELOG.md`を確認し、マージすると公開処理が始まります。
+通常PRではバージョンを変えず、Conventional Commitsで変更種別を伝えます。
+非互換変更には`!`または`BREAKING CHANGE:`を付けます。
 
-```bash
-pnpm verify:package
-npm publish --access public
-```
+Release workflowはGitHub Releaseの下書きとタグを作成し、タグの配布物を検証します。
+検証したtarballをnpmへ公開してから、GitHub Releaseを公開します。
+承認した変更履歴は、GitHub Releaseとアプリ内Docsの両方に使います。
+公開に失敗したときは、対象タグを指定して再試行できます。
 
-初回公開後、GitHub ActionsをnpmのTrusted Publisherとして登録します。
-
-```bash
-npm trust github @yuske-nakajima/zatto \
-  --file release.yml \
-  --repo yuske-nakajima/zatto \
-  --allow-publish
-```
-
-以降のリリースでは[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
-`package.json`を正本としてバージョンを更新し、テストとスクリプトの固定値も同期します。
-変更を`main`へマージした後、Release workflowを手動で実行します。
-
-```bash
-gh workflow run release.yml --ref main
-```
-
-workflowは品質チェックとパッケージ検証を実行します。
-検証に成功すると、npmへの公開、バージョンタグの作成、GitHub Releaseの作成を進めます。
+GitHub ActionsによるPR作成の許可と、npmのTrusted Publisher設定が必要です。
+Trusted Publisherの対象は、このリポジトリの`release.yml`です。個人用トークンは使いません。
+設定、確認する文章の範囲、再試行の手順は[リリース運用](https://github.com/yuske-nakajima/zatto/blob/main/docs/releasing.md)を参照してください。
+版の選定は[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
 
 ## 2.0.0への更新と内部設計
 
@@ -308,18 +296,19 @@ workflowは品質チェックとパッケージ検証を実行します。
 保存済みワークスペース、星、並び順と交換ファイルは引き継ぎます。
 runtime recordがなく旧サーバーが独自ポートを使う場合は、停止コマンドへ`--port <検出したポート>`を付けます。
 
-アプリ内DocsのChangelogにGitHub Releasesの公開履歴を同梱し、ロゴの下にはインストール済みの版を表示します。
+アプリ内Docsに変更履歴を同梱し、ロゴの下にはインストール済みの版を表示します。
 設計と機能追加の手順は[アーキテクチャ](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md)にまとめています。
 エージェントは`AGENTS.md`から`.claude/rules/`を読み、共通Commandsと共有RPC契約を使って拡張します。
 アーキテクチャの選定を変える場合は、実装前にユーザーとの壁打ちで合意します。
 
 ### 同梱Changelogの更新
 
-認証済みGitHub CLIで`node scripts/update-changelog.mjs --refresh`を実行すると、公開済みの全履歴を取得します。
-`scripts/changelog/releases.json`の原本と、生成した英日ページをコミットします。
-`node scripts/update-changelog.mjs`は原本からオフラインで再生成します。
-未公開の内容は`scripts/changelog/pending.json`に分け、公開済みの本文は原文を維持します。
-リリース前に履歴を更新してください。通常のビルドとインストール済みzattoはGitHubへの接続を必要としません。
+`CHANGELOG.md`を、リリースノートと英日Docsページの正本として使います。
+v1.2.0までの17リリースは原文を引き継ぎ、以降の履歴はリリースPRで追加します。
+英日どちらのページでも、変更履歴の本文は原文の言語を維持します。
+`node scripts/update-changelog.mjs`でオフライン生成でき、ビルド時にも再生成します。
+未公開版のメモや公開状態を示す固定文言は、別のデータとして持ちません。
+通常のビルドとインストール済みzattoはGitHubへの接続を必要としません。
 
 ## デバッグ
 
