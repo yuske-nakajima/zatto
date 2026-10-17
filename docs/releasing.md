@@ -41,6 +41,8 @@ v1.2.0までの17件は、GitHub Releasesの本文を原文で引き継ぎます
 
 `node scripts/update-changelog.mjs`と通常ビルドは、ローカルの原本からページを生成します。
 GitHubへの接続は不要です。ページは配布版までの履歴を表示します。
+生成した`src/web/public/docs/{en,ja}/changelog.html`はgitで管理しません。
+`pnpm run build`、`pnpm run test`、`pnpm run dev:web`は、実行前に`pnpm run changelog`でページを生成します。
 アプリへ「未公開」などの公開状態を固定で埋め込みません。
 
 ## GitHubとnpmの設定
