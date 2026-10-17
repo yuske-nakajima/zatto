@@ -50,6 +50,28 @@ test("workspace API switches isolated entries and refuses stale clear requests",
   ).toBe(1002);
   await app.close();
 });
+test("workspaces.get reads any workspace in List order without changing the selection", async () => {
+  const app = await createApp({ sessionStore: store });
+  const first = path.join(dir, "one.html");
+  const second = path.join(dir, "two.html");
+  await writeFile(first, "<title>One</title>");
+  await writeFile(second, "<title>Two</title>");
+  const research = await store.createWorkspace("Research");
+  const [one, two] = await store.addEntries([first, second], research.id);
+  await store.reorderEntries([two.id, one.id], research.id);
+  await store.setFavorite(one.id, true, research.id);
+  const read = await rpc(app, "workspaces.get", { id: research.id });
+  expect(read.code).toBe(0);
+  expect(read.json()).toEqual({
+    id: research.id,
+    name: "Research",
+    entries: [two, { ...one, favorite: true }],
+  });
+  expect(store.getWorkspaceState().activeWorkspaceId).toBe("default");
+  expect((await rpc(app, "workspaces.get", { id: "missing" })).code).toBe(1002);
+  expect((await rpc(app, "workspaces.get", {})).code).toBe(-32602);
+  await app.close();
+});
 test("a native picker started in a workspace adds only to that workspace after switching", async () => {
   const file = path.join(dir, "one.html");
   await writeFile(file, "<title>One</title>");

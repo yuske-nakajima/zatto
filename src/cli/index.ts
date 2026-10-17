@@ -7,6 +7,7 @@ import { type CliOptions, parseCliArgs } from "./args.js";
 import { addFiles, printFileUrls } from "./file-urls.js";
 import { HELP_TEXT } from "./help.js";
 import { runMcpCommand } from "./mcp-command.js";
+import { createMcpConnector } from "./mcp-connection.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
 import { exportSession, importSession, serverUrl } from "./server-api.js";
 import {
@@ -52,7 +53,7 @@ export async function runCli(
   }
   if (args[0] === "mcp") {
     return runMcpCommand(args.slice(1), {
-      readContext,
+      connect: createMcpConnector(dependencies),
       stdout: dependencies.stdout,
       stderr: dependencies.stderr,
     });

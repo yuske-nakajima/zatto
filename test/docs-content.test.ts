@@ -27,6 +27,7 @@ const RPC_OPERATIONS = [
   "session.pickFiles",
   "session.pickDirectory",
   "workspaces.list",
+  "workspaces.get",
   "workspaces.create",
   "workspaces.activate",
   "workspaces.rename",
@@ -109,8 +110,8 @@ describe("組み込みドキュメント本文", () => {
     }
   });
 
-  test("APIページが全21 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
-    expect(RPC_OPERATIONS).toHaveLength(21);
+  test("APIページが全22 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
+    expect(RPC_OPERATIONS).toHaveLength(22);
     for (const locale of LOCALES) {
       const html = await readDoc(locale, "api");
       const codeValues = readCodeValues(html);

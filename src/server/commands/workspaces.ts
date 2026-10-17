@@ -10,6 +10,7 @@ export function workspaceCommands(context: CommandContext) {
   const store = context.sessionStore;
   return {
     "workspaces.list": () => store.getWorkspaceState(),
+    "workspaces.get": ({ id }) => store.getWorkspace(id),
     "workspaces.create": async ({ name }) => {
       const workspace = await store.createWorkspace(name);
       await context.publish();
@@ -33,6 +34,7 @@ export function workspaceCommands(context: CommandContext) {
   } satisfies Pick<
     CommandHandlers,
     | "workspaces.list"
+    | "workspaces.get"
     | "workspaces.create"
     | "workspaces.activate"
     | "workspaces.rename"

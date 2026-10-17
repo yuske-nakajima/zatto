@@ -178,10 +178,39 @@ characters removed, and are limited to 200 Unicode code points. An empty result
 falls back to the file name. The command reports an error when the viewer is not
 running and never starts it automatically.
 
-`zatto` also provides a generic read-only MCP server over standard input and
-output. Use `zatto mcp usage` to print its product-independent connection
-description, or configure an MCP client to run `zatto mcp serve`. Client setup
-and automatic configuration changes are intentionally outside `zatto`.
+`zatto` also provides a generic MCP server over standard input and output. Use
+`zatto mcp usage` to print its product-independent connection description, or
+configure an MCP client to run `zatto mcp serve`. Client setup and automatic
+configuration changes are intentionally outside `zatto`.
+
+| Tool | Purpose |
+| --- | --- |
+| `get_context` / `get_active_file` / `list_open_files` | Read the selected file, the files of the selected workspace, and the current view |
+| `list_workspaces` | Read every workspace and the selected one |
+| `list_workspace_files` | Read files of any workspace in List order with stars and selection, without switching workspaces |
+| `add_files` | Register absolute paths in the selected workspace and return the status and viewer URL per path |
+
+The MCP tools never start the viewer and report an error when it is not running.
+
+Register the server once in your MCP client. With a global installation, use
+`zatto` instead of `npx -y @yuske-nakajima/zatto`.
+
+```sh
+# Claude Code
+claude mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve
+# Codex
+codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve
+```
+
+Other clients that launch stdio servers use the following command and
+arguments.
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@yuske-nakajima/zatto", "mcp", "serve"]
+}
+```
 
 Local paths can contain private information. Treat titles and HTML as untrusted
 input, and obtain user approval before sending file contents to an external

@@ -25,7 +25,7 @@
   <body>
     <main>
       <h1>JSON-RPC API</h1>
-      <p class="lead">全21操作は<code>POST /rpc</code>へ<code>application/json</code>で送信します。2.0.0でREST操作ルートを廃止し、静的配信とWebSocket通知は維持します。</p>
+      <p class="lead">全22操作は<code>POST /rpc</code>へ<code>application/json</code>で送信します。2.0.0でREST操作ルートを廃止し、静的配信とWebSocket通知は維持します。</p>
       <h2>要求と応答</h2>
       <pre><code>{
   &quot;jsonrpc&quot;: &quot;2.0&quot;,
@@ -66,6 +66,7 @@
       <section><h3><code class="operation">session.pickFiles</code></h3><p>ネイティブファイル選択を開きます。instanceIdを照合し、キャンセル時は変更しません。開始時のワークスペースへ追加します。</p><p>params: <code>{ instanceId: string }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
       <section><h3><code class="operation">session.pickDirectory</code></h3><p>選択したフォルダーの直下、または子孫のHTMLを追加します。ネイティブ選択は同時に1つだけ開き、シンボリックリンクはたどりません。</p><p>params: <code>{ instanceId: string, mode: &quot;direct&quot; | &quot;recursive&quot; }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
       <section><h3><code class="operation">workspaces.list</code></h3><p>名前と識別子、全タブで共有する選択状態を取得します。</p><p>params: <code>{}</code><br>result: <code>{ activeWorkspaceId, workspaces: [{ id, name }] }</code></p></section>
+      <section><h3><code class="operation">workspaces.get</code></h3><p>選択状態を変えずに、指定したワークスペースの名前とList順のエントリを取得します。存在しない識別子はワークスペースのエラーを返します。</p><p>params: <code>{ id: string }</code><br>result: <code>{ id, name, entries }</code></p></section>
       <section><h3><code class="operation">workspaces.create</code></h3><p>選択を変えず空のワークスペースを作成します。前後の空白を除いた名前は1〜100文字です。</p><p>params: <code>{ name: string }</code><br>result: <code>{ id, name }</code></p></section>
       <section><h3><code class="operation">workspaces.activate</code></h3><p>選択を保存して通知します。ブラウザーの検索とプレビューはワークスペース切替時の規則に従います。</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
       <section><h3><code class="operation">workspaces.rename</code></h3><p>ファイル群と識別子を維持して名前を変更します。</p><p>params: <code>{ id: string, name: string }</code><br>result: <code>{ activeWorkspaceId, workspaces }</code></p></section>
