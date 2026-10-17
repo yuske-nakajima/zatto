@@ -2,10 +2,11 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { compareVersions } from "../changelog/entries.mjs";
+import { updateRelease } from "./github.mjs";
 import { publicationAction } from "./policy.mjs";
 import { validateCheckout } from "./validate.mjs";
 
-const { release, version } = validateCheckout();
+const { version } = validateCheckout();
 const tarball = process.env.ZATTO_RELEASE_TARBALL;
 if (!tarball) throw new Error("A verified package tarball is required");
 const integrity = `sha512-${createHash("sha512").update(readFileSync(tarball)).digest("base64")}`;
@@ -36,18 +37,8 @@ if (action === "publish") {
 } else {
   console.log(`npm ${version} already contains the verified artifact`);
 }
-validateCheckout();
-execFileSync(
-  "gh",
-  [
-    "api",
-    "--method",
-    "PATCH",
-    `repos/${process.env.GITHUB_REPOSITORY}/releases/${release.id}`,
-    "-F",
-    "draft=false",
-    "-f",
-    "make_latest=legacy",
-  ],
-  { stdio: "inherit" },
-);
+const verified = validateCheckout();
+updateRelease(process.env.GITHUB_REPOSITORY, verified.release, verified.sha, {
+  draft: false,
+  make_latest: "legacy",
+});
