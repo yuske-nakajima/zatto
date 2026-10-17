@@ -1,4 +1,6 @@
 import { JSDOM } from "jsdom";
+import { marked } from "marked";
+import { compareVersions, parseChangelog } from "./entries.mjs";
 
 const allowed = new Set([
   "p",
@@ -88,35 +90,31 @@ export function sanitizeReleaseHtml(html) {
   }
   return Array.from(fragment.childNodes, render).join("");
 }
-/**
- * Renders a deterministic offline release-history document.
- * @param {import("./render.mjs").ReleaseSnapshot} snapshot - Captured public releases
- * @param {import("./render.mjs").PendingRelease} pending - Explicitly unreleased notes
- * @param {"en" | "ja"} locale - Page language; release bodies retain their original text
- * @returns {string} Complete standalone HTML
- * @throws When release body parsing fails
- */
-export function renderChangelog(snapshot, pending, locale) {
+/** Renders approved Markdown notes as a deterministic offline document. */
+export function renderChangelog(snapshot, markdown, version, locale) {
   const ja = locale === "ja";
   const title = ja ? "変更履歴" : "Changelog";
   const intro = ja
-    ? "GitHub Releasesの公開済み履歴を同梱しています。本文は原文のまま掲載し、オフラインで読めます。リンク先を開く場合は通信が必要です。"
-    : "Published GitHub Releases are bundled for offline reading. Release bodies retain their original language. Opening source links requires a connection.";
-  const isPublished = snapshot.releases.some(
-    (release) =>
-      release.tag === pending.version || release.tag === `v${pending.version}`,
+    ? "このバージョンまでの変更履歴を同梱しています。本文は原文のまま掲載し、オフラインで読めます。リンク先を開く場合は通信が必要です。"
+    : "Changes through this package version are bundled for offline reading. Notes retain their original language. Opening source links requires a connection.";
+  const entries = parseChangelog(markdown).filter(
+    (entry) => compareVersions(entry.version, version) <= 0,
   );
-  const notes = pending[locale];
-  const upcoming = isPublished
-    ? ""
-    : `<section class="pending" data-unreleased="${escapeHtml(pending.version)}"><h2>${escapeHtml(pending.version)} — ${ja ? "未公開" : "Unreleased"}</h2><p>${ja ? "この項目は公開済みリリースではありません。" : "This section is not a published release."}</p><ul>${notes.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><h3>${ja ? "更新手順" : "Upgrade steps"}</h3><ol>${notes.upgrade.map((item) => `<li><code>${escapeHtml(item)}</code></li>`).join("")}</ol></section>`;
-  const releases = snapshot.releases
-    .map((release) => {
-      const url = httpsUrl(release.url);
-      const link = url
-        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${ja ? "GitHubでリリースを開く" : "View release on GitHub"}</a>`
-        : "";
-      return `<article data-release="${escapeHtml(release.tag)}"><header><h2>${escapeHtml(release.name || release.tag)}</h2><p class="metadata"><code>${escapeHtml(release.tag)}</code> · <time datetime="${escapeHtml(release.publishedAt)}">${escapeHtml(release.publishedAt.slice(0, 10))}</time> · ${link}</p></header><div class="release-body">${sanitizeReleaseHtml(release.bodyHtml)}</div></article>`;
+  const releases = entries
+    .map((entry) => {
+      const legacy = snapshot.releases.find(
+        (release) => release.tag.replace(/^v/, "") === entry.version,
+      );
+      const tag = `v${entry.version}`;
+      const link =
+        legacy && httpsUrl(legacy.url)
+          ? `<a href="${escapeHtml(httpsUrl(legacy.url))}" target="_blank" rel="noopener noreferrer">${ja ? "GitHubでリリースを開く" : "View release on GitHub"}</a>`
+          : "";
+      const date = legacy?.publishedAt || entry.date;
+      const body = sanitizeReleaseHtml(
+        marked.parse(entry.body, { async: false, gfm: true }),
+      );
+      return `<article data-release="${escapeHtml(tag)}"><header><h2>${escapeHtml(tag)}</h2><p class="metadata"><time datetime="${escapeHtml(date)}">${escapeHtml(date.slice(0, 10))}</time>${link ? ` · ${link}` : ""}</p></header><div class="release-body">${body}</div></article>`;
     })
     .join("\n");
   return `<!doctype html>
@@ -132,11 +130,10 @@ article { margin-top: 32px; padding-top: 24px; border-top: 1px solid color-mix(i
 a { color: LinkText; overflow-wrap: anywhere; }
 code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); overflow-wrap: anywhere; }
 pre { overflow: auto; padding: 14px 16px; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 8px; } pre code { padding: 0; background: transparent; }
-.pending { margin-top: 24px; padding: 16px 20px; border: 1px solid color-mix(in srgb, CanvasText 25%, Canvas); border-radius: 8px; }
 table { width: 100%; border-collapse: collapse; } th, td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; }
 @media (max-width: 620px) { main { padding: 24px 18px 48px; } }
 </style></head>
-<body><main><h1>${title}</h1><p class="lead">${intro}</p>${upcoming}<section aria-label="${ja ? "公開済みリリース" : "Published releases"}">${releases}</section></main></body>
+<body><main><h1>${title}</h1><p class="lead">${intro}</p><section aria-label="${ja ? "変更履歴" : "Version history"}">${releases}</section></main></body>
 </html>
 `;
 }

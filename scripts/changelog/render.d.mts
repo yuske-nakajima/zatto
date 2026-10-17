@@ -1,4 +1,4 @@
-/** Captured public release metadata and original source bodies. */
+/** Immutable public metadata imported before release PR automation. */
 export interface ReleaseSnapshot {
   repository: string;
   releases: Array<{
@@ -10,17 +10,11 @@ export interface ReleaseSnapshot {
     body?: string;
   }>;
 }
-/** Hand-authored notes explicitly separated from public releases. */
-export interface PendingRelease {
-  version: string;
-  en: { items: string[]; upgrade: string[] };
-  ja: { items: string[]; upgrade: string[] };
-}
-/** Reconstructs inert markup with an allowlist and HTTPS-only links. */
 export function sanitizeReleaseHtml(html: string): string;
-/** Renders a deterministic offline release-history document. */
+/** Renders CHANGELOG.md entries through the package version. */
 export function renderChangelog(
   snapshot: ReleaseSnapshot,
-  pending: PendingRelease,
+  markdown: string,
+  version: string,
   locale: "en" | "ja",
 ): string;

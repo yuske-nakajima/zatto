@@ -46,7 +46,7 @@
   "scripts": {
     "build": "pnpm run build:web && pnpm run build:node && pnpm run typecheck",
     "build:node": "tsc -p tsconfig.build.json",
-    "build:web": "vite build",
+    "build:web": "node scripts/update-changelog.mjs && vite build",
     "check": "biome check .",
     "dev:web": "vite",
     "format": "biome format --write .",
@@ -81,6 +81,7 @@
     "@types/ws": "8.18.2",
     "@vitejs/plugin-react": "6.1.2",
     "jsdom": "30.1.2",
+    "marked": "18.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "remotion": "4.0.534",
