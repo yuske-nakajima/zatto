@@ -184,6 +184,8 @@ describe("App", () => {
     );
     render(<App />);
     await screen.findByTitle("Alpha preview");
+    // ショートカットはファイル選択の可否を受け取った後に登録され、同じ描画で追加ボタンが表示される
+    await screen.findByRole("button", { name: "Add HTML files" });
 
     fireEvent.keyDown(window, { key: "o", metaKey: true });
 
