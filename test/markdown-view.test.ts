@@ -111,6 +111,7 @@ describe("Markdown viewing", () => {
     expect(
       document.querySelector(`script[src="${MARKDOWN_VENDOR_ASSETS.mermaid}"]`),
     ).not.toBeNull();
+    expect(html).toContain("suppressErrorRendering: true");
   });
 
   test("Mermaidがない文書は描画処理を読み込まない", () => {

@@ -67,12 +67,15 @@ function diagramScript(): string {
   let generation = 0;
   async function render() {
     const current = ++generation;
-    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: scheme.matches ? "dark" : "default" });
+    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", suppressErrorRendering: true, theme: scheme.matches ? "dark" : "default" });
     for (const [index, node] of nodes.entries()) {
+      const id = "zatto-diagram-" + current + "-" + index;
       try {
-        const { svg } = await mermaid.render("zatto-diagram-" + current + "-" + index, sources[index]);
+        const { svg } = await mermaid.render(id, sources[index]);
         if (current === generation) node.innerHTML = svg;
       } catch (error) {
+        // mermaid.render は失敗時に描画用の一時要素 "d" + id を body に残す
+        document.getElementById("d" + id)?.remove();
         if (current !== generation) return;
         const message = document.createElement("div");
         message.className = "zatto-diagram-error";
