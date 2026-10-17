@@ -1,20 +1,14 @@
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { parseArgs } from "node:util";
 import { APP_VERSION } from "../meta.js";
-import { DEFAULT_PORT } from "../server/index.js";
 import { resolveRuntimeFilePath } from "../server/runtime.js";
 import { runAgentCommand } from "./agent-command.js";
 import { createAgentContextReader } from "./agent-context-client.js";
+import { type CliOptions, parseCliArgs } from "./args.js";
+import { addFiles, printFileUrls } from "./file-urls.js";
 import { HELP_TEXT } from "./help.js";
 import { runMcpCommand } from "./mcp-command.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
-import {
-  addFiles,
-  exportSession,
-  importSession,
-  serverUrl,
-} from "./server-api.js";
+import { exportSession, importSession, serverUrl } from "./server-api.js";
 import {
   connectOrStartServer,
   type ServerClientDependencies,
@@ -24,17 +18,6 @@ import {
   readSessionExchangeFile,
   writeSessionExchangeFile,
 } from "./session-file.js";
-
-interface CliOptions {
-  files: string[];
-  port: number;
-  open: boolean;
-  stop: boolean;
-  importFile: string | null;
-  exportFile: string | null;
-  help: boolean;
-  version: boolean;
-}
 
 interface CliDependencies extends ServerClientDependencies {
   openBrowser: (url: string) => void;
@@ -53,57 +36,6 @@ const defaultDependencies: CliDependencies = {
   runtimeFilePath: resolveRuntimeFilePath(),
   createInstanceId: randomUUID,
 };
-
-export function parseCliArgs(args: string[]): CliOptions {
-  const { values, positionals } = parseArgs({
-    args,
-    options: {
-      port: { type: "string", default: String(DEFAULT_PORT) },
-      open: { type: "boolean", default: true },
-      stop: { type: "boolean", default: false },
-      import: { type: "string" },
-      export: { type: "string" },
-      help: { type: "boolean", short: "h", default: false },
-      version: { type: "boolean", short: "v", default: false },
-    },
-    allowPositionals: true,
-    allowNegative: true,
-    strict: true,
-  });
-
-  const port = Number(values.port);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error("`--port` には 1〜65535 の整数を指定してください");
-  }
-
-  if (values.import === "" || values.export === "") {
-    throw new Error("セッションファイルには空でないパスを指定してください");
-  }
-  const importFile = values.import ? path.resolve(values.import) : null;
-  const exportFile = values.export ? path.resolve(values.export) : null;
-  const operationCount = [
-    values.stop,
-    importFile,
-    exportFile,
-    positionals.length > 0,
-  ].filter(Boolean).length;
-  if (operationCount > 1) {
-    throw new Error(
-      "`--import`、`--export`、`--stop`、HTML ファイルは同時に指定できません",
-    );
-  }
-
-  return {
-    files: positionals.map((file) => path.resolve(file)),
-    port,
-    open: values.open ?? true,
-    stop: values.stop ?? false,
-    importFile,
-    exportFile,
-    help: values.help ?? false,
-    version: values.version ?? false,
-  };
-}
 
 export async function runCli(
   args: string[],
@@ -174,10 +106,19 @@ export async function runCli(
       return 0;
     }
     const url = serverUrl(connection.record.port);
-    if (options.files.length > 0) {
-      await addFiles(connection.record, options.files, dependencies.fetch);
-    }
+    const result =
+      options.files.length > 0
+        ? await addFiles(connection.record, options.files, dependencies.fetch)
+        : null;
     dependencies.stdout(url);
+    if (result)
+      printFileUrls(
+        url,
+        options.files,
+        result,
+        dependencies.stdout,
+        dependencies.stderr,
+      );
     if (options.open && (connection.started || options.files.length === 0)) {
       dependencies.openBrowser(url);
     }
@@ -214,5 +155,6 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export { parseCliArgs } from "./args.js";
 export { HELP_TEXT } from "./help.js";
 export { openBrowser, spawnDetachedServer } from "./platform.js";

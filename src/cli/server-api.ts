@@ -79,21 +79,6 @@ export async function requestShutdown(
   }
 }
 
-export async function addFiles(
-  record: ServerRecord,
-  files: string[],
-  fetchFn: typeof globalThis.fetch,
-): Promise<void> {
-  const response = await fetchFn(`${serverUrl(record.port)}api/session/add`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ paths: files }),
-  });
-  if (!response.ok) {
-    throw new Error(`ファイルの追加に失敗しました (HTTP ${response.status})`);
-  }
-}
-
 /**
  * Replaces the managed server session from an exchange document.
  *

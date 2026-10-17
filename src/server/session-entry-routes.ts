@@ -41,15 +41,16 @@ export function registerSessionEntryRoutes(
         )
         .map((input) => resolve(input));
 
-      const addedEntries = await store.addEntries(
+      const result = await store.addEntriesWithResults(
         normalizedPaths,
         request.headers["x-zatto-workspace-id"] as string | undefined,
       );
-      if (addedEntries.length > 0) {
+      if (result.added.length > 0) {
         await publishSessionUpdate();
       }
       return reply.code(201).send({
-        added: addedEntries,
+        ...result,
+        activeWorkspaceId: store.getWorkspaceState().activeWorkspaceId,
         session: store.getSession(),
       });
     },

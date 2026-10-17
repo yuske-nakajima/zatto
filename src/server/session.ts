@@ -1,9 +1,9 @@
 import os from "node:os";
 import path from "node:path";
-import { nanoid } from "nanoid";
 import { writeFileAtomically } from "../shared/atomic-file.js";
 import { updateFavorite } from "./favorite-update.js";
-import { extractTitle, fileExists } from "./session-files.js";
+import { type EntryAddition, prepareEntryAddition } from "./session-add.js";
+import { extractTitle } from "./session-files.js";
 import { createImportedEntries } from "./session-import.js";
 import { WorkspaceStore } from "./workspace-store.js";
 
@@ -48,24 +48,22 @@ export class SessionStore extends WorkspaceStore {
     inputPaths: string[],
     workspaceId = this.activeId(),
   ): Promise<Entry[]> {
-    return this.updateEntries(workspaceId, async (entries) => {
-      const known = new Set(entries.map((entry) => entry.absPath));
-      const added: Entry[] = [];
-      for (const absPath of inputPaths) {
-        if (known.has(absPath) || !(await fileExists(absPath))) continue;
-        added.push({
-          id: nanoid(),
-          absPath,
-          title: await extractTitle(absPath),
-          addedAt: Date.now(),
-        });
-        known.add(absPath);
-      }
-      return {
-        entries: added.length ? [...entries, ...added] : undefined,
-        result: added,
-      };
-    });
+    return (await this.addEntriesWithResults(inputPaths, workspaceId)).added;
+  }
+  /**
+   * Resolves requested paths in the same serialized operation that adds them.
+   * @param inputPaths - Absolute file paths in requested order
+   * @param workspaceId - Target workspace identity
+   * @returns Added and existing entries with the target workspace ID
+   * @throws When reading or persistence fails, or the workspace was deleted
+   */
+  async addEntriesWithResults(
+    inputPaths: string[],
+    workspaceId = this.activeId(),
+  ): Promise<EntryAddition> {
+    return this.updateEntries(workspaceId, (entries) =>
+      prepareEntryAddition(entries, inputPaths, workspaceId),
+    );
   }
   /**
    * Replaces a workspace with validated imported files.
