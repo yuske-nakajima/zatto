@@ -44,8 +44,6 @@ const RPC_OPERATIONS = [
   "review.start",
   "review.finish",
   "review.states",
-  "review.listen",
-  "review.unlisten",
   "review.take",
   "search.query",
 ] as const;
@@ -78,7 +76,6 @@ const GUI_OPERATIONS = [
   "markdown.setTask",
   "review.list",
   "review.states",
-  "review.start",
   "review.finish",
   "review.create",
   "review.reply",
@@ -133,8 +130,8 @@ describe("組み込みドキュメント本文", () => {
     }
   });
 
-  test("APIページが全35 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
-    expect(RPC_OPERATIONS).toHaveLength(35);
+  test("APIページが全33 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
+    expect(RPC_OPERATIONS).toHaveLength(33);
     for (const locale of LOCALES) {
       const html = await readDoc(locale, "api");
       const codeValues = readCodeValues(html);

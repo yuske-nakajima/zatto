@@ -1,5 +1,5 @@
 import type { Entry } from "../server/session.js";
-import type { ActiveReview, ReviewListener } from "./review.js";
+import type { ReviewStates } from "./review.js";
 
 export type ServerMessage =
   | {
@@ -13,9 +13,5 @@ export type ServerMessage =
       id: string;
     }
   | { type: "review:update"; entryId: string }
-  | {
-      type: "review:states";
-      reviews: ActiveReview[];
-      listeners: ReviewListener[];
-    }
+  | ({ type: "review:states" } & ReviewStates)
   | { type: "review:event"; session: string };

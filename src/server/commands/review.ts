@@ -1,18 +1,17 @@
 import { nanoid } from "nanoid";
-import {
-  type ActiveReview,
-  REVIEW_LIMITS,
-  type ReviewAuthor,
-  type ReviewEvent,
-  type ReviewListener,
-  type ReviewThread,
+import type {
+  ActiveReview,
+  ReviewAuthor,
+  ReviewEvent,
+  ReviewStates,
+  ReviewThread,
 } from "../../shared/review.js";
 import type { CommandContext } from "./context.js";
 import { domainError } from "./errors.js";
 import type { CommandHandlers } from "./session.js";
 /**
  * Creates review thread commands and the in-memory review coordination.
- * Active reviews, waiting sessions, and undelivered events belong to running commands, so they are not persisted.
+ * Active reviews and undelivered events belong to running commands, so they are not persisted.
  * @param context - Stores, notifications, and guards
  * @returns Review handlers
  * @throws Never during construction
@@ -20,7 +19,6 @@ import type { CommandHandlers } from "./session.js";
 export function reviewCommands(context: CommandContext) {
   const store = context.reviewStore;
   const reviews = new Map<string, ActiveReview>();
-  const listeners = new Map<string, ReviewListener>();
   const queues = new Map<string, ReviewEvent[]>();
 
   function requireEntry(workspaceId: string, entryId: string): void {
@@ -29,17 +27,15 @@ export function reviewCommands(context: CommandContext) {
       .entries.some((entry) => entry.id === entryId);
     if (!exists) throw domainError("notFound", "Entry not found.");
   }
-  function threadUpdated(entryId: string): void {
-    context.realtimeHub.broadcast({ type: "review:update", entryId });
-  }
-  function states() {
-    const since = Date.now() - REVIEW_LIMITS.listenerTtlMs;
+  function states(): ReviewStates {
     return {
       reviews: [...reviews.values()],
-      listeners: [...listeners.values()].filter(
-        (listener) => listener.lastSeenAt >= since,
-      ),
+      openThreadCounts: store.openCounts(),
     };
+  }
+  function threadUpdated(entryId: string): void {
+    context.realtimeHub.broadcast({ type: "review:update", entryId });
+    statesChanged();
   }
   function statesChanged(): void {
     context.realtimeHub.broadcast({ type: "review:states", ...states() });
@@ -128,19 +124,14 @@ export function reviewCommands(context: CommandContext) {
       return null;
     },
     "review.states": () => states(),
-    "review.listen": ({ session }) => {
-      const listener = { session, lastSeenAt: Date.now() };
-      listeners.set(session, listener);
-      statesChanged();
-      return listener;
-    },
-    "review.unlisten": ({ session }) => {
-      if (listeners.delete(session)) statesChanged();
-      return null;
-    },
-    "review.take": ({ session }) => {
-      const events = queues.get(session) ?? [];
-      queues.delete(session);
+    "review.take": ({ session, entryId }) => {
+      const queued = queues.get(session) ?? [];
+      const events = queued.filter(
+        (event) => entryId === undefined || event.entryId === entryId,
+      );
+      const rest = queued.filter((event) => !events.includes(event));
+      if (rest.length) queues.set(session, rest);
+      else queues.delete(session);
       return { events };
     },
   } satisfies Pick<
@@ -154,8 +145,6 @@ export function reviewCommands(context: CommandContext) {
     | "review.start"
     | "review.finish"
     | "review.states"
-    | "review.listen"
-    | "review.unlisten"
     | "review.take"
   >;
 }

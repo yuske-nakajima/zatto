@@ -122,9 +122,11 @@ const schemas = {
   }),
   "review.finish": z.strictObject({ ...guards, reviewId: id }),
   "review.states": z.strictObject(guards),
-  "review.listen": z.strictObject({ ...guards, session }),
-  "review.unlisten": z.strictObject({ ...guards, session }),
-  "review.take": z.strictObject({ ...guards, session }),
+  "review.take": z.strictObject({
+    ...guards,
+    session,
+    entryId: id.optional(),
+  }),
   "search.query": z.strictObject({ ...guards, query: z.string() }),
 } satisfies Record<RpcMethod, z.ZodType>;
 /**

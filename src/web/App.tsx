@@ -2,7 +2,7 @@ import { AppViewer } from "./AppViewer.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
-import { ReviewingEntriesProvider } from "./review-status-context.js";
+import { ReviewFileStatesProvider } from "./review-status-context.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { useAgentContextSync } from "./useAgentContextSync.js";
@@ -131,7 +131,7 @@ export function App() {
     docs.open();
   }
   return (
-    <ReviewingEntriesProvider value={review.reviewingEntryIds}>
+    <ReviewFileStatesProvider value={review.fileStates}>
       <StatusBarFrame
         isDocsVisible={docs.isVisible}
         docsButtonRef={docs.triggerRef}
@@ -204,6 +204,6 @@ export function App() {
           }
         />
       </StatusBarFrame>
-    </ReviewingEntriesProvider>
+    </ReviewFileStatesProvider>
   );
 }

@@ -18,13 +18,12 @@ import { rpc } from "./rpc-server-helper.js";
 
 let dir: string;
 let app: FastifyInstance;
+let store: SessionStore;
+let port: number;
 let runtimeFilePath: string;
 let file: string;
 
-beforeEach(async () => {
-  dir = await mkdtemp(path.join(os.tmpdir(), "zatto-review-cli-"));
-  const store = new SessionStore(path.join(dir, "session.json"));
-  await store.load();
+async function startServer(listenPort = 0): Promise<void> {
   app = await createApp({
     sessionStore: store,
     serverIdentity: {
@@ -32,16 +31,23 @@ beforeEach(async () => {
       protocolVersion: SERVER_PROTOCOL_VERSION,
     },
   });
-  await app.listen({ host: "127.0.0.1", port: 0 });
+  await app.listen({ host: "127.0.0.1", port: listenPort });
   const address = app.server.address();
-  const port = typeof address === "object" && address ? address.port : 0;
-  runtimeFilePath = path.join(dir, "server.json");
+  port = typeof address === "object" && address ? address.port : 0;
   await writeServerRecord(runtimeFilePath, {
     instanceId: "review-server",
     pid: process.pid,
     port,
     protocolVersion: SERVER_PROTOCOL_VERSION,
   });
+}
+
+beforeEach(async () => {
+  dir = await mkdtemp(path.join(os.tmpdir(), "zatto-review-cli-"));
+  store = new SessionStore(path.join(dir, "session.json"));
+  await store.load();
+  runtimeFilePath = path.join(dir, "server.json");
+  await startServer();
   file = path.join(dir, "plan.md");
   await writeFile(file, "# 計画\n\n閲覧URL を返す\n");
 });
@@ -62,6 +68,7 @@ function dependencies(onInterrupt?: (handler: () => void) => () => void) {
     stdout: vi.fn(),
     stderr: vi.fn(),
     onInterrupt,
+    reconnectIntervalMs: 20,
   };
 }
 
@@ -75,16 +82,6 @@ async function activeReview(): Promise<ActiveReview> {
   });
 }
 
-async function waitingSession(session: string): Promise<void> {
-  await vi.waitFor(async () => {
-    const { listeners } = (await rpc(app, "review.states", {})).json<{
-      listeners: Array<{ session: string }>;
-    }>();
-    if (!listeners.some((listener) => listener.session === session))
-      throw new Error("not yet");
-  });
-}
-
 function comment(review: ActiveReview, body: string) {
   return rpc(app, "review.create", {
     workspaceId: review.workspaceId,
@@ -95,55 +92,45 @@ function comment(review: ActiveReview, body: string) {
   });
 }
 
+function lines(output: ReturnType<typeof vi.fn>) {
+  return output.mock.calls.map(([line]) => JSON.parse(String(line)));
+}
+
 describe("zatto review", () => {
-  test("ファイルをレビュー中にし、コメントのたびと終了時に戻る", async () => {
-    const first = dependencies();
-    const firstRun = runReviewCommand(
+  test("待ち続け、コメントのたびに 1 行の JSON を出し、レビューの終了で終わる", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
       [file, "--no-open", "--session", "zatto:a99c"],
-      first,
+      deps,
     );
     const review = await activeReview();
     expect(review.session).toBe("zatto:a99c");
-    const created = (await comment(review, "具体例は？")).json<{
-      id: string;
-    }>();
+    const first = (await comment(review, "具体例は？")).json<{ id: string }>();
+    await vi.waitFor(() => expect(deps.stdout).toHaveBeenCalledTimes(1));
 
-    await expect(firstRun).resolves.toBe(0);
-    const firstOutput = first.stdout.mock.calls.flat().join("\n");
-    expect(firstOutput).toContain(`ユーザーのコメント: 計画 (${file})`);
-    expect(firstOutput).toContain(`[thread ${created.id}]`);
-    expect(firstOutput).toContain('対象の文章: "閲覧URL"');
-    expect(firstOutput).toContain("- ユーザー: 具体例は？");
-    expect(firstOutput).toContain(
-      'zatto review reply <thread-id> "<本文>" --session zatto:a99c',
-    );
-    expect(first.stderr).toHaveBeenCalledWith(
-      expect.stringContaining(`?entry=${review.entryId}`),
-    );
-
-    const reply = dependencies();
     await expect(
       runReviewCommand(
-        ["reply", created.id, "例を追記しました", "--session", "zatto:a99c"],
-        reply,
+        ["reply", first.id, "例を追記しました", "--session", "zatto:a99c"],
+        dependencies(),
       ),
     ).resolves.toBe(0);
-
     await rpc(app, "review.reply", {
-      threadId: created.id,
+      threadId: first.id,
       author: { kind: "user" },
-      body: "ありがとう、もう 1 つ",
+      body: "ありがとう",
     });
-    const second = dependencies();
-    const secondRun = runReviewCommand(
-      [file, "--no-open", "--session", "zatto:a99c", "--json"],
-      second,
-    );
-    await expect(secondRun).resolves.toBe(0);
-    const report = JSON.parse(second.stdout.mock.calls[0]?.[0]);
-    expect(report.reports[0].finished).toBe(false);
+    await vi.waitFor(() => expect(deps.stdout).toHaveBeenCalledTimes(2));
+    await rpc(app, "review.finish", { reviewId: review.id });
+
+    await expect(running).resolves.toBe(0);
+    const [created, replied, finished] = lines(deps.stdout);
+    expect(created).toMatchObject({
+      event: "comment",
+      file: { path: file, title: "計画" },
+      threads: [{ id: first.id, anchor: { exact: "閲覧URL" } }],
+    });
     expect(
-      report.reports[0].threads[0].comments.map(
+      replied.threads[0].comments.map(
         (item: { author: { kind: string }; body: string }) => [
           item.author.kind,
           item.body,
@@ -152,122 +139,124 @@ describe("zatto review", () => {
     ).toEqual([
       ["user", "具体例は？"],
       ["llm", "例を追記しました"],
-      ["user", "ありがとう、もう 1 つ"],
+      ["user", "ありがとう"],
     ]);
-    expect(second.openBrowser).not.toHaveBeenCalled();
-
-    const third = dependencies();
-    const thirdRun = runReviewCommand(
-      [file, "--no-open", "--session", "zatto:a99c"],
-      third,
-    );
-    await waitingSession("zatto:a99c");
-    await rpc(app, "review.finish", { reviewId: review.id });
-    await expect(thirdRun).resolves.toBe(0);
-    const finished = third.stdout.mock.calls.flat().join("\n");
-    expect(finished).toContain(
-      `ユーザーがレビューを終えました: 計画 (${file})`,
-    );
-    expect(finished).toContain("未解決のスレッド: 1 件");
-  });
-
-  test("受付窓口として待ち、ユーザーが選んだファイルのコメントを受け取る", async () => {
-    const inbox = dependencies();
-    const inboxRun = runReviewCommand(
-      ["--inbox", "--session", "zatto:inbox"],
-      inbox,
-    );
-    await waitingSession("zatto:inbox");
-    const added = await rpc(app, "session.add", {
-      workspaceId: "default",
-      paths: [file],
+    expect(finished).toMatchObject({
+      event: "finished",
+      threads: [{ id: first.id }],
     });
-    const entryId = added.json<{ resolved: Array<{ id: string }> }>()
-      .resolved[0]?.id;
-    const review = (
-      await rpc(app, "review.start", {
-        workspaceId: "default",
-        entryId,
-        session: "zatto:inbox",
-      })
-    ).json<ActiveReview>();
-    expect(inbox.stdout).not.toHaveBeenCalled();
-    await comment(review, "これなに？");
-
-    await expect(inboxRun).resolves.toBe(0);
-    expect(inbox.stdout.mock.calls.flat().join("\n")).toContain(
-      "- ユーザー: これなに？",
+    expect(deps.stderr).toHaveBeenCalledWith(
+      expect.stringContaining(`?entry=${review.entryId}`),
     );
-    expect(inbox.openBrowser).not.toHaveBeenCalled();
   });
 
-  test("ほかのセッションへのコメントでは戻らない", async () => {
-    const mine = dependencies();
-    const mineRun = runReviewCommand(["--inbox", "--session", "mine"], mine);
-    const other = dependencies();
-    const otherRun = runReviewCommand(
-      [file, "--no-open", "--session", "other"],
-      other,
+  test("--once は最初に届いた内容を読みやすい形で表示して終わる", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--once", "--session", "s"],
+      deps,
     );
     const review = await activeReview();
-    await waitingSession("mine");
-    await comment(review, "other へ");
+    const created = (await comment(review, "これなに？")).json<{
+      id: string;
+    }>();
 
-    await expect(otherRun).resolves.toBe(0);
-    expect(mine.stdout).not.toHaveBeenCalled();
-    await rpc(app, "review.start", {
-      workspaceId: review.workspaceId,
-      entryId: review.entryId,
-      session: "mine",
-    });
-    await comment(review, "mine へ");
-    await expect(mineRun).resolves.toBe(0);
+    await expect(running).resolves.toBe(0);
+    const output = deps.stdout.mock.calls.flat().join("\n");
+    expect(output).toContain(`ユーザーのコメント: 計画 (${file})`);
+    expect(output).toContain(`[thread ${created.id}]`);
+    expect(output).toContain("- ユーザー: これなに？");
+    expect(output).toContain(
+      'zatto review reply <thread-id> "<本文>" --session s',
+    );
   });
 
-  test("中断すると待機をやめ、サーバーの停止ではエラーで終わる", async () => {
+  test("zatto が再起動しても再接続し、レビュー中に戻して待ち続ける", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "s"],
+      deps,
+    );
+    await activeReview();
+    const previousPort = port;
+    await app.close();
+    await vi.waitFor(() =>
+      expect(deps.stderr).toHaveBeenCalledWith(
+        "zatto サーバーとの接続が切れました。起動を待って再接続します",
+      ),
+    );
+    await startServer(previousPort);
+
+    const review = await activeReview();
+    await comment(review, "再起動後のコメント");
+    await vi.waitFor(() => expect(deps.stdout).toHaveBeenCalledTimes(1));
+    expect(lines(deps.stdout)[0].threads[0].comments[0].body).toBe(
+      "再起動後のコメント",
+    );
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await expect(running).resolves.toBe(0);
+  });
+
+  test("ほかのファイル・ほかのセッションへのコメントは出力しない", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "mine"],
+      deps,
+    );
+    const review = await activeReview();
+    const otherFile = path.join(dir, "other.md");
+    await writeFile(otherFile, "# Other\n");
+    const other = (
+      await rpc(app, "session.add", {
+        workspaceId: "default",
+        paths: [otherFile],
+      })
+    ).json<{ resolved: Array<{ id: string }> }>().resolved[0]?.id;
+    const otherReview = (
+      await rpc(app, "review.start", {
+        workspaceId: "default",
+        entryId: other,
+        session: "mine",
+      })
+    ).json<ActiveReview>();
+    await comment(otherReview, "別のファイル");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(deps.stdout).not.toHaveBeenCalled();
+
+    await comment(review, "このファイル");
+    await vi.waitFor(() => expect(deps.stdout).toHaveBeenCalledTimes(1));
+    expect(lines(deps.stdout)[0].threads[0].comments[0].body).toBe(
+      "このファイル",
+    );
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await expect(running).resolves.toBe(0);
+  });
+
+  test("中断すると 130 で終わる", async () => {
     let interrupt = () => {};
-    const cancelled = dependencies((handler) => {
+    const deps = dependencies((handler) => {
       interrupt = handler;
       return () => {};
     });
-    const cancelledRun = runReviewCommand(
-      ["--inbox", "--session", "stop-me"],
-      cancelled,
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "s"],
+      deps,
     );
-    await waitingSession("stop-me");
+    await activeReview();
     interrupt();
-    await expect(cancelledRun).resolves.toBe(130);
-    expect(
-      (await rpc(app, "review.states", {})).json<{ listeners: unknown[] }>()
-        .listeners,
-    ).toEqual([]);
-
-    const stopped = dependencies();
-    const stoppedRun = runReviewCommand(
-      ["--inbox", "--session", "server-stops"],
-      stopped,
-    );
-    await waitingSession("server-stops");
-    await app.close();
-    await expect(stoppedRun).resolves.toBe(1);
-    expect(stopped.stderr).toHaveBeenCalledWith(
-      "待っている間に zatto サーバーが停止しました",
-    );
+    await expect(running).resolves.toBe(130);
   });
 
   test("引数を検証する", () => {
-    expect(parseReviewArgs(["a.md", "--session", "s", "--json"])).toMatchObject(
+    expect(parseReviewArgs(["a.md", "--session", "s", "--once"])).toMatchObject(
       {
         mode: "file",
         file: path.resolve("a.md"),
         session: "s",
-        json: true,
+        once: true,
         open: true,
       },
     );
-    expect(parseReviewArgs(["--inbox", "--session", "s"])).toMatchObject({
-      mode: "inbox",
-    });
     expect(
       parseReviewArgs(["reply", "t1", "本文", "--session", "s"]),
     ).toMatchObject({ mode: "reply", threadId: "t1", body: "本文" });
@@ -279,8 +268,8 @@ describe("zatto review", () => {
       "1 つだけ",
     );
     expect(() =>
-      parseReviewArgs(["--inbox", "a.md", "--session", "s"]),
-    ).toThrow("--inbox ではファイル");
+      parseReviewArgs(["a.md", "--inbox", "--session", "s"]),
+    ).toThrow("不明なオプション");
     expect(() => parseReviewArgs(["reply", "t1", "--session", "s"])).toThrow(
       "スレッド ID と本文",
     );

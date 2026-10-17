@@ -31,10 +31,10 @@
           <tr><td>ファイルを選択</td><td><code>GET /f/:id/</code></td><td>プレビューiframeへHTML、またはHTMLへ変換したMarkdownを読み込みます。相対リソースには<code>GET /f/:id/*</code>を使います。</td></tr>
           <tr><td>Docsページを開く</td><td><code>GET /docs/*</code></td><td>セッションエントリを作らず、選択した言語とページを同一オリジンのiframeへ読み込みます。</td></tr>
           <tr><td>セッション・ファイル変更を受信</td><td><code>WS /ws</code></td><td>ファイルパネル、プレビュー、検索状態を更新します。</td></tr>
-          <tr><td>コメントのスレッドを読み込む</td><td><code>review.list</code> / <code>review.states</code></td><td>選択中ファイルのスレッド、レビュー中のファイル、待機中のLLMのセッションを読み込み、<code>review:update</code>と<code>review:states</code>の通知に追従します。レビュー中のファイルには、ファイル一覧でIn reviewのラベルを付けます。</td></tr>
+          <tr><td>コメントのスレッドを読み込む</td><td><code>review.list</code> / <code>review.states</code></td><td>選択中ファイルのスレッド、レビュー中のファイル、未解決のスレッド数を読み込み、<code>review:update</code>と<code>review:states</code>の通知に追従します。ファイル一覧にはスレッド数を表示し、レビュー中はIn reviewを付けます。</td></tr>
           <tr><td>Comment / Reply / Edit / Delete</td><td><code>review.create</code> / <code>review.reply</code> / <code>review.edit</code> / <code>review.delete</code></td><td>スレッドを保存し、強調表示を更新します。</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>解決したスレッドは強調表示しません。</td></tr>
-          <tr><td>Start review</td><td><code>review.start</code></td><td>選んだ待機中のLLMのセッションとのレビュー中にし、以後のコメントと返信をそのセッションへ送ります。</td></tr>
+          <tr><td>Ask an LLM to review</td><td>—</td><td>LLMの会話に貼る依頼文をコピーします。貼られたLLMが<code>zatto review</code>を実行し、<code>review.start</code>を呼びます。</td></tr>
           <tr><td>Finish review</td><td><code>review.finish</code></td><td>レビューを終え、LLMのセッションが未解決のスレッドを受け取ります。</td></tr>
           <tr><td>Markdownのタスクのチェックを切り替え</td><td><code>markdown.setTask</code></td><td>チェックの状態をファイルへ書き込みます。ファイルが変更されていた場合は、最新の内容でプレビューを読み直します。</td></tr>
           <tr><td>ファイルを検索</td><td><code>search.query</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>

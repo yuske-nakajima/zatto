@@ -1,7 +1,6 @@
 import path from "node:path";
 import { DEFAULT_PORT } from "../server/index.js";
 import type { ServerRecord } from "../server/runtime.js";
-import type { Entry } from "../server/session.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import type {
   ReviewAuthor,
@@ -11,31 +10,34 @@ import type {
 import { rpcCall } from "../shared/rpc-client.js";
 import { serverUrl } from "./server-api.js";
 import type { ServerClientDependencies } from "./server-client.js";
-import { connectOrStartServer } from "./server-client.js";
+import {
+  connectOrStartServer,
+  connectToRunningServer,
+} from "./server-client.js";
 
 export const REVIEW_USAGE = `Usage:
-  zatto review <file> --session <id> [--json] [--no-open] [--port <n>]
-  zatto review --inbox --session <id> [--json] [--port <n>]
+  zatto review <file> --session <id> [--once] [--no-open] [--port <n>]
   zatto review reply <thread-id> <body> --session <id> [--port <n>]
 
-<file> を選択中のワークスペースへ登録してレビュー中にし、ユーザーの操作を待ちます。
---inbox は、ユーザーが画面でこのセッションを送り先に選んだファイルの操作を待ちます。
-ユーザーがコメント・返信を書くか、Finish review を押すと、その内容を表示して終了します。
-対応したら、同じコマンドをもう一度実行して待ちを続けます。
+<file> を選択中のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
+ユーザーがコメント・返信を書くたびに、内容を 1 行の JSON で出力します。Finish review で終了します。
+zatto が停止・再起動しても、起動を待って自動で再接続します。Ctrl+C で終了します。
+--once は、最初に届いた内容を読みやすい形で表示して終了します。
 reply は、スレッドにこのセッションとして返信します。`;
 
-const LISTEN_REFRESH_MS = 5 * 60 * 1000;
+const RECONNECT_INTERVAL_MS = 2_000;
+
+type FileOptions = {
+  mode: "file";
+  file: string;
+  session: string;
+  once: boolean;
+  open: boolean;
+  port: number;
+};
 
 type ReviewOptions =
-  | {
-      mode: "file";
-      file: string;
-      session: string;
-      json: boolean;
-      open: boolean;
-      port: number;
-    }
-  | { mode: "inbox"; session: string; json: boolean; port: number }
+  | FileOptions
   | {
       mode: "reply";
       threadId: string;
@@ -50,13 +52,18 @@ export interface ReviewCommandDependencies extends ServerClientDependencies {
   stderr: (message: string) => void;
   createWebSocket?: (url: string) => WebSocket;
   onInterrupt?: (handler: () => void) => () => void;
+  reconnectIntervalMs?: number;
 }
 
-interface ThreadReport {
-  entry: { id: string; title: string; path: string };
-  finished: boolean;
+/** One delivered user action with the thread state an LLM needs to answer it. */
+export interface ReviewReport {
+  event: "comment" | "finished";
+  file: { id: string; title: string; path: string };
   threads: ReviewThread[];
 }
+
+type Call = ReturnType<typeof rpc>;
+type Outcome = "done" | "interrupted" | "disconnected";
 
 /**
  * Runs the review commands an LLM uses to receive and answer the user's comments.
@@ -77,56 +84,116 @@ export async function runReviewCommand(
     dependencies.stderr(REVIEW_USAGE);
     return 1;
   }
-  let socket: WebSocket | undefined;
-  let stopInterrupt = () => {};
-  let refresh: ReturnType<typeof setInterval> | undefined;
-  try {
-    const { record } = await connectOrStartServer(options.port, dependencies);
-    const call = rpc(record, dependencies.fetch);
-    if (options.mode === "reply") {
-      await call("review.reply", {
+  if (options.mode === "reply") {
+    try {
+      const { record } = await connectOrStartServer(options.port, dependencies);
+      await rpc(record, dependencies.fetch)("review.reply", {
         threadId: options.threadId,
         author: { kind: "llm", session: options.session },
         body: options.body,
       });
       dependencies.stdout(`返信しました: thread ${options.threadId}`);
       return 0;
+    } catch (error) {
+      dependencies.stderr(errorMessage(error));
+      return 1;
     }
+  }
 
-    socket = (dependencies.createWebSocket ?? ((url) => new WebSocket(url)))(
-      `ws://127.0.0.1:${record.port}/ws`,
-    );
-    const opened = socket;
+  const interruption = createInterruption();
+  const stopInterrupt =
+    dependencies.onInterrupt?.(interruption.trigger) ?? (() => {});
+  try {
+    let record = (await connectOrStartServer(options.port, dependencies))
+      .record;
+    for (let first = true; ; first = false) {
+      const outcome = await follow(
+        record,
+        options,
+        dependencies,
+        first,
+        interruption,
+      );
+      if (outcome === "done") return 0;
+      if (outcome === "interrupted") return 130;
+      dependencies.stderr(
+        "zatto サーバーとの接続が切れました。起動を待って再接続します",
+      );
+      const next = await waitForServer(dependencies, interruption);
+      if (!next) return 130;
+      record = next;
+    }
+  } catch (error) {
+    dependencies.stderr(errorMessage(error));
+    return 1;
+  } finally {
+    stopInterrupt();
+  }
+}
+
+interface Interruption {
+  readonly interrupted: boolean;
+  trigger: () => void;
+  wait: () => Promise<void>;
+}
+
+function createInterruption(): Interruption {
+  let interrupted = false;
+  let wake = () => {};
+  const signal = new Promise<void>((resolve) => {
+    wake = resolve;
+  });
+  return {
+    get interrupted() {
+      return interrupted;
+    },
+    trigger() {
+      interrupted = true;
+      wake();
+    },
+    wait: () => signal,
+  };
+}
+
+/** Keeps the file under review on one server connection and prints what the user does. */
+async function follow(
+  record: ServerRecord,
+  options: FileOptions,
+  dependencies: ReviewCommandDependencies,
+  announce: boolean,
+  interruption: Interruption,
+): Promise<Outcome> {
+  const call = rpc(record, dependencies.fetch);
+  const socket = (
+    dependencies.createWebSocket ?? ((url) => new WebSocket(url))
+  )(`ws://127.0.0.1:${record.port}/ws`);
+  let closed = false;
+  socket.addEventListener("close", () => {
+    closed = true;
+  });
+  try {
     await new Promise<void>((resolve, reject) => {
-      opened.addEventListener("open", () => resolve(), { once: true });
-      opened.addEventListener(
+      socket.addEventListener("open", () => resolve(), { once: true });
+      socket.addEventListener(
         "error",
         () => reject(new Error("zatto サーバーへの通知の接続に失敗しました")),
         { once: true },
       );
     });
-    await call("review.listen", { session: options.session });
-    refresh = setInterval(() => {
-      void call("review.listen", { session: options.session }).catch(
-        () => undefined,
-      );
-    }, LISTEN_REFRESH_MS);
-
-    if (options.mode === "file") {
-      const startedAt = Date.now();
-      const workspaceId = (await call("workspaces.list", {})).activeWorkspaceId;
-      const added = await call("session.add", {
-        paths: [options.file],
-        workspaceId,
-      });
-      const entry = added.resolved[0];
-      if (!entry)
-        throw new Error(`ファイルを登録できませんでした: ${options.file}`);
-      const review = await call("review.start", {
-        workspaceId,
-        entryId: entry.id,
-        session: options.session,
-      });
+    // 確認状態はサーバーのメモリーにだけあるため、接続のたびに張り直す
+    const startedAt = Date.now();
+    const workspaceId = (await call("workspaces.list", {})).activeWorkspaceId;
+    const entry = (
+      await call("session.add", { paths: [options.file], workspaceId })
+    ).resolved[0];
+    if (!entry)
+      throw new Error(`ファイルを登録できませんでした: ${options.file}`);
+    const review = await call("review.start", {
+      workspaceId,
+      entryId: entry.id,
+      session: options.session,
+    });
+    if (announce) {
       const url = new URL(serverUrl(record.port));
       url.searchParams.set("entry", entry.id);
       dependencies.stderr(
@@ -134,115 +201,114 @@ export async function runReviewCommand(
       );
       if (options.open && review.createdAt >= startedAt)
         dependencies.openBrowser(url.href);
-    } else {
-      dependencies.stderr(
-        `${options.session} として、レビュー中のファイルへのユーザーのコメントを待ちます`,
-      );
     }
 
-    const events = await waitForEvents(
-      opened,
-      () => call("review.take", { session: options.session }),
-      options.session,
-      (handler) => {
-        stopInterrupt =
-          dependencies.onInterrupt?.(() => {
-            void call("review.unlisten", { session: options.session })
-              .catch(() => undefined)
-              .finally(handler);
-          }) ?? stopInterrupt;
-      },
-    );
-    if (events === null) {
-      dependencies.stderr("待機をやめました");
-      return 130;
-    }
-    const reports = await collectReports(call, events);
-    dependencies.stdout(
-      options.json
-        ? JSON.stringify({ session: options.session, reports }, null, 2)
-        : formatReports(reports, options.session),
-    );
-    return 0;
+    return await new Promise<Outcome>((resolve, reject) => {
+      let settled = false;
+      let checking = Promise.resolve();
+      const settle = (outcome: Outcome) => {
+        if (settled) return;
+        settled = true;
+        resolve(outcome);
+      };
+      const deliver = async () => {
+        const { events } = await call("review.take", {
+          session: options.session,
+          entryId: entry.id,
+        });
+        const reports = await collectReports(call, events);
+        if (!reports.length) return;
+        if (options.once) {
+          dependencies.stdout(formatReports(reports, options.session));
+          settle("done");
+          return;
+        }
+        for (const report of reports)
+          dependencies.stdout(JSON.stringify(report));
+        // 終えたレビューを再接続で張り直さないよう、終了の通知で待機も終える
+        if (reports.some((report) => report.event === "finished"))
+          settle("done");
+      };
+      const check = () => {
+        checking = checking
+          .then(async () => {
+            if (!settled) await deliver();
+          })
+          .catch((error) => {
+            if (settled) return;
+            if (closed) settle("disconnected");
+            else {
+              settled = true;
+              reject(error);
+            }
+          });
+      };
+      socket.addEventListener("message", (event) => {
+        const message = parseMessage(event.data);
+        if (
+          message?.type === "review:event" &&
+          message.session === options.session
+        )
+          check();
+      });
+      socket.addEventListener("close", () => settle("disconnected"));
+      void interruption.wait().then(() => settle("interrupted"));
+      if (closed) settle("disconnected");
+      check();
+    });
   } catch (error) {
-    dependencies.stderr(errorMessage(error));
-    return 1;
+    if (interruption.interrupted) return "interrupted";
+    if (closed || socket.readyState !== WebSocket.OPEN) return "disconnected";
+    throw error;
   } finally {
-    if (refresh) clearInterval(refresh);
-    stopInterrupt();
-    socket?.close();
+    socket.close();
   }
 }
 
-/** Resolves with queued events, waiting for a notification when none are queued; null when interrupted. */
-async function waitForEvents(
-  socket: WebSocket,
-  take: () => Promise<{ events: ReviewEvent[] }>,
-  session: string,
-  onInterrupt: (handler: () => void) => void,
-): Promise<ReviewEvent[] | null> {
-  return new Promise((resolve, reject) => {
-    let checking = Promise.resolve();
-    let done = false;
-    const check = () => {
-      checking = checking.then(async () => {
-        if (done) return;
-        const { events } = await take();
-        if (events.length && !done) {
-          done = true;
-          resolve(events);
-        }
-      });
-      checking.catch((error) => {
-        done = true;
-        reject(error);
-      });
-    };
-    socket.addEventListener("message", (event) => {
-      const message = parseMessage(event.data);
-      if (message?.type === "review:event" && message.session === session)
-        check();
-    });
-    socket.addEventListener("close", () => {
-      if (done) return;
-      done = true;
-      reject(new Error("待っている間に zatto サーバーが停止しました"));
-    });
-    onInterrupt(() => {
-      done = true;
-      resolve(null);
-    });
-    check();
-  });
+/** Waits until a managed server is running again; null when interrupted. */
+async function waitForServer(
+  dependencies: ReviewCommandDependencies,
+  interruption: Interruption,
+): Promise<ServerRecord | null> {
+  for (;;) {
+    if (interruption.interrupted) return null;
+    try {
+      return await connectToRunningServer(dependencies);
+    } catch {
+      await Promise.race([
+        new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            dependencies.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS,
+          ),
+        ),
+        interruption.wait(),
+      ]);
+    }
+  }
 }
 
 async function collectReports(
-  call: ReturnType<typeof rpc>,
+  call: Call,
   events: ReviewEvent[],
-): Promise<ThreadReport[]> {
-  const reports: ThreadReport[] = [];
-  const byEntry = new Map<string, ReviewEvent[]>();
-  for (const event of events)
-    byEntry.set(event.entryId, [...(byEntry.get(event.entryId) ?? []), event]);
-  for (const [entryId, entryEvents] of byEntry) {
-    const workspaceId = entryEvents[0]?.workspaceId ?? "";
-    const entry: Entry | undefined = (
-      await call("workspaces.get", { id: workspaceId })
-    ).entries.find((item) => item.id === entryId);
+): Promise<ReviewReport[]> {
+  const reports: ReviewReport[] = [];
+  for (const event of events) {
+    const entry = (
+      await call("workspaces.get", { id: event.workspaceId })
+    ).entries.find((item) => item.id === event.entryId);
     if (!entry) continue;
-    const { threads } = await call("review.list", { workspaceId, entryId });
-    const finished = entryEvents.some((event) => event.kind === "finished");
-    const commented = new Set(
-      entryEvents.flatMap((event) =>
-        event.kind === "comment" ? [event.threadId] : [],
-      ),
-    );
+    const { threads } = await call("review.list", {
+      workspaceId: event.workspaceId,
+      entryId: event.entryId,
+    });
     reports.push({
-      entry: { id: entry.id, title: entry.title, path: entry.absPath },
-      finished,
-      threads: finished
-        ? threads.filter((thread) => !thread.resolved)
-        : threads.filter((thread) => commented.has(thread.id)),
+      event: event.kind,
+      file: { id: entry.id, title: entry.title, path: entry.absPath },
+      threads:
+        event.kind === "finished"
+          ? threads.filter((thread) => !thread.resolved)
+          : threads.filter((thread) => thread.id === event.threadId),
     });
   }
   return reports;
@@ -251,15 +317,13 @@ async function collectReports(
 export function parseReviewArgs(args: string[]): ReviewOptions {
   let session: string | undefined;
   let port = DEFAULT_PORT;
-  let json = false;
+  let once = false;
   let open = true;
-  let inbox = false;
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--json") json = true;
+    if (arg === "--once") once = true;
     else if (arg === "--no-open") open = false;
-    else if (arg === "--inbox") inbox = true;
     else if (arg === "--session" || arg === "--port") {
       const value = args[index + 1];
       if (!value || value.startsWith("--"))
@@ -284,11 +348,6 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       );
     return { mode: "reply", threadId, body, session, port };
   }
-  if (inbox) {
-    if (positionals.length)
-      throw new Error("--inbox ではファイルを指定できません");
-    return { mode: "inbox", session, json, port };
-  }
   if (!positionals[0])
     throw new Error("レビューするファイルを指定してください");
   if (positionals.length > 1)
@@ -297,7 +356,7 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     mode: "file",
     file: path.resolve(positionals[0]),
     session,
-    json,
+    once,
     open,
     port,
   };
@@ -305,21 +364,23 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
 
 /** Formats reports so an LLM can address each thread by its ID and quoted text. */
 export function formatReports(
-  reports: ThreadReport[],
+  reports: ReviewReport[],
   session: string,
 ): string {
   const lines: string[] = [];
   for (const report of reports) {
     if (lines.length) lines.push("");
     lines.push(
-      report.finished
-        ? `ユーザーがレビューを終えました: ${report.entry.title} (${report.entry.path})`
-        : `ユーザーのコメント: ${report.entry.title} (${report.entry.path})`,
+      report.event === "finished"
+        ? `ユーザーがレビューを終えました: ${report.file.title} (${report.file.path})`
+        : `ユーザーのコメント: ${report.file.title} (${report.file.path})`,
     );
-    if (report.finished && !report.threads.length)
-      lines.push("未解決のコメントはありません。");
-    else if (report.finished)
-      lines.push(`未解決のスレッド: ${report.threads.length} 件`);
+    if (report.event === "finished")
+      lines.push(
+        report.threads.length
+          ? `未解決のスレッド: ${report.threads.length} 件`
+          : "未解決のコメントはありません。",
+      );
     for (const thread of report.threads) {
       lines.push("", `[thread ${thread.id}]`);
       lines.push(
@@ -334,7 +395,6 @@ export function formatReports(
   lines.push(
     "",
     `返信: zatto review reply <thread-id> "<本文>" --session ${session}`,
-    "対応したら、同じ zatto review のコマンドをもう一度実行して待ちを続けてください。",
   );
   return lines.join("\n");
 }

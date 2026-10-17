@@ -203,12 +203,12 @@ configuration changes are intentionally outside `zatto`.
 
 The MCP tools never start the viewer and report an error when it is not running.
 
-To discuss a file with an LLM, the LLM waits with `zatto review <file> --session <id>`
-or `zatto review --inbox --session <id>`. Press **Start review** on a file to choose a
-waiting session, or let the LLM start the review; the file list labels it In review.
-Each comment or reply you write returns the waiting command with the thread, the LLM
-answers with `zatto review reply` or `reply_review_thread` and waits again, and
-**Finish review** ends the review.
+To discuss a file with an LLM, press **Ask an LLM to review** in the viewer and paste
+the copied request into an LLM conversation, or have the LLM run
+`zatto review <file> --session <id>` in the background. The command keeps waiting and
+prints one JSON line each time you comment or reply on the file; the LLM answers with
+`zatto review reply` or `reply_review_thread`. It reconnects when zatto restarts, and
+**Finish review** ends it. The file list shows unresolved thread counts.
 
 Register the server once in your MCP client. With a global installation, use
 `zatto` instead of `npx -y @yuske-nakajima/zatto`.
@@ -425,7 +425,7 @@ IDs atomically without deleting files. Operations that change or export files re
 `workspaceId`, the target workspace, which need not be the selected one. Native pickers,
 import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 35 methods, parameters, results and errors.
+The built-in API documentation describes all 33 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 

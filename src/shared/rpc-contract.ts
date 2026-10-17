@@ -10,7 +10,7 @@ import type {
   ActiveReview,
   ReviewAuthor,
   ReviewEvent,
-  ReviewListener,
+  ReviewStates,
   ReviewThread,
   TextAnchor,
 } from "./review.js";
@@ -189,18 +189,10 @@ export interface RpcMethods {
   };
   "review.states": {
     params: RequestContext;
-    result: { reviews: ActiveReview[]; listeners: ReviewListener[] };
-  };
-  "review.listen": {
-    params: RequestContext & { session: string };
-    result: ReviewListener;
-  };
-  "review.unlisten": {
-    params: RequestContext & { session: string };
-    result: null;
+    result: ReviewStates;
   };
   "review.take": {
-    params: RequestContext & { session: string };
+    params: RequestContext & { session: string; entryId?: string };
     result: { events: ReviewEvent[] };
   };
   "search.query": {

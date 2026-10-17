@@ -2,7 +2,7 @@ import { expect } from "vitest";
 
 const REVIEW_DEFAULTS: Record<string, unknown> = {
   "review.list": { threads: [] },
-  "review.states": { reviews: [], listeners: [] },
+  "review.states": { reviews: [], openThreadCounts: {} },
 };
 
 /**

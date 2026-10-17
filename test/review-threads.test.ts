@@ -188,12 +188,9 @@ describe("review threads", () => {
 
   test("レビュー中のファイルへのユーザーのコメントだけを、送り先のセッションへ届ける", async () => {
     const { commands, broadcast, entry } = await fixture();
-    await commands.execute("review.listen", { session: "zatto:a99c" }, []);
-    await expect(
-      commands.execute("review.states", {}, []),
-    ).resolves.toMatchObject({
+    await expect(commands.execute("review.states", {}, [])).resolves.toEqual({
       reviews: [],
-      listeners: [{ session: "zatto:a99c" }],
+      openThreadCounts: {},
     });
     const before = await commands.execute(
       "review.create",
@@ -277,11 +274,57 @@ describe("review threads", () => {
       commands.execute("review.finish", { reviewId: review.id }, []),
     ).rejects.toMatchObject({ code: 1001 });
 
-    await commands.execute("review.unlisten", { session: "zatto:a99c" }, []);
     await expect(commands.execute("review.states", {}, [])).resolves.toEqual({
       reviews: [],
-      listeners: [],
+      openThreadCounts: { [entry.id]: 2 },
     });
+    await commands.execute(
+      "review.resolve",
+      { threadId: before.id, resolved: true },
+      [],
+    );
+    await expect(
+      commands.execute("review.states", {}, []),
+    ).resolves.toMatchObject({ openThreadCounts: { [entry.id]: 1 } });
+    expect(broadcast).toHaveBeenCalledWith({
+      type: "review:states",
+      reviews: [],
+      openThreadCounts: { [entry.id]: 1 },
+    });
+  });
+
+  test("ファイルを指定した受け取りは、そのファイルのイベントだけを取り出す", async () => {
+    const { store, commands, entry } = await fixture();
+    const otherFile = path.join(dir, "other.md");
+    await writeFile(otherFile, "# Other\n");
+    const [other] = await store.addEntries([otherFile]);
+    for (const entryId of [entry.id, other.id]) {
+      await commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId, session: "s" },
+        [],
+      );
+      await commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId,
+          anchor: null,
+          author: USER,
+          body: "x",
+        },
+        [],
+      );
+    }
+
+    const mine = await commands.execute(
+      "review.take",
+      { session: "s", entryId: other.id },
+      [],
+    );
+    expect(mine.events.map((event) => event.entryId)).toEqual([other.id]);
+    const rest = await commands.execute("review.take", { session: "s" }, []);
+    expect(rest.events.map((event) => event.entryId)).toEqual([entry.id]);
   });
 
   test("別のセッションを選ぶと、レビューの送り先が切り替わる", async () => {

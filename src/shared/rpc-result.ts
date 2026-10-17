@@ -108,9 +108,6 @@ function activeReview(value: unknown): boolean {
     number(value.createdAt)
   );
 }
-function reviewListener(value: unknown): boolean {
-  return object(value) && text(value.session) && number(value.lastSeenAt);
-}
 function reviewEvent(value: unknown): boolean {
   return (
     object(value) &&
@@ -207,14 +204,12 @@ export function isRpcResult<M extends RpcMethod>(
       return (
         object(value) &&
         list(value.reviews, activeReview) &&
-        list(value.listeners, reviewListener)
+        object(value.openThreadCounts) &&
+        Object.values(value.openThreadCounts).every(number)
       );
-    case "review.listen":
-      return reviewListener(value);
     case "review.take":
       return object(value) && list(value.events, reviewEvent);
     case "review.finish":
-    case "review.unlisten":
       return value === null;
     case "markdown.setTask":
       return object(value) && text(value.revision);

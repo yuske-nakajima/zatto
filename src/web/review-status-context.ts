@@ -1,11 +1,27 @@
 import { createContext, useContext } from "react";
 
-const ReviewingEntriesContext = createContext<ReadonlySet<string>>(new Set());
+/** Review information shown on file list rows. */
+export interface ReviewFileStates {
+  reviewing: ReadonlySet<string>;
+  openThreadCounts: Readonly<Record<string, number>>;
+}
 
-/** Provides the entries under review to every file list row. */
-export const ReviewingEntriesProvider = ReviewingEntriesContext.Provider;
+const ReviewFileStatesContext = createContext<ReviewFileStates>({
+  reviewing: new Set(),
+  openThreadCounts: {},
+});
 
-/** Whether the user is reviewing the entry with an LLM session. */
-export function useIsReviewing(entryId: string): boolean {
-  return useContext(ReviewingEntriesContext).has(entryId);
+/** Provides review information to every file list row. */
+export const ReviewFileStatesProvider = ReviewFileStatesContext.Provider;
+
+/** Whether the entry is under review and how many threads are unresolved. */
+export function useReviewFileState(entryId: string): {
+  isReviewing: boolean;
+  openThreads: number;
+} {
+  const states = useContext(ReviewFileStatesContext);
+  return {
+    isReviewing: states.reviewing.has(entryId),
+    openThreads: states.openThreadCounts[entryId] ?? 0,
+  };
 }

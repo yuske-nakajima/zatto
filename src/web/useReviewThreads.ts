@@ -2,11 +2,11 @@ import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import type { ServerMessage } from "../shared/protocol.js";
 import type {
   ActiveReview,
-  ReviewListener,
   ReviewThread,
   TextAnchor,
 } from "../shared/review.js";
 import { rpcCall } from "../shared/rpc-client.js";
+import type { ReviewFileStates } from "./review-status-context.js";
 import { subscribeServerMessages } from "./server-messages.js";
 
 const USER = { kind: "user" } as const;
@@ -15,11 +15,8 @@ export interface ReviewThreads {
   threads: ReviewThread[];
   /** The review of the selected entry, if the user is reviewing it with an LLM session. */
   activeReview: ActiveReview | null;
-  /** Entries under review in any workspace, for labelling the file list. */
-  reviewingEntryIds: ReadonlySet<string>;
-  /** LLM sessions waiting to receive a review. */
-  listeners: ReviewListener[];
-  startReview: (session: string) => Promise<boolean>;
+  /** Entries under review and unresolved thread counts, for labelling the file list. */
+  fileStates: ReviewFileStates;
   create: (anchor: TextAnchor | null, body: string) => Promise<boolean>;
   reply: (threadId: string, body: string) => Promise<boolean>;
   edit: (threadId: string, commentId: string, body: string) => Promise<boolean>;
@@ -42,7 +39,9 @@ export function useReviewThreads(
 ): ReviewThreads {
   const [threads, setThreads] = useState<ReviewThread[]>([]);
   const [reviews, setReviews] = useState<ActiveReview[]>([]);
-  const [listeners, setListeners] = useState<ReviewListener[]>([]);
+  const [openThreadCounts, setOpenThreadCounts] = useState<
+    Record<string, number>
+  >({});
 
   const refresh = useCallback(async () => {
     if (!workspaceId || !entryId) {
@@ -69,7 +68,7 @@ export function useReviewThreads(
       void refresh();
     if (message.type === "review:states") {
       setReviews(message.reviews);
-      setListeners(message.listeners);
+      setOpenThreadCounts(message.openThreadCounts);
     }
   });
 
@@ -84,7 +83,7 @@ export function useReviewThreads(
     void rpcCall("review.states", {})
       .then((result) => {
         setReviews(result.reviews);
-        setListeners(result.listeners);
+        setOpenThreadCounts(result.openThreadCounts);
       })
       .catch(() => undefined);
   }, [isSessionLoaded]);
@@ -106,13 +105,10 @@ export function useReviewThreads(
   return {
     threads,
     activeReview: reviews.find((review) => review.entryId === entryId) ?? null,
-    reviewingEntryIds: new Set(reviews.map((review) => review.entryId)),
-    listeners,
-    startReview: (session) =>
-      run(async () => {
-        if (!workspaceId || !entryId) throw new Error("No entry");
-        await rpcCall("review.start", { workspaceId, entryId, session });
-      }, "Could not start the review."),
+    fileStates: {
+      reviewing: new Set(reviews.map((review) => review.entryId)),
+      openThreadCounts,
+    },
     create: (anchor, body) =>
       run(async () => {
         if (!workspaceId || !entryId) throw new Error("No entry");

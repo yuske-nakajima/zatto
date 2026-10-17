@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { ReviewThread } from "../src/shared/review.js";
 import { App } from "../src/web/App.js";
+import { reviewRequestText } from "../src/web/ReviewLayer.js";
 import { rpcFixture } from "./rpc-client-fixture.js";
 
 const entries: Entry[] = [
@@ -40,7 +41,7 @@ class FakeWebSocket extends EventTarget {
 
 describe("レビューのコメント", () => {
   let calls: Array<{ method: string; params: Record<string, unknown> }>;
-  let states: { reviews: unknown[]; listeners: unknown[] };
+  let states: { reviews: unknown[]; openThreadCounts: Record<string, number> };
 
   beforeEach(() => {
     states = {
@@ -53,7 +54,7 @@ describe("レビューのコメント", () => {
           createdAt: 1,
         },
       ],
-      listeners: [],
+      openThreadCounts: { plan: 1 },
     };
     window.history.replaceState(null, "", "/?entry=plan");
     vi.stubGlobal("WebSocket", FakeWebSocket);
@@ -125,14 +126,16 @@ describe("レビューのコメント", () => {
     );
   });
 
-  test("レビュー中のファイルにラベルと送り先を表示し、レビューを終えられる", async () => {
+  test("レビュー中のファイルにスレッド数とラベルを表示し、レビューを終えられる", async () => {
     render(<App />);
     await screen.findByTitle("Plan preview");
 
     expect(
       (await screen.findByText("In review with zatto:a99c")).textContent,
     ).toBe("In review with zatto:a99c");
-    expect(screen.getByText("In review").className).toBe("entry-review-label");
+    const label = document.querySelector(".entry-review-label");
+    expect(label?.textContent).toBe("1 · In review");
+    expect(label?.classList.contains("entry-review-label--active")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Finish review" }));
 
     await waitFor(() =>
@@ -143,43 +146,60 @@ describe("レビューのコメント", () => {
     );
   });
 
-  test("待機中のセッションを選んでレビューを始める", async () => {
-    states = {
-      reviews: [],
-      listeners: [{ session: "zatto:inbox", lastSeenAt: Date.now() }],
-    };
+  test("レビュー中でないファイルは、LLM に貼る依頼文をコピーできる", async () => {
+    states = { reviews: [], openThreadCounts: { plan: 2 } };
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
     render(<App />);
     await screen.findByTitle("Plan preview");
 
+    expect(
+      (
+        await screen.findByText(
+          (_, element) =>
+            element?.classList.contains("entry-review-label") ?? false,
+        )
+      ).textContent,
+    ).toBe("2");
     fireEvent.click(
-      await screen.findByRole("button", { name: "Start review" }),
+      screen.getByRole("button", { name: "Ask an LLM to review" }),
     );
-    fireEvent.click(screen.getByRole("menuitem", { name: /zatto:inbox/ }));
 
-    await waitFor(() =>
-      expect(calls).toContainEqual({
-        method: "review.start",
-        params: {
-          workspaceId: "default",
-          entryId: "plan",
-          session: "zatto:inbox",
-        },
-      }),
+    await screen.findByRole("button", {
+      name: "Copied — paste it into an LLM",
+    });
+    expect(writeText).toHaveBeenCalledWith(reviewRequestText("/work/plan.md"));
+    expect(reviewRequestText("/work/plan.md")).toContain(
+      'zatto review "/work/plan.md" --session <id>',
     );
-    expect(screen.queryByText("In review")).toBeNull();
   });
 
-  test("待機中のセッションがなければ、待たせる方法を案内する", async () => {
-    states = { reviews: [], listeners: [] };
+  test("クリップボードが使えないときは、依頼文を表示する", async () => {
+    states = { reviews: [], openThreadCounts: {} };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn(async () => {
+          throw new Error("denied");
+        }),
+      },
+    });
     render(<App />);
     await screen.findByTitle("Plan preview");
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Start review" }),
+      await screen.findByRole("button", { name: "Ask an LLM to review" }),
     );
 
     expect(
-      screen.getByRole("menu", { name: "LLM sessions" }).textContent,
-    ).toContain("No LLM session is waiting.");
+      (
+        (await screen.findByLabelText(
+          "Request for an LLM",
+        )) as HTMLTextAreaElement
+      ).value,
+    ).toBe(reviewRequestText("/work/plan.md"));
   });
 });

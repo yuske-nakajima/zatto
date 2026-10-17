@@ -167,6 +167,7 @@ export function Viewer({
         />
         {selectedEntry && review && (
           <ReviewLayer
+            filePath={selectedEntry.absPath}
             iframeRef={iframeRef}
             canvasRef={canvasRef}
             frameKey={`${selectedEntry.id}:${reloadVersion}`}

@@ -10,6 +10,7 @@ import type {
   ReviewThread,
   TextAnchor,
 } from "../shared/review.js";
+import { BubbleIcon } from "./BubbleIcon.js";
 import { createTextAnchor, locateTextAnchor } from "./review-anchor.js";
 import type { ReviewThreads } from "./useReviewThreads.js";
 import "./review.css";
@@ -19,6 +20,7 @@ const ACTIVE_HIGHLIGHT = "zatto-review-active";
 const STYLE_ATTRIBUTE = "data-zatto-review-styles";
 
 interface ReviewLayerProps {
+  filePath: string;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   canvasRef: RefObject<HTMLDivElement | null>;
   frameKey: string;
@@ -50,6 +52,7 @@ interface HighlightWindow {
  * Highlights are drawn inside the frame so they scroll with the text; popovers are drawn here and repositioned.
  */
 export function ReviewLayer({
+  filePath,
   iframeRef,
   canvasRef,
   frameKey,
@@ -58,7 +61,9 @@ export function ReviewLayer({
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isRecipientMenuOpen, setIsRecipientMenuOpen] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
   const [layoutVersion, setLayoutVersion] = useState(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: フレームの差し替えごとに読み直す
@@ -182,6 +187,30 @@ export function ReviewLayer({
     return { left: Math.min(Math.max(8, left), maxLeft), top: top + 6 };
   }
 
+  /** Places a marker in the right margin of the preview, level with the first line of the commented text. */
+  function markerPosition(range: Range | undefined): Position | null {
+    const frame = iframeRef.current;
+    const canvas = canvasRef.current;
+    if (!range || !frame || !canvas) return null;
+    const rect = range.getClientRects()[0];
+    if (!rect) return null;
+    const frameRect = frame.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    const top =
+      frameRect.top -
+      canvasRect.top +
+      frame.clientTop +
+      rect.top +
+      rect.height / 2;
+    if (
+      top < frameRect.top - canvasRect.top ||
+      top > frameRect.bottom - canvasRect.top
+    )
+      return null;
+    // 本文に重ならないよう、スクロールバーの内側の右端に寄せる
+    return { left: frameRect.right - canvasRect.left - 56, top };
+  }
+
   void layoutVersion;
   const thread =
     popover?.kind === "thread"
@@ -194,6 +223,18 @@ export function ReviewLayer({
         ? positionOf(located.get(thread.id))
         : null;
   const openCount = review.threads.filter((item) => !item.resolved).length;
+  // 同じ行の印が重ならないよう、高さが近いスレッドを 1 つの印にまとめる
+  const markerGroups: Array<{ position: Position; threadIds: string[] }> = [];
+  for (const item of review.threads) {
+    if (item.resolved) continue;
+    const position = markerPosition(located.get(item.id));
+    if (!position) continue;
+    const group = markerGroups.find(
+      (candidate) => Math.abs(candidate.position.top - position.top) < 12,
+    );
+    if (group) group.threadIds.push(item.id);
+    else markerGroups.push({ position, threadIds: [item.id] });
+  }
 
   return (
     <>
@@ -216,48 +257,66 @@ export function ReviewLayer({
           <button
             type="button"
             className="review-panel-toggle"
-            aria-expanded={isRecipientMenuOpen}
-            data-status-description="Review this file with a waiting LLM session; your comments are sent to it."
-            onClick={() => setIsRecipientMenuOpen((open) => !open)}
+            data-status-description="Copy a request to paste into an LLM conversation; that conversation then answers your comments on this file."
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(
+                  reviewRequestText(filePath),
+                );
+                setCopyState("copied");
+                setTimeout(() => setCopyState("idle"), 2000);
+              } catch {
+                // クリップボードが使えない環境では、依頼文を表示して手で写せるようにする
+                setCopyState("failed");
+              }
+            }}
           >
-            Start review
+            {copyState === "copied"
+              ? "Copied — paste it into an LLM"
+              : copyState === "failed"
+                ? "Copy the request below"
+                : "Ask an LLM to review"}
           </button>
-          {isRecipientMenuOpen && (
-            <div className="review-panel" role="menu" aria-label="LLM sessions">
-              {review.listeners.length === 0 ? (
-                <p className="review-empty">
-                  No LLM session is waiting. Ask an LLM to run{" "}
-                  <code>zatto review --inbox --session &lt;id&gt;</code>.
-                </p>
-              ) : (
-                <ol>
-                  {review.listeners.map((listener) => (
-                    <li key={listener.session}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="review-panel-item"
-                        onClick={async () => {
-                          if (await review.startReview(listener.session))
-                            setIsRecipientMenuOpen(false);
-                        }}
-                      >
-                        <span className="review-panel-body">
-                          {listener.session}
-                        </span>
-                        <span className="review-panel-meta">
-                          Waiting since{" "}
-                          {new Date(listener.lastSeenAt).toLocaleTimeString()}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              )}
+          {copyState === "failed" && (
+            <div className="review-panel">
+              <textarea
+                className="review-request-text"
+                aria-label="Request for an LLM"
+                readOnly
+                rows={6}
+                value={reviewRequestText(filePath)}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button
+                type="button"
+                className="review-text-button"
+                onClick={() => setCopyState("idle")}
+              >
+                Close
+              </button>
             </div>
           )}
         </div>
       )}
+      {markerGroups.map((group) => (
+        <button
+          key={group.threadIds.join(" ")}
+          type="button"
+          className="review-marker"
+          style={group.position}
+          aria-label={`Open comment thread (${group.threadIds.length} on this line)`}
+          data-status-description="Open the comment thread on this line."
+          onClick={() =>
+            setPopover({
+              kind: "thread",
+              threadId: group.threadIds[0] ?? "",
+            })
+          }
+        >
+          <BubbleIcon size={11} />
+          {group.threadIds.length}
+        </button>
+      ))}
       {popover?.kind === "selection" && popoverPosition && (
         <button
           type="button"
@@ -529,6 +588,17 @@ function CommentForm({
 
 function Quote({ text }: { text: string }) {
   return <blockquote className="review-quote">{text}</blockquote>;
+}
+
+/** A request any LLM conversation can act on; it keeps the review command running for this file. */
+export function reviewRequestText(filePath: string): string {
+  const quoted = JSON.stringify(filePath);
+  return [
+    "Please review this document with me in zatto.",
+    `Run \`zatto review ${quoted} --session <id>\` in the background and keep it running, using an ID for this conversation as <id>.`,
+    "Each JSON line it prints is a comment I wrote. Read the document, answer in that thread with",
+    `\`zatto review reply <thread-id> "<reply>" --session <id>\`, and keep the command running until it exits when I finish the review.`,
+  ].join("\n");
 }
 
 function authorLabel(author: ReviewAuthor): string {

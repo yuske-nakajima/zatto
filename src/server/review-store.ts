@@ -53,6 +53,15 @@ export class ReviewStore {
     );
   }
 
+  /** Counts unresolved threads per entry. */
+  openCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const thread of this.threads)
+      if (!thread.resolved)
+        counts[thread.entryId] = (counts[thread.entryId] ?? 0) + 1;
+    return counts;
+  }
+
   /** Returns a detached thread. */
   get(threadId: string): ReviewThread | undefined {
     const thread = this.threads.find((item) => item.id === threadId);

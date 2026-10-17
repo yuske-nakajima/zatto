@@ -252,13 +252,54 @@
 }
 
 .entry-review-label {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   margin-top: var(--spacing-2);
   padding: 1px 6px;
   border-radius: var(--radius-full);
-  background: rgb(250 204 21 / 25%);
-  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
   font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.entry-review-label--active {
+  background: rgb(250 204 21 / 25%);
+  color: var(--color-text-primary);
+}
+
+.review-marker {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  transform: translateY(-50%);
+  border: 1px solid rgb(250 204 21);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 15%);
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.review-request-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font:
+    0.75rem / 1.5 "Geist Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+  resize: none;
 }

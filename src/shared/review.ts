@@ -35,12 +35,6 @@ export interface ActiveReview {
   createdAt: number;
 }
 
-/** An LLM session waiting through `zatto review`, offered to the user as a review recipient. */
-export interface ReviewListener {
-  session: string;
-  lastSeenAt: number;
-}
-
 /** Something the waiting LLM session must handle: a new user comment, or the user finishing a review. */
 export type ReviewEvent =
   | {
@@ -61,6 +55,10 @@ export const REVIEW_LIMITS = {
   bodyLength: 10_000,
   anchorTextLength: 2_000,
   contextLength: 64,
-  /** Listeners not seen for this long are not offered as recipients. */
-  listenerTtlMs: 30 * 60 * 1000,
 } as const;
+
+/** Files under review and the number of unresolved threads per entry. */
+export interface ReviewStates {
+  reviews: ActiveReview[];
+  openThreadCounts: Record<string, number>;
+}
