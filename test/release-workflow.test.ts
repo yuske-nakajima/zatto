@@ -10,8 +10,8 @@ import {
 afterEach(cleanupReleaseFixtures);
 
 describe("release workflow external boundaries", () => {
-  test("copies approved notes to a draft, then publishes npm before GitHub", async () => {
-    const { run, log, releaseFile } = await createReleaseFixture({
+  test("updates existing release notes and publishes with Contents write permission", async () => {
+    const { run, log, releaseFile, sha } = await createReleaseFixture({
       staleNotes: true,
     });
     run("validate.mjs");
@@ -23,6 +23,7 @@ describe("release workflow external boundaries", () => {
       body: notes,
       draft: false,
       tag_name: "v2.0.0",
+      target_commitish: sha,
     });
   });
   test("resumes an identical npm artifact without republishing", async () => {
