@@ -1,4 +1,6 @@
 import { Marked } from "marked";
+import { MARKDOWN_TASK_MESSAGE } from "../shared/markdown-task-message.js";
+import { findMarkdownTasks, markdownRevision } from "./markdown-tasks.js";
 
 /** Published paths of the bundled theme and diagram renderer under /assets. */
 export const MARKDOWN_VENDOR_ASSETS = {
@@ -7,27 +9,47 @@ export const MARKDOWN_VENDOR_ASSETS = {
   mermaid: "/assets/vendor/mermaid.min.js",
 } as const;
 
-const markdown = new Marked({
-  gfm: true,
-  renderer: {
-    code({ text, lang }) {
-      if (lang?.trim().toLowerCase() !== "mermaid") return false;
-      return `<pre class="mermaid">${escapeHtml(text)}</pre>\n`;
+const TASK_ATTRIBUTE = /\sdata-task="\d+"/g;
+
+function renderBody(source: string): { body: string; editableTasks: boolean } {
+  const rendered: boolean[] = [];
+  const markdown = new Marked({
+    gfm: true,
+    renderer: {
+      code({ text, lang }) {
+        if (lang?.trim().toLowerCase() !== "mermaid") return false;
+        return `<pre class="mermaid">${escapeHtml(text)}</pre>\n`;
+      },
+      checkbox({ checked }) {
+        rendered.push(checked);
+        return `<input type="checkbox" data-task="${rendered.length - 1}"${checked ? " checked" : ""} disabled> `;
+      },
     },
-  },
-});
+  });
+  const body = markdown.parse(source, { async: false });
+  const tasks = findMarkdownTasks(source);
+  const editableTasks =
+    rendered.length > 0 &&
+    rendered.length === tasks.length &&
+    tasks.every((task, index) => task.checked === rendered[index]);
+  return {
+    body: editableTasks ? body : body.replace(TASK_ATTRIBUTE, ""),
+    editableTasks,
+  };
+}
 
 /**
- * Renders a Markdown file as a standalone, read-only HTML document.
+ * Renders a Markdown file as a standalone HTML document whose only editable part is task checkboxes.
  * Relative links and images resolve against the entry URL, so the viewer's asset route serves them.
  * Embedded HTML is kept as written, matching how registered HTML files are displayed.
+ * Task checkboxes stay disabled unless each one maps to a task marker found in the source.
  * @param source - Markdown text
  * @param title - Display title
  * @returns Complete HTML document
  * @throws Never
  */
 export function renderMarkdownDocument(source: string, title: string): string {
-  const body = markdown.parse(source, { async: false });
+  const { body, editableTasks } = renderBody(source);
   const hasDiagram = body.includes('<pre class="mermaid">');
   return `<!doctype html>
 <html>
@@ -49,9 +71,9 @@ body { background-color: Canvas; }
 </style>
 </head>
 <body>
-<article class="markdown-body">
+<article class="markdown-body" data-revision="${markdownRevision(source)}">
 ${body}</article>
-${hasDiagram ? diagramScript() : ""}</body>
+${hasDiagram ? diagramScript() : ""}${editableTasks ? taskScript() : ""}</body>
 </html>
 `;
 }
@@ -88,6 +110,41 @@ function diagramScript(): string {
   }
   scheme.addEventListener("change", () => void render());
   void render();
+})();
+</script>
+`;
+}
+
+/** Forwards checkbox changes to the viewer, which saves them through the shared RPC client. */
+function taskScript(): string {
+  return `<script>
+(() => {
+  // 単独で開いたページには保存先の画面がないため、チェックボックスは無効のままにする
+  if (window.parent === window) return;
+  const article = document.querySelector("article.markdown-body");
+  const entryId = decodeURIComponent(location.pathname.split("/")[2] ?? "");
+  const inputs = [...document.querySelectorAll("input[data-task]")];
+  for (const input of inputs) {
+    input.disabled = false;
+    input.addEventListener("change", () => {
+      for (const other of inputs) other.disabled = true;
+      window.parent.postMessage({
+        type: "${MARKDOWN_TASK_MESSAGE.request}",
+        entryId,
+        index: Number(input.dataset.task),
+        checked: input.checked,
+        revision: article.dataset.revision,
+      }, location.origin);
+    });
+  }
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin || event.source !== window.parent) return;
+    const result = event.data;
+    if (result?.type !== "${MARKDOWN_TASK_MESSAGE.result}") return;
+    if (!result.ok) return location.reload();
+    article.dataset.revision = result.revision;
+    for (const input of inputs) input.disabled = false;
+  });
 })();
 </script>
 `;

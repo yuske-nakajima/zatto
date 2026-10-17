@@ -145,6 +145,8 @@ export function isRpcResult<M extends RpcMethod>(
       }
     case "search.query":
       return search(value);
+    case "markdown.setTask":
+      return object(value) && text(value.revision);
     case "session.setFavorite":
     case "session.reorder":
     case "session.removeMany":

@@ -31,6 +31,7 @@
           <tr><td>Select a file</td><td><code>GET /f/:id/</code></td><td>Loads the HTML in the preview iframe; relative resources use <code>GET /f/:id/*</code>.</td></tr>
           <tr><td>Open a Docs page</td><td><code>GET /docs/*</code></td><td>Loads the selected locale and slug in a same-origin iframe without creating a session entry.</td></tr>
           <tr><td>Receive session or file changes</td><td><code>WS /ws</code></td><td>Updates the file panel, preview, and search state.</td></tr>
+          <tr><td>Toggle a Markdown task checkbox</td><td><code>markdown.setTask</code></td><td>Writes the checkbox state to the file; when the file changed, reloads the preview with its latest content.</td></tr>
           <tr><td>Search files</td><td><code>search.query</code></td><td>Shows fixed-string source matches and truncation status.</td></tr>
           <tr><td>Select HTML or Markdown files</td><td><code>session.pickFiles</code></td><td>Opens the native file dialog and selects the first added entry.</td></tr>
           <tr><td>Add folder…</td><td><code>session.pickDirectory</code></td><td>Uses the selected direct or recursive scope and selects the first added entry.</td></tr>

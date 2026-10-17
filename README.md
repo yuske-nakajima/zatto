@@ -74,7 +74,9 @@ On macOS, add individual `.html`, `.htm`, `.md` or `.markdown` files with
 **+ Add**, **Select HTML or Markdown files**, or <kbd>Command</kbd>+<kbd>O</kbd>.
 
 Markdown files are shown read-only with GitHub-flavored tables, task lists and
-code blocks. The light or dark theme follows the system setting, and `mermaid`
+code blocks. Task list checkboxes can be toggled in the preview; only the
+`[ ]` or `[x]` is written back, and nothing is written if the file changed
+since it was shown. The light or dark theme follows the system setting, and `mermaid`
 code blocks are drawn as diagrams. Relative images and links resolve from the
 file's folder. The themes and the diagram renderer are bundled, so no network
 connection is needed.
@@ -415,7 +417,7 @@ IDs atomically without deleting files. Operations that change or export files re
 `workspaceId`, the target workspace, which need not be the selected one. Native pickers,
 import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 22 methods, parameters, results and errors.
+The built-in API documentation describes all 23 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 

@@ -25,6 +25,7 @@ export const RPC_ERROR = {
   pickerUnavailable: 1004,
   busy: 1005,
   searchLimit: 1006,
+  conflict: 1007,
 } as const;
 /** Empty named parameters. */
 export type EmptyParams = Record<string, never>;
@@ -123,6 +124,15 @@ export interface RpcMethods {
   "agentContext.set": {
     params: WorkspaceParams & BrowserAgentContext;
     result: null;
+  };
+  "markdown.setTask": {
+    params: WorkspaceParams & {
+      id: string;
+      index: number;
+      checked: boolean;
+      revision: string;
+    };
+    result: { revision: string };
   };
   "search.query": {
     params: RequestContext & { query: string };

@@ -64,6 +64,14 @@ const schemas = {
     view: z.enum(["preview", "search", "docs"]),
     workspaceId,
   }),
+  "markdown.setTask": z.strictObject({
+    ...guards,
+    workspaceId,
+    id,
+    index: z.number().int().min(0),
+    checked: z.boolean(),
+    revision: id,
+  }),
   "search.query": z.strictObject({ ...guards, query: z.string() }),
 } satisfies Record<RpcMethod, z.ZodType>;
 /**

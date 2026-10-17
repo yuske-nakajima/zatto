@@ -31,6 +31,7 @@
           <tr><td>ファイルを選択</td><td><code>GET /f/:id/</code></td><td>プレビューiframeへHTML、またはHTMLへ変換したMarkdownを読み込みます。相対リソースには<code>GET /f/:id/*</code>を使います。</td></tr>
           <tr><td>Docsページを開く</td><td><code>GET /docs/*</code></td><td>セッションエントリを作らず、選択した言語とページを同一オリジンのiframeへ読み込みます。</td></tr>
           <tr><td>セッション・ファイル変更を受信</td><td><code>WS /ws</code></td><td>ファイルパネル、プレビュー、検索状態を更新します。</td></tr>
+          <tr><td>Markdownのタスクのチェックを切り替え</td><td><code>markdown.setTask</code></td><td>チェックの状態をファイルへ書き込みます。ファイルが変更されていた場合は、最新の内容でプレビューを読み直します。</td></tr>
           <tr><td>ファイルを検索</td><td><code>search.query</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>
           <tr><td>Select HTML or Markdown files</td><td><code>session.pickFiles</code></td><td>ネイティブファイル選択を開き、追加した最初のエントリを選択します。</td></tr>
           <tr><td>Add folder…</td><td><code>session.pickDirectory</code></td><td>選択した直下・再帰範囲を使い、追加した最初のエントリを選択します。</td></tr>
