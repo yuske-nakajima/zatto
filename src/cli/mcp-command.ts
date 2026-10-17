@@ -1,8 +1,11 @@
-import { MCP_USAGE, serveZattoMcp } from "../mcp/server.js";
-import type { AgentContext } from "../shared/agent-context.js";
+import {
+  MCP_USAGE,
+  serveZattoMcp,
+  type ZattoConnection,
+} from "../mcp/server.js";
 
 interface McpCommandDependencies {
-  readContext: () => Promise<AgentContext>;
+  connect: () => Promise<ZattoConnection>;
   stdout: (message: string) => void;
   stderr: (message: string) => void;
   serve?: typeof serveZattoMcp;
@@ -18,7 +21,7 @@ export async function runMcpCommand(
   }
   if (args.length === 1 && args[0] === "serve") {
     try {
-      (dependencies.serve ?? serveZattoMcp)(dependencies.readContext);
+      (dependencies.serve ?? serveZattoMcp)(dependencies.connect);
       return 0;
     } catch (error) {
       dependencies.stderr(

@@ -65,6 +65,15 @@ export class WorkspaceStore {
       })),
     };
   }
+  /**
+   * Returns a detached copy of any workspace without changing the active selection.
+   * @param id - Workspace ID
+   * @returns Workspace name and ordered entries
+   * @throws WorkspaceError when the ID does not exist
+   */
+  getWorkspace(id: string): Workspace {
+    return structuredClone(this.requireWorkspace(id));
+  }
   /** Returns an entry in the active collection. */
   getEntry(id: string): Entry | undefined {
     const entry = this.active().entries.find((entry) => entry.id === id);

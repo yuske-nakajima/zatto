@@ -25,7 +25,7 @@
   <body>
     <main>
       <h1>JSON-RPC API</h1>
-      <p class="lead">All 21 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
+      <p class="lead">All 22 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
       <h2>Requests and responses</h2>
       <pre><code>{
   &quot;jsonrpc&quot;: &quot;2.0&quot;,
@@ -66,6 +66,7 @@
       <section><h3><code class="operation">session.pickFiles</code></h3><p>Open the native file picker. Require a matching instance; return cancellation without changes. Add to the workspace captured before opening.</p><p>params: <code>{ instanceId: string }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
       <section><h3><code class="operation">session.pickDirectory</code></h3><p>Add HTML files directly within a picked folder or recursively. Native pickers share one lock; symbolic links are not followed.</p><p>params: <code>{ instanceId: string, mode: &quot;direct&quot; | &quot;recursive&quot; }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
       <section><h3><code class="operation">workspaces.list</code></h3><p>Read workspace names and the shared active selection.</p><p>params: <code>{}</code><br>result: <code>{ activeWorkspaceId, workspaces: [{ id, name }] }</code></p></section>
+      <section><h3><code class="operation">workspaces.get</code></h3><p>Read one workspace and its entries in List order without changing the active selection. An unknown ID returns the workspace error.</p><p>params: <code>{ id: string }</code><br>result: <code>{ id, name, entries }</code></p></section>
       <section><h3><code class="operation">workspaces.create</code></h3><p>Create an empty workspace without changing selection. A trimmed name has 1–100 characters.</p><p>params: <code>{ name: string }</code><br>result: <code>{ id, name }</code></p></section>
       <section><h3><code class="operation">workspaces.activate</code></h3><p>Persist and broadcast the active selection; browser search and preview state follow workspace-change rules.</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
       <section><h3><code class="operation">workspaces.rename</code></h3><p>Rename a workspace without changing its files or ID.</p><p>params: <code>{ id: string, name: string }</code><br>result: <code>{ activeWorkspaceId, workspaces }</code></p></section>

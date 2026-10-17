@@ -1,6 +1,7 @@
 import type { Entry, Session } from "../server/session.js";
 import type { EntryAddition } from "../server/session-add.js";
 import type {
+  Workspace,
   WorkspaceState,
   WorkspaceSummary,
 } from "../server/workspace-state.js";
@@ -98,6 +99,10 @@ export interface RpcMethods {
     result: PickerResult;
   };
   "workspaces.list": { params: RequestContext; result: WorkspaceState };
+  "workspaces.get": {
+    params: RequestContext & { id: string };
+    result: Workspace;
+  };
   "workspaces.create": {
     params: RequestContext & { name: string };
     result: WorkspaceSummary;

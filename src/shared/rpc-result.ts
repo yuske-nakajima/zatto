@@ -129,6 +129,8 @@ export function isRpcResult<M extends RpcMethod>(
     case "workspaces.list":
     case "workspaces.rename":
       return workspaces(value);
+    case "workspaces.get":
+      return workspace(value) && session(value);
     case "workspaces.create":
       return workspace(value);
     case "workspaces.activate":

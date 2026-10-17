@@ -52,6 +52,7 @@ const schemas = {
     workspaceId,
   }),
   "workspaces.list": z.strictObject(guards),
+  "workspaces.get": z.strictObject({ ...guards, id }),
   "workspaces.create": z.strictObject({ ...guards, name }),
   "workspaces.activate": z.strictObject({ ...guards, id }),
   "workspaces.rename": z.strictObject({ ...guards, id, name }),
