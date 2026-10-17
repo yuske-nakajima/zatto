@@ -90,6 +90,33 @@ Pass multiple paths to add several HTML files at once.
 npx @yuske-nakajima/zatto page.html report.html
 ```
 
+The first stdout line is the connected server's top URL. File arguments also
+print each title and its directly selectable URL, separated by blank lines:
+
+```text
+http://127.0.0.1:6280/
+
+Page
+http://127.0.0.1:6280/?entry=page-id
+
+Report
+http://127.0.0.1:6280/?entry=report-id
+```
+
+The port is the actual connected port. Already-registered files return their
+existing links; repeated arguments appear once in argument order. Titles are
+not truncated, and control characters and line separators become spaces. Output
+has no terminal styling, including when piped. With no file arguments, only the
+top URL is printed. Browser auto-opening behavior is unchanged by file URLs.
+
+Links select entries in the active workspace. Keep the registration workspace
+selected when opening them; links do not switch workspaces. Removing a file or
+replacing its workspace collection invalidates its entry link. Missing or
+inaccessible paths skipped by registration are reported on stderr; the accepted
+request still exits with status 0, including when all paths are skipped.
+Directory arguments are not expanded: read errors reject the batch with status 1,
+as do request, persistence, and argument errors. Use **Add folder…** for folders.
+
 Run the same command again to add files to a running `zatto` server.
 Commands from other directories and Node.js environments join the same
 server for the current OS user.

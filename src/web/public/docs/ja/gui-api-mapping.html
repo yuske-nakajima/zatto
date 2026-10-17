@@ -49,6 +49,7 @@
       <p class="note">Docsは組み込みコンテンツです。セッションエントリにはならず、List、Folders、HTML検索、インポート、エクスポート、削除、並べ替えの対象外です。</p>
       <h2>ワークスペース操作</h2><p>Workspaceは<code>GET /api/session</code>のワークスペース情報を読み、<code>PUT /api/workspaces/:id/activate</code>で選択します。New workspaceは<code>POST /api/workspaces</code>で作成後に選択します。Renameは<code>PATCH /api/workspaces/:id</code>、確認後の削除は<code>DELETE /api/workspaces/:id</code>です。WebSocketで全タブの選択・ファイル群・順序を同期します。ブラウザーは表示中のIDを送信し、切り替え前の操作を拒否できるようにします。</p>
       <h2>お気に入り操作</h2><p>行の星は<code>PATCH /api/session/:id/favorite</code>へ明示的な真偽値を送ります。<code>aria-pressed</code>で状態を示し、EnterとSpaceで操作できます。Favoritesはエントリをブラウザーで絞り込み、履歴に<code>fileView=favorites</code>を保存します。更新は<code>session:update</code>で同期し、List全体の順序は維持します。Favoritesにはドラッグ用の操作部を表示せず、Clear Allを無効にします。</p>
+      <p>CLIのファイル指定は、トップURLに続けてタイトルとエントリのリンクを表示します。リンクはブラウザーのURLから対象を選ぶため、登録先のワークスペースを選択した状態で開いてください。追加応答は既存と新規の両方を解決し、List順を変更しません。</p>
     </main>
   </body>
 </html>

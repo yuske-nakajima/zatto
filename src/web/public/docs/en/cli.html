@@ -29,6 +29,17 @@
       <pre><code>npx @yuske-nakajima/zatto page.html report.html</code></pre>
       <p>Paths are resolved from the command's working directory. A later command joins the background server for the same OS user and adds its files to the existing session. Already-open paths are skipped.</p>
 
+      <h2>File links on stdout</h2>
+      <p>The first line is the connected server's top URL. For file arguments, each full title and <code>?entry=ID</code> URL follows on separate lines, with a blank line between pairs. Repeated paths appear once in argument order; already-registered files return their existing links. The actual connected port is used. Control characters and line separators become spaces, with no terminal styling or truncation. With no files, only the top URL is printed.</p>
+      <pre><code>{top URL}
+
+Page
+{top URL}?entry=page-id
+
+Report
+{top URL}?entry=report-id</code></pre>
+      <p>Keep the registration workspace selected when opening a link: links select an entry but do not switch workspaces. Removing entries or replacing the collection invalidates their IDs. Missing/inaccessible paths skipped by registration are reported on stderr; accepted requests retain exit status 0 even if all paths are skipped. Directories are not expanded. Read errors reject the batch with status 1; request, persistence, and argument errors also return 1. Use Add folder… in the browser for directory imports.</p>
+
       <h2>Options</h2>
       <table>
         <tbody>

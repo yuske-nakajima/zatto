@@ -37,6 +37,7 @@
       <p>表示順のエントリ、サーバー識別子、ネイティブのファイル・フォルダー選択機能を返します。</p>
       <h3><code class="operation">POST /api/session/add</code></h3>
       <p>本文は<code>{ "paths": ["page.html"] }</code>です。パスを絶対パスへ解決し、存在していてセッションに未登録のパスを1回だけ追加します。HTMLの拡張子は必須ではありません。<code>201</code>と<code>added</code>、<code>session</code>を返します。</p>
+      <p>応答には<code>resolved</code>（指定した既存・追加エントリを指定順で重複除去）、<code>workspaceId</code>（登録先）、<code>activeWorkspaceId</code>（応答時の選択）も含めます。解決結果は追加と同じ直列化処理で取得し、切り替え先のファイル群と混同しません。<code>added</code>と<code>session</code>の形式は維持し、<code>session</code>は応答時の選択先を返します。存在しないパスは除外します。ディレクトリを含む読取りエラーは追加全体を中止し、保存失敗時も変更を確定しません。</p>
       <h3><code class="operation">POST /api/session/pick</code></h3>
       <p>管理対象のネイティブファイル選択を開きます。<code>x-zatto-instance-id</code>が必要です。利用不可は<code>501</code>、別の選択画面が開いている場合は<code>409</code>です。</p>
       <h3><code class="operation">POST /api/session/pick-directory</code></h3>

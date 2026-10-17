@@ -5,6 +5,9 @@ export const HELP_TEXT = `Usage: zatto [options] [file...]
 
 ローカル HTML ファイルを zatto セッションへ追加します。ファイルを省略するとビューアーを開きます。
 
+標準出力の先頭行はトップURLです。ファイル指定時は、タイトルと直接URLの組を空行で区切って続けます。
+登録できなかったパスは標準エラーへ表示します。
+
 Commands:
   agent <usage|context> AIエージェント向けの利用方法とコンテキストを表示する
   mcp <usage|serve>     MCPの接続情報を表示またはstdioサーバーを起動する

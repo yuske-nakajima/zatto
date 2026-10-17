@@ -37,6 +37,7 @@
       <p>Returns ordered entries plus server identity and native file/folder picker capabilities.</p>
       <h3><code class="operation">POST /api/session/add</code></h3>
       <p>Body: <code>{ "paths": ["page.html"] }</code>. Paths are resolved to absolute paths; existing paths not already in the session are added once. The endpoint does not require an HTML file extension. The response is <code>201</code> with <code>added</code> and <code>session</code>.</p>
+      <p>The response also includes <code>resolved</code> (requested existing and added entries, in request order without duplicates), <code>workspaceId</code> (registration target), and <code>activeWorkspaceId</code> (selection when responding). Resolution shares the serialized addition, so a workspace switch cannot substitute another collection. <code>added</code> and <code>session</code> retain their shapes; <code>session</code> reflects the active collection when responding. Missing paths are skipped. Read failures, including directory arguments, reject the batch; persistence failures commit nothing.</p>
       <h3><code class="operation">POST /api/session/pick</code></h3>
       <p>Opens the managed native file picker. Requires <code>x-zatto-instance-id</code>. It returns <code>501</code> when unavailable and <code>409</code> while another native picker is active.</p>
       <h3><code class="operation">POST /api/session/pick-directory</code></h3>
