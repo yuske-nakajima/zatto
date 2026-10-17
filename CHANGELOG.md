@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/yuske-nakajima/zatto/compare/v2.1.0...v3.0.0) (2026-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mcp:** session.add / setFavorite / reorder / remove / removeMany / clear / import / export / pickFiles / pickDirectory と agentContext.set は workspaceId（対象ワークスペース）が必須になった。読取り操作は workspaceId を 受け付けない。稼働中の 2.x サーバーは 3.0.0 の zatto --stop で停止してから 起動し直す必要がある。
+
+### Features
+
+* **mcp:** MCPからのファイル削除・ワークスペース作成・整理を追加 ([19cda07](https://github.com/yuske-nakajima/zatto/commit/19cda074912890ac20fbc181ca322fd42bd7775b)), closes [#87](https://github.com/yuske-nakajima/zatto/issues/87)
+
 ## [2.1.0](https://github.com/yuske-nakajima/zatto/compare/v2.0.0...v2.1.0) (2026-10-17)
 
 
