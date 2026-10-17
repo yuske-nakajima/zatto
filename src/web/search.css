@@ -1,5 +1,10 @@
 .view-switcher {
-  grid-template-columns: 1fr 1fr 40px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 32px;
+}
+
+.view-switcher button {
+  min-width: 0;
+  padding: 0 2px;
 }
 
 .viewer[hidden] {

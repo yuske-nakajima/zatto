@@ -6,6 +6,10 @@ import {
   type DirectoryTreeNode,
   directoryContainsEntry,
 } from "./directory-tree-model.js";
+import {
+  readCollapsedDirectoryPaths,
+  storeCollapsedDirectoryPaths,
+} from "./directory-tree-preferences.js";
 import { EntryRow } from "./EntryRow.js";
 import { Icon } from "./icons.js";
 
@@ -15,6 +19,7 @@ interface DirectoryTreeProps {
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
+  onFavorite?: (id: string, favorite: boolean) => Promise<void>;
   onRemoveEntries: (ids: string[]) => void;
 }
 
@@ -25,14 +30,13 @@ type DirectoryBranchProps = Omit<DirectoryTreeProps, "entries"> & {
   onToggle: (directory: string) => void;
 };
 
-const COLLAPSED_DIRECTORY_PATHS_KEY = "zatto:collapsed-directory-paths";
-
 export function DirectoryTree({
   entries,
   selectedId,
   onSelect,
   onCopyPath,
   onRemove,
+  onFavorite,
   onRemoveEntries,
 }: DirectoryTreeProps) {
   const [collapsedDirectories, setCollapsedDirectories] = useState<Set<string>>(
@@ -69,43 +73,13 @@ export function DirectoryTree({
             onSelect={onSelect}
             onCopyPath={onCopyPath}
             onRemove={onRemove}
+            onFavorite={onFavorite}
             onRemoveEntries={onRemoveEntries}
           />
         ))}
       </ul>
     </nav>
   );
-}
-
-function readCollapsedDirectoryPaths(): Set<string> {
-  try {
-    const storedValue = window.localStorage.getItem(
-      COLLAPSED_DIRECTORY_PATHS_KEY,
-    );
-    if (storedValue === null) {
-      return new Set();
-    }
-    const parsedValue: unknown = JSON.parse(storedValue);
-    if (!Array.isArray(parsedValue)) {
-      return new Set();
-    }
-    return new Set(
-      parsedValue.filter((value): value is string => typeof value === "string"),
-    );
-  } catch {
-    return new Set();
-  }
-}
-
-function storeCollapsedDirectoryPaths(paths: Set<string>): void {
-  try {
-    window.localStorage.setItem(
-      COLLAPSED_DIRECTORY_PATHS_KEY,
-      JSON.stringify([...paths]),
-    );
-  } catch {
-    return;
-  }
 }
 
 function DirectoryBranch({
@@ -117,6 +91,7 @@ function DirectoryBranch({
   onSelect,
   onCopyPath,
   onRemove,
+  onFavorite,
   onRemoveEntries,
 }: DirectoryBranchProps) {
   const isExpanded = !collapsedDirectories.has(node.directory);
@@ -179,6 +154,7 @@ function DirectoryBranch({
               onSelect={onSelect}
               onCopyPath={onCopyPath}
               onRemove={onRemove}
+              onFavorite={onFavorite}
             />
           ))}
           {node.children.map((child) => (
@@ -191,6 +167,7 @@ function DirectoryBranch({
               onSelect={onSelect}
               onCopyPath={onCopyPath}
               onRemove={onRemove}
+              onFavorite={onFavorite}
               onRemoveEntries={onRemoveEntries}
             />
           ))}

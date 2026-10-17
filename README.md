@@ -39,9 +39,27 @@ Each workspace remembers its files and drag-and-drop List order across server
 restarts. Existing sessions become **Default**. The active workspace is shared
 by every browser tab and CLI connected to the server: `zatto file.html` adds to
 that workspace. Switching resets search and selects the first available file.
-List/Folders, panel visibility, and panel width remain browser preferences.
+List/Folders/Favorites, panel visibility, and panel width remain browser preferences.
 Import/export and agent context operate on the active workspace; exchange
 files retain the version 1 single-collection format.
+
+
+## Favorites
+
+Use the star beside a file in **List**, **Folders**, or **Favorites** to keep
+frequently used files close at hand. Stars are saved per workspace and survive
+server restarts. **Favorites** shows starred files in their original List order;
+starring a file never reorders the full list. Unstarring the previewed file
+keeps its preview open even when it disappears from Favorites.
+
+Drag to reorder in List. **Clear All** is disabled in Favorites; switch to
+List or Folders to clear the entire workspace. The Favorites view supports
+keyboard controls, browser history, reload, and the saved file-panel preference.
+Search still searches every file in the workspace.
+
+Session exchange files contain paths only. Replacing a collection resets its
+stars; merging preserves stars on existing entries. Removing and re-adding a
+file also resets its star.
 
 
 ## Usage

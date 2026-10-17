@@ -84,7 +84,8 @@ export function parseWorkspaceDocument(value: unknown): WorkspaceDocument {
           !entry.absPath ||
           typeof entry.title !== "string" ||
           typeof entry.addedAt !== "number" ||
-          !Number.isFinite(entry.addedAt),
+          !Number.isFinite(entry.addedAt) ||
+          (entry.favorite !== undefined && typeof entry.favorite !== "boolean"),
       )
     )
       throw new WorkspaceError("Invalid workspace entries.");

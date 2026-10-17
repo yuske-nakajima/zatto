@@ -55,6 +55,24 @@ export function registerSessionEntryRoutes(
     },
   );
 
+  app.patch<{ Params: { id: string }; Body: { favorite?: unknown } }>(
+    "/api/session/:id/favorite",
+    async (request, reply) => {
+      if (typeof request.body?.favorite !== "boolean") {
+        return reply.code(400).send({ message: "favorite must be a boolean." });
+      }
+      const result = await store.setFavorite(
+        request.params.id,
+        request.body.favorite,
+        request.headers["x-zatto-workspace-id"] as string | undefined,
+      );
+      if (result === "missing")
+        return reply.code(404).send({ message: "Entry not found." });
+      if (result === "updated") await publishSessionUpdate();
+      return reply.code(204).send();
+    },
+  );
+
   app.patch<{ Body: ReorderSessionBody }>(
     "/api/session/order",
     async (request, reply) => {

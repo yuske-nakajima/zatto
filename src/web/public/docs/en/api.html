@@ -94,6 +94,11 @@
         <tr><th><code>DELETE /api/workspaces/:id</code></th><td>Removes a workspace, preserving disk files. Deleting the active workspace selects the first remaining one. The last workspace cannot be deleted.</td></tr>
       </tbody></table>
       <p>Browser requests send <code>x-zatto-workspace-id</code>; a mismatch returns 409. Missing/deleted workspace IDs, invalid names, and last-workspace deletion also return 409. Requests without this header operate on the active workspace. A native picker already open when selection changes adds only to its original workspace. Deleted picker targets are rejected.</p>
+      <h2>Favorites</h2>
+      <p>Session entries may include <code>favorite: boolean</code>; an omitted flag means false. Favorites belong to a workspace, retain List order, and are saved in the version 2 workspace document.</p>
+      <h3><code class="operation">PATCH /api/session/:id/favorite</code></h3>
+      <p>Send <code>{ "favorite": true }</code> or <code>{ "favorite": false }</code>. A successful request returns 204. A changed flag is persisted atomically and emits <code>session:update</code>; repeating the same state performs no write or notification. A nonboolean flag returns 400, a missing entry returns 404, and a stale <code>x-zatto-workspace-id</code> returns 409.</p>
+      <p>Version 1 exchange documents contain paths only. Replace imports reset stars, merge imports retain existing stars, and removal followed by re-addition creates an unstarred entry. Search and agent context still include all active-workspace entries.</p>
     </main>
   </body>
 </html>

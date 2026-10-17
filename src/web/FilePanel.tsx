@@ -4,6 +4,7 @@ import { AddEntryControls } from "./AddEntryControls.js";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
 import { FilePanelHeader } from "./FilePanelHeader.js";
+import { FilePanelViews } from "./FilePanelViews.js";
 import type { FilePanelView } from "./file-panel-model.js";
 import { SessionActions } from "./SessionActions.js";
 import type {
@@ -36,6 +37,7 @@ interface FilePanelProps {
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
+  onFavorite?: (id: string, favorite: boolean) => Promise<void>;
   onRemoveEntries: (ids: string[]) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnter: (id: string) => void;
@@ -68,6 +70,7 @@ export function FilePanel({
   onSelect,
   onCopyPath,
   onRemove,
+  onFavorite,
   onRemoveEntries,
   onDragStart,
   onDragEnter,
@@ -79,6 +82,8 @@ export function FilePanel({
   onImportSession,
   onExportSession,
 }: FilePanelProps) {
+  const visibleEntries =
+    view === "favorites" ? entries.filter((entry) => entry.favorite) : entries;
   return (
     <aside className="sidebar">
       <FilePanelHeader />
@@ -97,70 +102,51 @@ export function FilePanel({
           />
           <button
             className="clear-button"
-            data-status-description="Remove all files from this session."
+            data-status-description={
+              view === "favorites"
+                ? "Switch to List or Folders to clear this workspace."
+                : "Remove all files from this session."
+            }
             type="button"
             aria-label="Clear all"
-            disabled={entries.length === 0}
+            disabled={entries.length === 0 || view === "favorites"}
             onClick={onClear}
           >
             Clear All
           </button>
         </div>
       </div>
-      <fieldset className="view-switcher">
-        <legend className="visually-hidden">File panel view</legend>
-        <button
-          type="button"
-          data-status-description="Show files in list order."
-          aria-pressed={view === "list"}
-          onClick={() => onViewChange("list")}
-        >
-          List
-        </button>
-        <button
-          type="button"
-          data-status-description="Group files by folder."
-          aria-pressed={view === "directories"}
-          onClick={() => onViewChange("directories")}
-        >
-          Folders
-        </button>
-        <button
-          ref={searchButtonRef}
-          className="search-mode-button"
-          data-status-description="Search HTML files in this session."
-          type="button"
-          aria-label={
-            !isSearchVisible && hasSearchState
-              ? "Back to search results"
-              : "Search"
-          }
-          aria-pressed={isSearchVisible}
-          onClick={onOpenSearch}
-        >
-          <span className="search-glyph" aria-hidden="true" />
-          {!isSearchVisible && hasSearchState && (
-            <span className="search-state-dot" aria-hidden="true" />
-          )}
-        </button>
-      </fieldset>
+      <FilePanelViews
+        view={view}
+        onViewChange={onViewChange}
+        isSearchVisible={isSearchVisible}
+        hasSearchState={hasSearchState}
+        searchButtonRef={searchButtonRef}
+        onOpenSearch={onOpenSearch}
+      />
       <div className="sidebar-scroll-region">
-        {view === "list" ? (
-          <ol className="entry-list" aria-label="HTML entries">
-            {entries.map((entry) => (
+        {view !== "directories" ? (
+          <ol
+            className="entry-list"
+            aria-label={
+              view === "favorites" ? "Favorite HTML entries" : "HTML entries"
+            }
+          >
+            {visibleEntries.map((entry) => (
               <EntryRow
                 entry={entry}
                 isSelected={entry.id === selectedId}
-                isDragging={entry.id === draggedId}
-                isDropTarget={entry.id === dropTargetId}
+                isDragging={view === "list" && entry.id === draggedId}
+                isDropTarget={view === "list" && entry.id === dropTargetId}
                 key={entry.id}
                 onSelect={onSelect}
                 onCopyPath={onCopyPath}
                 onRemove={onRemove}
-                onDragStart={onDragStart}
-                onDragEnter={onDragEnter}
+                onFavorite={onFavorite}
+                onDragStart={view === "list" ? onDragStart : undefined}
+                onDragEnter={view === "list" ? onDragEnter : undefined}
                 onDragEnd={onDragEnd}
-                onDrop={onDrop}
+                onDrop={view === "list" ? onDrop : undefined}
               />
             ))}
           </ol>
@@ -171,10 +157,17 @@ export function FilePanel({
             onSelect={onSelect}
             onCopyPath={onCopyPath}
             onRemove={onRemove}
+            onFavorite={onFavorite}
             onRemoveEntries={onRemoveEntries}
           />
         )}
-        {entries.length === 0 && (
+        {view === "favorites" && visibleEntries.length === 0 && (
+          <div className="empty-list">
+            <p>No favorites in this workspace.</p>
+            <p>Star files in List or Folders to find them here.</p>
+          </div>
+        )}
+        {view !== "favorites" && entries.length === 0 && (
           <div className="empty-list">
             <p>Add HTML files from the CLI</p>
             <code>zatto page.html</code>

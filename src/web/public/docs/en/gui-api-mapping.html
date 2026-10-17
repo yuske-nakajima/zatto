@@ -48,6 +48,7 @@
       <p><code>POST /api/session/add</code> is used by the CLI to add path arguments. <code>GET /api/health</code> identifies a compatible server, and <code>POST /api/shutdown</code> supports the stop command.</p>
       <p class="note">Docs are built-in content. They do not become session entries and are excluded from List, Folders, HTML search, import, export, removal, and ordering.</p>
       <h2>Workspace controls</h2><p>Workspace reads metadata from <code>GET /api/session</code> and activates with <code>PUT /api/workspaces/:id/activate</code>. New workspace uses <code>POST /api/workspaces</code> then activates the returned ID. Rename uses <code>PATCH /api/workspaces/:id</code>; confirmed deletion uses <code>DELETE /api/workspaces/:id</code>. WebSocket updates synchronize selection, files, and order across tabs. Browser mutations carry the displayed workspace ID to reject stale operations.</p>
+      <h2>Favorite controls</h2><p>Each row's star sends an explicit boolean to <code>PATCH /api/session/:id/favorite</code>. The button exposes its state through <code>aria-pressed</code> and supports Enter and Space. Favorites filters session entries locally and writes <code>fileView=favorites</code> to browser history. Updates synchronize through <code>session:update</code>; the complete List order remains unchanged. In Favorites, drag handles are absent and Clear All is disabled.</p>
     </main>
   </body>
 </html>

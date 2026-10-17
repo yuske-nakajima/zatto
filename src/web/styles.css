@@ -561,10 +561,14 @@ button:focus-visible,
 .entry-row {
   position: relative;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) 48px;
+  grid-template-columns: 20px minmax(0, 1fr) max-content;
   min-height: 58px;
   border-bottom: 1px solid var(--color-border-default);
   background: var(--color-bg-sidebar);
+}
+
+.entry-row--static {
+  grid-template-columns: minmax(0, 1fr) max-content;
 }
 
 .entry-row--selected {
@@ -585,7 +589,7 @@ button:focus-visible,
 }
 
 .entry-row--grouped {
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   min-height: 0;
   padding: 0 var(--spacing-12);
   border-bottom: 0;
