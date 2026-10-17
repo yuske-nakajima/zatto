@@ -35,6 +35,16 @@ const RPC_OPERATIONS = [
   "agentContext.get",
   "agentContext.set",
   "markdown.setTask",
+  "review.list",
+  "review.create",
+  "review.reply",
+  "review.edit",
+  "review.delete",
+  "review.resolve",
+  "review.request",
+  "review.requests",
+  "review.complete",
+  "review.cancel",
   "search.query",
 ] as const;
 const HTTP_OPERATIONS = [
@@ -64,6 +74,14 @@ const GUI_OPERATIONS = [
   "agentContext.set",
   "session.setFavorite",
   "markdown.setTask",
+  "review.list",
+  "review.requests",
+  "review.create",
+  "review.reply",
+  "review.edit",
+  "review.delete",
+  "review.resolve",
+  "review.complete",
   "workspaces.create",
   "workspaces.activate",
   "workspaces.rename",
@@ -112,8 +130,8 @@ describe("組み込みドキュメント本文", () => {
     }
   });
 
-  test("APIページが全23 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
-    expect(RPC_OPERATIONS).toHaveLength(23);
+  test("APIページが全33 RPC methodsと保持するHTTP/WS配信を記載する", async () => {
+    expect(RPC_OPERATIONS).toHaveLength(33);
     for (const locale of LOCALES) {
       const html = await readDoc(locale, "api");
       const codeValues = readCodeValues(html);

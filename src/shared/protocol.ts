@@ -1,4 +1,5 @@
 import type { Entry } from "../server/session.js";
+import type { ReviewRequest } from "./review.js";
 
 export type ServerMessage =
   | {
@@ -10,4 +11,7 @@ export type ServerMessage =
   | {
       type: "file:changed";
       id: string;
-    };
+    }
+  | { type: "review:update"; entryId: string }
+  | { type: "review:requests"; requests: ReviewRequest[] }
+  | { type: "review:completed"; requestId: string };

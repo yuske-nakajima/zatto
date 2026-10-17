@@ -9,6 +9,7 @@ import { HELP_TEXT } from "./help.js";
 import { runMcpCommand } from "./mcp-command.js";
 import { createMcpConnector } from "./mcp-connection.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
+import { runReviewCommand } from "./review-command.js";
 import { exportSession, importSession, serverUrl } from "./server-api.js";
 import {
   connectOrStartServer,
@@ -49,6 +50,15 @@ export async function runCli(
       readContext,
       stdout: dependencies.stdout,
       stderr: dependencies.stderr,
+    });
+  }
+  if (args[0] === "review") {
+    return runReviewCommand(args.slice(1), {
+      ...dependencies,
+      onInterrupt: (handler) => {
+        process.once("SIGINT", handler);
+        return () => process.off("SIGINT", handler);
+      },
     });
   }
   if (args[0] === "mcp") {

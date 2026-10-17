@@ -11,6 +11,7 @@ import { useEntryReordering } from "./useEntryReordering.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
 import { useMarkdownTaskBridge } from "./useMarkdownTaskBridge.js";
 import { useNativeEntryPicker } from "./useNativeEntryPicker.js";
+import { useReviewThreads } from "./useReviewThreads.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
 import { useSessionTransfer } from "./useSessionTransfer.js";
@@ -54,6 +55,7 @@ export function App() {
     selectEntry,
     setErrorMessage,
   });
+  const review = useReviewThreads(workspaceId, selectedId, setErrorMessage);
   useMarkdownTaskBridge({
     workspaceId,
     selectedEntryId: selectedId,
@@ -195,6 +197,7 @@ export function App() {
             onCopyPath={copyPath}
             onRemove={removeEntry}
             onPickFiles={pickerControl.openFiles}
+            review={review}
           />
         }
       />

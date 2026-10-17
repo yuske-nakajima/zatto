@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { createApp, defaultFrontendDistPath } from "./app.js";
 import { runServerCommand } from "./command.js";
 import { isDirectExecution } from "./direct-execution.js";
@@ -7,6 +8,7 @@ import {
   createNativeFilePicker,
 } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
+import { ReviewStore } from "./review-store.js";
 import {
   acquireServerLock,
   releaseServerRuntime,
@@ -16,7 +18,7 @@ import {
   updateServerLockState,
   writeServerRecord,
 } from "./runtime.js";
-import { SessionStore } from "./session.js";
+import { DEFAULT_SESSION_FILE, SessionStore } from "./session.js";
 import { EntryWatcher } from "./watch.js";
 
 /** CLIから指定されない場合にサーバーが使用するポート。 */
@@ -65,10 +67,16 @@ export async function startServer(
   let heartbeatUpdate = Promise.resolve(true);
   let runtimeOwned = true;
   try {
-    const sessionStore = new SessionStore(
-      options.sessionFilePath ?? process.env.ZATTO_SESSION_FILE,
-    );
+    const sessionFilePath =
+      options.sessionFilePath ??
+      process.env.ZATTO_SESSION_FILE ??
+      DEFAULT_SESSION_FILE;
+    const sessionStore = new SessionStore(sessionFilePath);
     await sessionStore.load();
+    const reviewStore = new ReviewStore(
+      path.join(path.dirname(sessionFilePath), "threads.json"),
+    );
+    await reviewStore.load((id) => sessionStore.hasEntry(id));
     const realtimeHub = new RealtimeHub();
     const createdEntryWatcher = new EntryWatcher((id) => {
       realtimeHub.broadcast({ type: "file:changed", id });
@@ -78,6 +86,7 @@ export async function startServer(
 
     const createdApp = await createApp({
       sessionStore,
+      reviewStore,
       pickFiles: createNativeFilePicker(),
       pickDirectory: createNativeDirectoryPicker(),
       realtimeHub,

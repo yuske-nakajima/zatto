@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REVIEW_LIMITS } from "../../shared/review.js";
 import type { RpcMethod, RpcParams } from "../../shared/rpc-contract.js";
 import { CommandError } from "./errors.js";
 
@@ -8,6 +9,20 @@ const instanceId = id.optional();
 const ids = z.array(id);
 const name = z.string().trim().min(1).max(100);
 const empty = z.strictObject({});
+const reviewBody = z.string().trim().min(1).max(REVIEW_LIMITS.bodyLength);
+const session = z.string().trim().min(1).max(100);
+const author = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("user") }),
+  z.strictObject({ kind: z.literal("llm"), session: session.optional() }),
+]);
+const context = z.string().max(REVIEW_LIMITS.contextLength);
+const anchor = z
+  .strictObject({
+    exact: z.string().min(1).max(REVIEW_LIMITS.anchorTextLength),
+    prefix: context,
+    suffix: context,
+  })
+  .nullable();
 const guards = { instanceId };
 const schemas = {
   "server.health": empty,
@@ -72,6 +87,42 @@ const schemas = {
     checked: z.boolean(),
     revision: id,
   }),
+  "review.list": z.strictObject({ ...guards, workspaceId, entryId: id }),
+  "review.create": z.strictObject({
+    ...guards,
+    workspaceId,
+    entryId: id,
+    anchor,
+    author,
+    body: reviewBody,
+  }),
+  "review.reply": z.strictObject({
+    ...guards,
+    threadId: id,
+    author,
+    body: reviewBody,
+  }),
+  "review.edit": z.strictObject({
+    ...guards,
+    threadId: id,
+    commentId: id,
+    body: reviewBody,
+  }),
+  "review.delete": z.strictObject({ ...guards, threadId: id, commentId: id }),
+  "review.resolve": z.strictObject({
+    ...guards,
+    threadId: id,
+    resolved: z.boolean(),
+  }),
+  "review.request": z.strictObject({
+    ...guards,
+    workspaceId,
+    entryId: id,
+    session: session.optional(),
+  }),
+  "review.requests": z.strictObject(guards),
+  "review.complete": z.strictObject({ ...guards, requestId: id }),
+  "review.cancel": z.strictObject({ ...guards, requestId: id }),
   "search.query": z.strictObject({ ...guards, query: z.string() }),
 } satisfies Record<RpcMethod, z.ZodType>;
 /**

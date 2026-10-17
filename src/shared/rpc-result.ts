@@ -74,6 +74,40 @@ function search(value: unknown): boolean {
     )
   );
 }
+function reviewThread(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.id) &&
+    text(value.entryId) &&
+    boolean(value.resolved) &&
+    number(value.createdAt) &&
+    (value.anchor === null ||
+      (object(value.anchor) &&
+        text(value.anchor.exact) &&
+        text(value.anchor.prefix) &&
+        text(value.anchor.suffix))) &&
+    list(
+      value.comments,
+      (comment) =>
+        object(comment) &&
+        text(comment.id) &&
+        text(comment.body) &&
+        number(comment.createdAt) &&
+        object(comment.author) &&
+        (comment.author.kind === "user" || comment.author.kind === "llm"),
+    )
+  );
+}
+function reviewRequest(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.id) &&
+    text(value.entryId) &&
+    text(value.workspaceId) &&
+    number(value.createdAt) &&
+    (value.session === undefined || text(value.session))
+  );
+}
 /** Validates command results before clients consume untrusted wire data. */
 export function isRpcResult<M extends RpcMethod>(
   method: M,
@@ -145,6 +179,22 @@ export function isRpcResult<M extends RpcMethod>(
       }
     case "search.query":
       return search(value);
+    case "review.list":
+      return object(value) && list(value.threads, reviewThread);
+    case "review.create":
+    case "review.reply":
+    case "review.edit":
+    case "review.resolve":
+      return reviewThread(value);
+    case "review.delete":
+      return value === null || reviewThread(value);
+    case "review.request":
+      return reviewRequest(value);
+    case "review.requests":
+      return object(value) && list(value.requests, reviewRequest);
+    case "review.complete":
+    case "review.cancel":
+      return value === null;
     case "markdown.setTask":
       return object(value) && text(value.revision);
     case "session.setFavorite":

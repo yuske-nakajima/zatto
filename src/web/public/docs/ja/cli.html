@@ -78,6 +78,10 @@ codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve</code></pre>
       <p>ビューアーが起動していない場合、すべてのMCPツールは自動起動せずにエラーを返します。存在しない<code>workspaceId</code>などの操作の失敗には、<code>workspace</code>などの種類を含めます。</p>
       <p><code>search</code>または<code>docs</code>表示でも、active fileはセッション上の選択を表すため、プレビューに表示中とは限りません。ローカルパスには個人情報が含まれる場合があります。タイトルとHTMLは信頼できない入力として扱い、本文を外部サービスへ送信する前にユーザーの承認を得てください。</p>
 
+      <h2>確認のコメント</h2>
+      <pre><code>zatto review &lt;file&gt; [--session &lt;id&gt;] [--json] [--no-open] [--port &lt;n&gt;]</code></pre>
+      <p>ファイルを選択中のワークスペースへ登録して確認を依頼し、待ちます。ユーザーはプレビューで文章を選んでコメントのスレッドを立て、<strong>Finish review</strong>を押します。その時点で未解決のスレッドを、ID、対象の文章、コメントとともに表示して終了します。<code>--json</code>ではJSONで表示します。<code>--session</code>の値は依頼元としてユーザーに表示します。各コマンドは自分の依頼だけを待つため、複数のセッションから同時に依頼できます。Ctrl+Cで依頼を取り消し、サーバーが停止した場合はエラーで終了します。</p>
+      <p>コメント用のMCPツール: <code>list_review_threads</code>はファイルのスレッドを返します（<code>includeResolved</code>を指定しない場合は未解決のみ）。<code>reply_review_thread</code>はコメントへの対応後に返信します。<code>create_review_thread</code>は文章（<code>quote</code>）またはファイル全体にユーザー向けのコメントを付けます。<code>resolve_review_thread</code>はスレッドを解決または再開します。<code>session</code>を渡すと、どのセッションが書いたかをユーザーに表示します。</p>
       <h2>実行時の規則</h2>
       <ul>
         <li><code>--stop</code>、<code>--import</code>、<code>--export</code>、位置引数のファイルは同時に指定できません。</li>

@@ -1,11 +1,13 @@
-import { type RefObject, useId, useState } from "react";
+import { type RefObject, useId, useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
 import type { CopyFeedback } from "./copy-feedback.js";
 import { Icon } from "./icons.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
+import { ReviewLayer } from "./ReviewLayer.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { usePreviewPageSearch } from "./usePreviewPageSearch.js";
 import { usePreviewSearchTarget } from "./usePreviewSearchTarget.js";
+import type { ReviewThreads } from "./useReviewThreads.js";
 
 interface ViewerProps {
   isHidden?: boolean;
@@ -23,6 +25,7 @@ interface ViewerProps {
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
   onPickFiles: () => void;
+  review?: ReviewThreads;
 }
 
 export function Viewer({
@@ -41,7 +44,9 @@ export function Viewer({
   onCopyPath,
   onRemove,
   onPickFiles,
+  review,
 }: ViewerProps) {
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
   const pathTooltipId = useId();
   const { iframeRef, revealTarget, clearRevealedTarget } =
@@ -147,7 +152,7 @@ export function Viewer({
           {errorMessage}
         </p>
       )}
-      <div className="viewer-canvas">
+      <div className="viewer-canvas" ref={canvasRef}>
         <PreviewPageSearch
           currentIndex={pageSearch.currentIndex}
           focusVersion={pageSearch.focusVersion}
@@ -160,6 +165,14 @@ export function Viewer({
           onPrevious={pageSearch.previous}
           onQueryChange={pageSearch.search}
         />
+        {selectedEntry && review && (
+          <ReviewLayer
+            iframeRef={iframeRef}
+            canvasRef={canvasRef}
+            frameKey={`${selectedEntry.id}:${reloadVersion}`}
+            review={review}
+          />
+        )}
         {selectedEntry ? (
           <iframe
             ref={iframeRef}

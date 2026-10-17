@@ -6,6 +6,12 @@ import type {
   WorkspaceSummary,
 } from "../server/workspace-state.js";
 import type { AgentContext, BrowserAgentContext } from "./agent-context.js";
+import type {
+  ReviewAuthor,
+  ReviewRequest,
+  ReviewThread,
+  TextAnchor,
+} from "./review.js";
 import type { SearchResponse } from "./search.js";
 import type { SessionExchange } from "./session-exchange.js";
 
@@ -133,6 +139,59 @@ export interface RpcMethods {
       revision: string;
     };
     result: { revision: string };
+  };
+  "review.list": {
+    params: WorkspaceParams & { entryId: string };
+    result: { threads: ReviewThread[] };
+  };
+  "review.create": {
+    params: WorkspaceParams & {
+      entryId: string;
+      anchor: TextAnchor | null;
+      author: ReviewAuthor;
+      body: string;
+    };
+    result: ReviewThread;
+  };
+  "review.reply": {
+    params: RequestContext & {
+      threadId: string;
+      author: ReviewAuthor;
+      body: string;
+    };
+    result: ReviewThread;
+  };
+  "review.edit": {
+    params: RequestContext & {
+      threadId: string;
+      commentId: string;
+      body: string;
+    };
+    result: ReviewThread;
+  };
+  "review.delete": {
+    params: RequestContext & { threadId: string; commentId: string };
+    result: ReviewThread | null;
+  };
+  "review.resolve": {
+    params: RequestContext & { threadId: string; resolved: boolean };
+    result: ReviewThread;
+  };
+  "review.request": {
+    params: WorkspaceParams & { entryId: string; session?: string };
+    result: ReviewRequest;
+  };
+  "review.requests": {
+    params: RequestContext;
+    result: { requests: ReviewRequest[] };
+  };
+  "review.complete": {
+    params: RequestContext & { requestId: string };
+    result: null;
+  };
+  "review.cancel": {
+    params: RequestContext & { requestId: string };
+    result: null;
   };
   "search.query": {
     params: RequestContext & { query: string };

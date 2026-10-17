@@ -44,6 +44,10 @@ describe("Zatto MCP server", () => {
         "remove_files",
         "create_workspace",
         "update_files",
+        "list_review_threads",
+        "create_review_thread",
+        "reply_review_thread",
+        "resolve_review_thread",
       ],
     });
   });
@@ -53,17 +57,24 @@ describe("Zatto MCP server", () => {
     const tools = await client.listTools();
 
     expect(tools.tools.map(({ name }) => name)).toEqual(MCP_USAGE.tools);
-    const changes = [
-      "add_files",
-      "remove_files",
+    const reads = [
+      "get_context",
+      "get_active_file",
+      "list_open_files",
+      "list_workspaces",
+      "list_workspace_files",
+      "list_review_threads",
+    ];
+    const creates = [
       "create_workspace",
-      "update_files",
+      "create_review_thread",
+      "reply_review_thread",
     ];
     for (const tool of tools.tools) {
       expect(tool.annotations).toMatchObject({
-        readOnlyHint: !changes.includes(tool.name),
+        readOnlyHint: reads.includes(tool.name),
         destructiveHint: tool.name === "remove_files",
-        idempotentHint: tool.name !== "create_workspace",
+        idempotentHint: !creates.includes(tool.name),
         openWorldHint: false,
       });
     }
@@ -363,6 +374,76 @@ describe("Zatto MCP server", () => {
     expect(invalid.isError).toBe(true);
   });
 
+  test("ユーザーのスレッドを読み、LLMとして返信・作成・解決する", async () => {
+    const { connection, store, files, commands } = await fixture();
+    const [entry] = await store.addEntries([files.a]);
+    const userThread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: { exact: "A", prefix: "", suffix: "" },
+        author: { kind: "user" },
+        body: "具体例は？",
+      },
+      [],
+    );
+    const { client } = await connect(connection);
+
+    await expect(
+      toolResult(client, "list_review_threads", { entryId: entry.id }),
+    ).resolves.toMatchObject({
+      workspace: { id: "default", active: true },
+      threads: [
+        {
+          id: userThread.id,
+          anchor: { exact: "A" },
+          comments: [{ author: { kind: "user" }, body: "具体例は？" }],
+        },
+      ],
+    });
+    await expect(
+      toolResult(client, "reply_review_thread", {
+        threadId: userThread.id,
+        body: "例を追記しました",
+        session: "zatto:a99c",
+      }),
+    ).resolves.toMatchObject({
+      thread: {
+        comments: [
+          { author: { kind: "user" } },
+          {
+            author: { kind: "llm", session: "zatto:a99c" },
+            body: "例を追記しました",
+          },
+        ],
+      },
+    });
+    const created = (await toolResult(client, "create_review_thread", {
+      entryId: entry.id,
+      quote: "A",
+      body: "ここを確認してください",
+    })) as { thread: { id: string; anchor: unknown } };
+    expect(created.thread.anchor).toEqual({
+      exact: "A",
+      prefix: "",
+      suffix: "",
+    });
+    await toolResult(client, "resolve_review_thread", {
+      threadId: userThread.id,
+    });
+
+    const open = (await toolResult(client, "list_review_threads", {
+      entryId: entry.id,
+    })) as { threads: Array<{ id: string }> };
+    expect(open.threads.map(({ id }) => id)).toEqual([created.thread.id]);
+    const all = (await toolResult(client, "list_review_threads", {
+      entryId: entry.id,
+      includeResolved: true,
+    })) as { threads: unknown[] };
+    expect(all.threads).toHaveLength(2);
+  });
+
   test("サーバー未起動などの接続エラーをツールエラーとして返す", async () => {
     const { client } = await connect(async () => {
       throw new Error("zatto サーバーは起動していません");
@@ -389,6 +470,10 @@ const TOOL_ARGUMENTS: Record<string, Record<string, unknown>> = {
   remove_files: { entryIds: ["a"] },
   create_workspace: { name: "Notes" },
   update_files: { files: [{ entryId: "a", favorite: true }] },
+  list_review_threads: { entryId: "a" },
+  create_review_thread: { entryId: "a", body: "Why?" },
+  reply_review_thread: { threadId: "t", body: "Fixed" },
+  resolve_review_thread: { threadId: "t" },
 };
 
 async function fixture() {
@@ -431,7 +516,7 @@ async function fixture() {
       }
     },
   });
-  return { store, agentContextStore, broadcast, files, connection };
+  return { store, agentContextStore, broadcast, files, connection, commands };
 }
 
 async function connect(connection: () => Promise<ZattoConnection>) {

@@ -6,6 +6,7 @@ import { createCommands } from "./commands/index.js";
 import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
+import type { ReviewStore } from "./review-store.js";
 import { registerRpcRoute } from "./rpc-route.js";
 import type { Session, SessionStore } from "./session.js";
 import { registerStaticRoutes } from "./static-routes.js";
@@ -20,6 +21,7 @@ type CreateAppOptions = {
   pickDirectory?: PickDirectory;
   onSessionChanged?: (session: Session) => Promise<void> | void;
   agentContextStore?: AgentContextStore;
+  reviewStore?: ReviewStore;
   serverIdentity?: {
     instanceId: string;
     protocolVersion: number;

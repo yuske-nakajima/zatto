@@ -1,6 +1,7 @@
 import type { AgentContextStore } from "../agent-context.js";
 import type { PickDirectory, PickFiles } from "../file-picker.js";
 import type { RealtimeHub } from "../realtime.js";
+import { ReviewStore } from "../review-store.js";
 import type { Session, SessionStore } from "../session.js";
 import { domainError } from "./errors.js";
 /** Dependencies owned by the shared command layer. */
@@ -8,6 +9,8 @@ export interface CommandOptions {
   sessionStore: SessionStore;
   agentContextStore: AgentContextStore;
   realtimeHub: RealtimeHub;
+  /** Defaults to a store that keeps threads only in memory. */
+  reviewStore?: ReviewStore;
   serverIdentity?: { instanceId: string; protocolVersion: number };
   pickFiles?: PickFiles;
   pickDirectory?: PickDirectory;
@@ -17,6 +20,7 @@ export interface CommandOptions {
 }
 /** Validated command dependencies and mutation guards. */
 export interface CommandContext extends CommandOptions {
+  reviewStore: ReviewStore;
   publish: () => Promise<void>;
   /** Rejects a workspace other than the shared active selection. */
   activeWorkspace: (expected: string) => string;
@@ -36,8 +40,11 @@ export function createCommandContext(options: CommandOptions): CommandContext {
   let publishedWorkspaceId =
     options.sessionStore.getWorkspaceState().activeWorkspaceId;
   let pending = Promise.resolve();
+  const reviewStore =
+    options.reviewStore ?? new ReviewStore("", async () => undefined);
   return {
     ...options,
+    reviewStore,
     activeWorkspace(expected) {
       const id = options.sessionStore.getWorkspaceState().activeWorkspaceId;
       if (expected !== id)
@@ -69,6 +76,17 @@ export function createCommandContext(options: CommandOptions): CommandContext {
             view: "preview",
           });
           publishedWorkspaceId = state.activeWorkspaceId;
+        }
+        try {
+          if (
+            await reviewStore.prune((id) => options.sessionStore.hasEntry(id))
+          )
+            options.realtimeHub.broadcast({
+              type: "review:update",
+              entryId: "",
+            });
+        } catch (error) {
+          options.logError(error, "レビュースレッドの整理に失敗しました");
         }
         try {
           await options.onSessionChanged?.(session);

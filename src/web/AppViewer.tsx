@@ -4,6 +4,7 @@ import { DocsView } from "./DocsView.js";
 import { SearchWorkspace } from "./SearchWorkspace.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import type { DocsNavigation } from "./useDocsNavigation.js";
+import type { ReviewThreads } from "./useReviewThreads.js";
 import type { SearchNavigation } from "./useSearchNavigation.js";
 import { Viewer } from "./Viewer.js";
 
@@ -22,6 +23,7 @@ interface AppViewerProps {
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
   onPickFiles: () => void;
+  review: ReviewThreads;
 }
 
 export function AppViewer({
@@ -39,6 +41,7 @@ export function AppViewer({
   onCopyPath,
   onRemove,
   onPickFiles,
+  review,
 }: AppViewerProps) {
   return (
     <>
@@ -65,6 +68,7 @@ export function AppViewer({
         onCopyPath={onCopyPath}
         onRemove={onRemove}
         onPickFiles={onPickFiles}
+        review={review}
       />
     </>
   );

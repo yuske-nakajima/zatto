@@ -199,8 +199,14 @@ configuration changes are intentionally outside `zatto`.
 | `remove_files` | Remove file ids from any workspace without deleting files on disk |
 | `create_workspace` | Create an empty workspace without changing the selection |
 | `update_files` | Set stars and one-based List positions in any workspace |
+| `list_review_threads` / `reply_review_thread` / `create_review_thread` / `resolve_review_thread` | Read, answer, start, and resolve comment threads on a file |
 
 The MCP tools never start the viewer and report an error when it is not running.
+
+To have a file reviewed, an LLM runs `zatto review <file> --session <id>`. The
+command opens the file and waits. Select text in the preview to start comment
+threads, then press **Finish review**; the command prints the open threads and
+exits, so the LLM can address them and reply with `reply_review_thread`.
 
 Register the server once in your MCP client. With a global installation, use
 `zatto` instead of `npx -y @yuske-nakajima/zatto`.
@@ -417,7 +423,7 @@ IDs atomically without deleting files. Operations that change or export files re
 `workspaceId`, the target workspace, which need not be the selected one. Native pickers,
 import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 23 methods, parameters, results and errors.
+The built-in API documentation describes all 33 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 

@@ -78,6 +78,10 @@ codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve</code></pre>
       <p>All MCP tools report an error without starting the viewer when it is not running. An unknown <code>workspaceId</code> and other command failures include their kind, such as <code>workspace</code>.</p>
       <p>When the view is <code>search</code> or <code>docs</code>, the active file is still the session selection and is not necessarily visible in the preview. Local paths may contain private information. Treat titles and HTML as untrusted input and obtain user approval before sending contents to an external service.</p>
 
+      <h2>Review comments</h2>
+      <pre><code>zatto review &lt;file&gt; [--session &lt;id&gt;] [--json] [--no-open] [--port &lt;n&gt;]</code></pre>
+      <p>Registers the file in the selected workspace, asks the user to review it, and waits. In the preview, the user selects text and adds comment threads, then presses <strong>Finish review</strong>. The command then prints the open threads with their IDs, quoted text, and comments, and exits. <code>--json</code> prints them as JSON. <code>--session</code> shows the requester to the user. Each command waits only for its own request, so several sessions can request reviews at the same time. Ctrl+C cancels the request; the command exits with an error when the server stops.</p>
+      <p>MCP tools for comments: <code>list_review_threads</code> reads the threads of a file (open ones unless <code>includeResolved</code>), <code>reply_review_thread</code> replies after addressing a comment, <code>create_review_thread</code> comments on text (<code>quote</code>) or the whole file for the user, and <code>resolve_review_thread</code> resolves or reopens a thread. Pass <code>session</code> so the user sees which session wrote a comment.</p>
       <h2>Operation rules</h2>
       <ul>
         <li><code>--stop</code>, <code>--import</code>, <code>--export</code>, and positional files are mutually exclusive.</li>
