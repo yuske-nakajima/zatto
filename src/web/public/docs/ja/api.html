@@ -84,6 +84,16 @@
           <tr><th><code>GET /docs/*</code></th><td>docsディレクトリ外への移動を拒否し、組み込みドキュメントを返します。</td></tr>
         </tbody>
       </table>
+      <h2>ワークスペース</h2>
+      <p>選択は全タブとCLIで共有します。セッションAPI、検索、プレビュー、インポート、エクスポート、Agentコンテキストは選択中のワークスペースを対象にします。<code>GET /api/session</code>と<code>session:update</code>は<code>entries</code>に加え、<code>activeWorkspaceId</code>と<code>workspaces: [{ id, name }]</code>を返します。</p>
+      <table><tbody>
+        <tr><th><code>GET /api/workspaces</code></th><td>選択IDとワークスペース名の一覧を返します。</td></tr>
+        <tr><th><code>POST /api/workspaces</code></th><td><code>{ "name": "Research" }</code>で空のワークスペースを作成し、201でIDと名前を返します。選択は変更しません。</td></tr>
+        <tr><th><code>PUT /api/workspaces/:id/activate</code></th><td>選択を保存し、エントリとワークスペース情報を通知します。</td></tr>
+        <tr><th><code>PATCH /api/workspaces/:id</code></th><td><code>{ "name": "Research" }</code>で名前を変更します。前後の空白を除いた名前は1〜100文字です。</td></tr>
+        <tr><th><code>DELETE /api/workspaces/:id</code></th><td>実ファイルを残してワークスペースを削除します。選択中の場合は残る先頭を選択します。最後の1件は削除できません。</td></tr>
+      </tbody></table>
+      <p>ブラウザーは<code>x-zatto-workspace-id</code>を送り、選択と不一致なら409になります。不明・削除済みID、不正な名前、最後の1件の削除も409です。ヘッダー省略時は選択中を操作します。開始済みのネイティブ選択は開始元だけに追加し、開始元が削除済みなら拒否します。</p>
     </main>
   </body>
 </html>

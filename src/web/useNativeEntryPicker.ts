@@ -1,11 +1,14 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
 import type { NativePickerCapability } from "./native-picker-capability.js";
+import { workspaceHeaders } from "./workspace-request.js";
 
 export type DirectoryPickerMode = "direct" | "recursive";
 export type NativePickerPending = "files" | "directory" | null;
 
 interface UseNativeEntryPickerOptions {
+  workspaceId?: string | null;
+  isCurrentWorkspace?: (id: string | null) => boolean;
   fileCapability: NativePickerCapability;
   directoryCapability: NativePickerCapability;
   selectEntry: (id: string) => void;
@@ -31,6 +34,8 @@ interface PickerResult {
  * @returns Native picker actions and their shared pending state
  */
 export function useNativeEntryPicker({
+  workspaceId,
+  isCurrentWorkspace,
   fileCapability,
   directoryCapability,
   selectEntry,
@@ -44,7 +49,8 @@ export function useNativeEntryPicker({
     if (!request) return;
     try {
       const result = await sendPickerRequest("/api/session/pick", request);
-      selectFirstAddedEntry(result, selectEntry);
+      if (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
+        selectFirstAddedEntry(result, selectEntry);
     } catch {
       setErrorMessage("Could not open HTML files.");
     } finally {
@@ -60,10 +66,13 @@ export function useNativeEntryPicker({
         "/api/session/pick-directory",
         request,
       );
+      if (isCurrentWorkspace && !isCurrentWorkspace(workspaceId ?? null))
+        return;
       if (!result.cancelled && result.added.length === 0) {
         setErrorMessage("No HTML files were added from the selected folder.");
       } else {
-        selectFirstAddedEntry(result, selectEntry);
+        if (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
+          selectFirstAddedEntry(result, selectEntry);
       }
     } catch {
       setErrorMessage("Could not add HTML files from the selected folder.");
@@ -88,6 +97,7 @@ export function useNativeEntryPicker({
       headers: {
         ...(mode ? { "content-type": "application/json" } : {}),
         "x-zatto-instance-id": capability.instanceId,
+        ...workspaceHeaders(workspaceId),
       },
       ...(mode ? { body: JSON.stringify({ mode }) } : {}),
     };

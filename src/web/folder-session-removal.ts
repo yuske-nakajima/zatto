@@ -1,4 +1,5 @@
 import { requestSessionChange } from "./session-change.js";
+import { workspaceHeaders } from "./workspace-request.js";
 
 /**
  * Creates an action that confirms and removes folder entries from the session.
@@ -8,13 +9,15 @@ import { requestSessionChange } from "./session-change.js";
  */
 export function createFolderSessionRemover(
   reportError: (message: string) => void,
+  workspaceId?: string | null,
 ): (ids: string[]) => Promise<void> {
-  return (ids) => removeFolderEntriesFromSession(ids, reportError);
+  return (ids) => removeFolderEntriesFromSession(ids, reportError, workspaceId);
 }
 
 async function removeFolderEntriesFromSession(
   ids: string[],
   reportError: (message: string) => void,
+  workspaceId?: string | null,
 ): Promise<void> {
   const fileLabel = ids.length === 1 ? "file" : "files";
   if (
@@ -25,7 +28,10 @@ async function removeFolderEntriesFromSession(
   }
   const removed = await requestSessionChange("/api/session/entries", {
     method: "DELETE",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...workspaceHeaders(workspaceId),
+    },
     body: JSON.stringify({ ids }),
   });
   if (!removed) {

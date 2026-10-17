@@ -44,11 +44,8 @@ export class EntryWatcher {
       this.watcher.unwatch(removedPaths);
     }
 
-    for (const removedPath of removedPaths) {
-      const removedId = this.entryIdByPath.get(removedPath);
-      if (removedId) {
-        this.clearDebounce(removedId);
-      }
+    for (const [entryPath, id] of this.entryIdByPath) {
+      if (nextEntryIdByPath.get(entryPath) !== id) this.clearDebounce(id);
     }
 
     this.entryIdByPath.clear();

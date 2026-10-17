@@ -99,7 +99,10 @@ describe("POST /api/session/pick-directory", () => {
         session: { entries: expectedPaths.map((absPath) => ({ absPath })) },
       });
       expect(addEntries).toHaveBeenCalledOnce();
-      expect(addEntries).toHaveBeenCalledWith(expectedPaths);
+      expect(addEntries).toHaveBeenCalledWith(
+        expectedPaths,
+        store.getWorkspaceState().activeWorkspaceId,
+      );
       expect(onSessionChanged).toHaveBeenCalledOnce();
       expect(broadcast).toHaveBeenCalledOnce();
       await app.close();

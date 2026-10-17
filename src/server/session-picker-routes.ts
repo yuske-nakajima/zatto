@@ -44,6 +44,8 @@ export function registerSessionPickerRoutes(
         .send({ message: "ネイティブ選択ダイアログはすでに開いています" });
     }
 
+    const workspaceId =
+      options.sessionStore.getWorkspaceState().activeWorkspaceId;
     nativePickerActive = true;
     try {
       const result = await options.pickFiles();
@@ -51,7 +53,10 @@ export function registerSessionPickerRoutes(
         return reply.code(200).send({ cancelled: true, added: [] });
       }
       const htmlPaths = result.paths.filter(isHtmlPath);
-      const addedEntries = await options.sessionStore.addEntries(htmlPaths);
+      const addedEntries = await options.sessionStore.addEntries(
+        htmlPaths,
+        workspaceId,
+      );
       if (addedEntries.length > 0) {
         await options.publishSessionUpdate();
       }
@@ -88,6 +93,8 @@ export function registerSessionPickerRoutes(
           .send({ message: "ネイティブ選択ダイアログはすでに開いています" });
       }
 
+      const workspaceId =
+        options.sessionStore.getWorkspaceState().activeWorkspaceId;
       nativePickerActive = true;
       try {
         const result = await options.pickDirectory();
@@ -95,7 +102,10 @@ export function registerSessionPickerRoutes(
           return reply.code(200).send({ cancelled: true, added: [] });
         }
         const htmlPaths = await enumerateHtmlFiles(result.path, mode);
-        const addedEntries = await options.sessionStore.addEntries(htmlPaths);
+        const addedEntries = await options.sessionStore.addEntries(
+          htmlPaths,
+          workspaceId,
+        );
         if (addedEntries.length > 0) {
           await options.publishSessionUpdate();
         }

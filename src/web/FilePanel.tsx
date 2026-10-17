@@ -1,10 +1,9 @@
-import type { DragEvent, RefObject } from "react";
+import type { DragEvent, ReactNode, RefObject } from "react";
 import type { Entry } from "../server/session.js";
 import { AddEntryControls } from "./AddEntryControls.js";
-import zattoLogoBlack from "./assets/zatto-logo-black.png";
-import zattoLogoWhite from "./assets/zatto-logo-white.png";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
+import { FilePanelHeader } from "./FilePanelHeader.js";
 import type { FilePanelView } from "./file-panel-model.js";
 import { SessionActions } from "./SessionActions.js";
 import type {
@@ -17,9 +16,8 @@ import type {
   SessionTransferPending,
 } from "./useSessionTransfer.js";
 
-const DARK_COLOR_SCHEME = "(prefers-color-scheme: dark)";
-
 interface FilePanelProps {
+  workspaceControls?: ReactNode;
   entries: Entry[];
   selectedId: string | null;
   view: FilePanelView;
@@ -51,6 +49,7 @@ interface FilePanelProps {
 }
 
 export function FilePanel({
+  workspaceControls,
   entries,
   selectedId,
   view,
@@ -82,15 +81,8 @@ export function FilePanel({
 }: FilePanelProps) {
   return (
     <aside className="sidebar">
-      <header className="sidebar-header">
-        <p className="eyebrow">LOCAL HTML VIEWER</p>
-        <h1>
-          <picture>
-            <source media={DARK_COLOR_SCHEME} srcSet={zattoLogoWhite} />
-            <img src={zattoLogoBlack} alt="zatto" />
-          </picture>
-        </h1>
-      </header>
+      <FilePanelHeader />
+      {workspaceControls}
       <div className="list-heading">
         <span className="entry-count">
           ENTRIES <strong>{entries.length}</strong>

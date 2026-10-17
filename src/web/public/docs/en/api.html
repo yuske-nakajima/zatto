@@ -84,6 +84,16 @@
           <tr><th><code>GET /docs/*</code></th><td>Returns bundled documentation without allowing traversal outside the docs directory.</td></tr>
         </tbody>
       </table>
+      <h2>Workspaces</h2>
+      <p>The active workspace is shared by all tabs and CLI clients. Session routes, search, previews, import/export, and agent context target that workspace. <code>GET /api/session</code> and <code>session:update</code> retain <code>entries</code> and also include <code>activeWorkspaceId</code> and <code>workspaces: [{ id, name }]</code>.</p>
+      <table><tbody>
+        <tr><th><code>GET /api/workspaces</code></th><td>Returns the active ID and workspace names.</td></tr>
+        <tr><th><code>POST /api/workspaces</code></th><td>Creates an empty workspace with <code>{ "name": "Research" }</code>; returns its ID and name with 201. Does not activate it.</td></tr>
+        <tr><th><code>PUT /api/workspaces/:id/activate</code></th><td>Persists selection and publishes active entries and workspace metadata.</td></tr>
+        <tr><th><code>PATCH /api/workspaces/:id</code></th><td>Renames with <code>{ "name": "Research" }</code>. Trimmed names must contain 1–100 characters.</td></tr>
+        <tr><th><code>DELETE /api/workspaces/:id</code></th><td>Removes a workspace, preserving disk files. Deleting the active workspace selects the first remaining one. The last workspace cannot be deleted.</td></tr>
+      </tbody></table>
+      <p>Browser requests send <code>x-zatto-workspace-id</code>; a mismatch returns 409. Missing/deleted workspace IDs, invalid names, and last-workspace deletion also return 409. Requests without this header operate on the active workspace. A native picker already open when selection changes adds only to its original workspace. Deleted picker targets are rejected.</p>
     </main>
   </body>
 </html>

@@ -1,13 +1,11 @@
-import { useRef, useState } from "react";
 import { AppViewer } from "./AppViewer.js";
-import type { CopyFeedback } from "./copy-feedback.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
-import { requestSessionChange } from "./session-change.js";
 import { useAgentContextSync } from "./useAgentContextSync.js";
+import { useCopyPath } from "./useCopyPath.js";
 import { useDocsNavigation } from "./useDocsNavigation.js";
 import { useEntryReordering } from "./useEntryReordering.js";
 import { useFilePanelNavigation } from "./useFilePanelNavigation.js";
@@ -15,13 +13,16 @@ import { useNativeEntryPicker } from "./useNativeEntryPicker.js";
 import { useSearchNavigation } from "./useSearchNavigation.js";
 import { useSessionEntries } from "./useSessionEntries.js";
 import { useSessionTransfer } from "./useSessionTransfer.js";
+import { WorkspaceControls } from "./WorkspaceControls.js";
+import { workspaceEntryActions } from "./workspace-entry-actions.js";
 
 export { buildDirectoryTree } from "./directory-tree-model.js";
 export { moveEntry, selectAvailableEntry } from "./file-panel-model.js";
 export function App() {
-  const copyRequestId = useRef(0);
-  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
+  const { copyFeedback, copyPath, resetCopyFeedback } = useCopyPath();
   const {
+    workspaceState,
+    isCurrentWorkspace,
     entries,
     setEntries,
     selectedId,
@@ -35,11 +36,18 @@ export function App() {
     serverInstanceId,
     isLoaded: isSessionLoaded,
     applyImportedEntries,
-  } = useSessionEntries(() => {
-    copyRequestId.current += 1;
-    setCopyFeedback(null);
+  } = useSessionEntries((workspaceChanged) => {
+    if (workspaceChanged) {
+      search.reset();
+      docs.hide();
+      entryReordering.resetDragState();
+    }
+    resetCopyFeedback();
   });
+  const workspaceId = workspaceState?.activeWorkspaceId ?? null;
   const pickerControl = useNativeEntryPicker({
+    workspaceId,
+    isCurrentWorkspace,
     fileCapability: filePicker,
     directoryCapability: directoryPicker,
     selectEntry,
@@ -49,11 +57,15 @@ export function App() {
   const docs = useDocsNavigation();
   const filePanel = useFilePanelNavigation(search.flushHistory);
   const entryReordering = useEntryReordering({
+    workspaceId,
+    isCurrentWorkspace,
     entries,
     setEntries,
     setErrorMessage,
   });
   const sessionTransfer = useSessionTransfer({
+    workspaceId,
+    isCurrentWorkspace,
     instanceId: serverInstanceId,
     applyImportedEntries,
     resetSearch: search.reset,
@@ -66,13 +78,13 @@ export function App() {
       ? "search"
       : "preview";
   useAgentContextSync({
+    workspaceId,
     activeEntryId: selectedEntry?.id ?? null,
     view: mainView,
     enabled: isSessionLoaded,
   });
   function selectEntry(id: string): void {
-    copyRequestId.current += 1;
-    setCopyFeedback(null);
+    resetCopyFeedback();
     search.flushHistory();
     docs.hide();
     selectSessionEntry(id);
@@ -87,45 +99,15 @@ export function App() {
       selectEntry(id);
       return;
     }
-    copyRequestId.current += 1;
+    resetCopyFeedback();
     selectSessionEntry(id, "none");
-    setCopyFeedback(null);
     search.openResult(id, locator);
   }
-  async function copyPath(path: string): Promise<void> {
-    const requestId = copyRequestId.current + 1;
-    copyRequestId.current = requestId;
-    setCopyFeedback(null);
-    try {
-      await navigator.clipboard.writeText(path);
-      if (copyRequestId.current === requestId) {
-        setCopyFeedback({ kind: "success", message: "Path copied!" });
-      }
-    } catch {
-      if (copyRequestId.current === requestId) {
-        setCopyFeedback({
-          kind: "error",
-          message: "Could not copy the path.",
-        });
-      }
-    }
-  }
-  async function removeEntry(id: string): Promise<void> {
-    const removed = await requestSessionChange(
-      `/api/session/${encodeURIComponent(id)}`,
-      { method: "DELETE" },
-    );
-    if (!removed) setErrorMessage("Could not remove the entry.");
-  }
-  async function clearEntries(): Promise<void> {
-    if (entries.length === 0 || !window.confirm("Remove all entries?")) {
-      return;
-    }
-    const cleared = await requestSessionChange("/api/session", {
-      method: "DELETE",
-    });
-    if (!cleared) setErrorMessage("Could not remove all entries.");
-  }
+  const { removeEntry, clearEntries } = workspaceEntryActions(
+    workspaceId,
+    entries.length > 0,
+    setErrorMessage,
+  );
   function openSearch(): void {
     docs.hide();
     search.open();
@@ -150,6 +132,12 @@ export function App() {
         filePanel={
           filePanel.isVisible ? (
             <FilePanel
+              workspaceControls={
+                <WorkspaceControls
+                  state={workspaceState}
+                  reportError={setErrorMessage}
+                />
+              }
               entries={entries}
               selectedId={selectedId}
               view={filePanel.view}
@@ -168,7 +156,10 @@ export function App() {
               onSelect={selectEntry}
               onCopyPath={copyPath}
               onRemove={removeEntry}
-              onRemoveEntries={createFolderSessionRemover(setErrorMessage)}
+              onRemoveEntries={createFolderSessionRemover(
+                setErrorMessage,
+                workspaceId,
+              )}
               onDragStart={entryReordering.handleDragStart}
               onDragEnter={entryReordering.setDropTargetId}
               onDragEnd={entryReordering.resetDragState}

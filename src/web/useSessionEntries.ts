@@ -1,7 +1,6 @@
-import { useEffect, useEffectEvent, useState } from "react";
-import type { Entry, Session } from "../server/session.js";
-import type { ServerMessage } from "../shared/protocol.js";
-import { selectAvailableEntry } from "./file-panel-model.js";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import type { Entry } from "../server/session.js";
+import type { WorkspaceState } from "../server/workspace-state.js";
 import {
   type NativePickerCapabilities,
   readNativePickerCapabilities,
@@ -9,33 +8,40 @@ import {
 import {
   pushSelectedEntryIdInUrl,
   readSelectedEntryIdFromUrl,
-  replaceSelectedEntryIdInUrl,
 } from "./selected-entry-url.js";
+import {
+  parseServerMessage,
+  resolveSelectedEntryIdAndUpdateUrl,
+  type SessionResponse,
+} from "./session-message.js";
 import type { SessionImportMode } from "./useSessionTransfer.js";
 
-interface SessionEntries {
-  entries: Entry[];
-  setEntries: React.Dispatch<React.SetStateAction<Entry[]>>;
-  selectedId: string | null;
-  selectEntry: (id: string, historyMode?: "push" | "none") => void;
-  reloadVersion: number;
-  searchVersion: number;
-  errorMessage: string | null;
-  setErrorMessage: React.Dispatch<React.SetStateAction<string | null>>;
-  filePicker: NativePickerCapabilities["files"];
-  directoryPicker: NativePickerCapabilities["directory"];
-  serverInstanceId: string | null;
-  isLoaded: boolean;
-  applyImportedEntries: (entries: Entry[], mode: SessionImportMode) => void;
-}
-
-interface SessionResponse extends Session {
-  filePicker?: { available?: boolean; instanceId?: string };
-  directoryPicker?: { available?: boolean; instanceId?: string };
-  serverIdentity?: { instanceId?: string };
-}
-
-export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
+export function useSessionEntries(
+  onSessionUpdate: (workspaceChanged?: boolean) => void,
+) {
+  const [workspaceState, setWorkspaceState] = useState<WorkspaceState | null>(
+    null,
+  );
+  const workspaceIdRef = useRef<string | null>(null);
+  const socketUpdateRef = useRef(0);
+  const sessionRevision = socketUpdateRef.current;
+  const workspaceGenerationRef = useRef(0);
+  const workspaceGeneration = workspaceGenerationRef.current;
+  const applyWorkspace = useEffectEvent(
+    (state: Partial<WorkspaceState>): boolean => {
+      if (!state.activeWorkspaceId || !state.workspaces) return false;
+      const changed =
+        workspaceIdRef.current !== null &&
+        workspaceIdRef.current !== state.activeWorkspaceId;
+      if (changed) workspaceGenerationRef.current += 1;
+      workspaceIdRef.current = state.activeWorkspaceId;
+      setWorkspaceState({
+        activeWorkspaceId: state.activeWorkspaceId,
+        workspaces: state.workspaces,
+      });
+      return changed;
+    },
+  );
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
@@ -61,6 +67,7 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
 
   useEffect(() => {
     let active = true;
+    const updateVersion = socketUpdateRef.current;
     fetch("/api/session")
       .then(async (response) => {
         if (!response.ok) {
@@ -70,16 +77,19 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
       })
       .then((session) => {
         if (active) {
-          setEntries(session.entries);
+          if (updateVersion === socketUpdateRef.current) {
+            applyWorkspace(session);
+            setEntries(session.entries);
+            setSelectedId(
+              resolveSelectedEntryIdAndUpdateUrl(
+                readSelectedEntryIdFromUrl(),
+                session.entries,
+              ),
+            );
+          }
           setPickerCapabilities(readNativePickerCapabilities(session));
           setServerInstanceId(session.serverIdentity?.instanceId ?? null);
           setIsLoaded(true);
-          setSelectedId(
-            resolveSelectedEntryIdAndUpdateUrl(
-              readSelectedEntryIdFromUrl(),
-              session.entries,
-            ),
-          );
         }
       })
       .catch(() => {
@@ -108,6 +118,7 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     importedEntries: Entry[],
     mode: SessionImportMode,
   ): void {
+    if (socketUpdateRef.current !== sessionRevision) return;
     onSessionUpdate();
     setEntries(importedEntries);
     setSearchVersion((current) => current + 1);
@@ -127,11 +138,16 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
       return;
     }
     if (message.type === "session:update") {
-      onSessionUpdate();
+      socketUpdateRef.current += 1;
+      const workspaceChanged = applyWorkspace(message);
+      onSessionUpdate(workspaceChanged);
       setSearchVersion((current) => current + 1);
       setEntries(message.entries);
       setSelectedId(
-        resolveSelectedEntryIdAndUpdateUrl(selectedId, message.entries),
+        resolveSelectedEntryIdAndUpdateUrl(
+          workspaceChanged ? null : selectedId,
+          message.entries,
+        ),
       );
       return;
     }
@@ -151,6 +167,10 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
   }, []);
 
   return {
+    workspaceState,
+    isCurrentWorkspace: (id: string | null) =>
+      workspaceIdRef.current === id &&
+      workspaceGenerationRef.current === workspaceGeneration,
     entries,
     setEntries,
     selectedId,
@@ -165,24 +185,4 @@ export function useSessionEntries(onSessionUpdate: () => void): SessionEntries {
     isLoaded,
     applyImportedEntries,
   };
-}
-
-function resolveSelectedEntryIdAndUpdateUrl(
-  requestedId: string | null,
-  availableEntries: Entry[],
-): string | null {
-  const selectedEntryId = selectAvailableEntry(requestedId, availableEntries);
-  replaceSelectedEntryIdInUrl(selectedEntryId);
-  return selectedEntryId;
-}
-
-function parseServerMessage(data: unknown): ServerMessage | null {
-  if (typeof data !== "string") {
-    return null;
-  }
-  try {
-    return JSON.parse(data) as ServerMessage;
-  } catch {
-    return null;
-  }
 }

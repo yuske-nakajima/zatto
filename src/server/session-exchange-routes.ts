@@ -49,8 +49,14 @@ export function registerSessionExchangeRoutes(
         const paths = exchange.entries.map((entry) => entry.path);
         const session =
           mode === "merge"
-            ? await options.sessionStore.mergeEntries(paths)
-            : await options.sessionStore.replaceEntries(paths);
+            ? await options.sessionStore.mergeEntries(
+                paths,
+                request.headers["x-zatto-workspace-id"] as string | undefined,
+              )
+            : await options.sessionStore.replaceEntries(
+                paths,
+                request.headers["x-zatto-workspace-id"] as string | undefined,
+              );
         await options.publishSessionUpdate();
         return reply.code(200).send(session);
       } catch (error) {

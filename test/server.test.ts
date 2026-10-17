@@ -48,10 +48,10 @@ describe("zatto server", () => {
     });
 
     const persisted = JSON.parse(await readFile(sessionFilePath, "utf8")) as {
-      entries: Array<{ absPath: string; title: string }>;
+      workspaces: Array<{ entries: Array<{ absPath: string; title: string }> }>;
     };
-    expect(persisted.entries).toHaveLength(1);
-    expect(persisted.entries[0]).toMatchObject({
+    expect(persisted.workspaces[0].entries).toHaveLength(1);
+    expect(persisted.workspaces[0].entries[0]).toMatchObject({
       absPath: htmlPath,
       title: "サンプル画面",
     });
@@ -372,6 +372,7 @@ describe("zatto server", () => {
     expect(response.statusCode).toBe(204);
     expect(message).toEqual({
       type: "session:update",
+      ...store.getWorkspaceState(),
       entries: [second, first],
     });
 
@@ -485,6 +486,7 @@ describe("zatto server", () => {
     expect(response.statusCode).toBe(201);
     expect(message).toMatchObject({
       type: "session:update",
+      ...store.getWorkspaceState(),
       entries: [{ absPath: htmlPath }],
     });
     expect(onSessionChanged).toHaveBeenCalledWith(
@@ -509,6 +511,7 @@ describe("zatto server", () => {
     expect(deleteResponse.statusCode).toBe(204);
     expect(deleteMessage).toEqual({
       type: "session:update",
+      ...store.getWorkspaceState(),
       entries: [],
     });
     const restoredStore = new SessionStore(sessionFilePath);
