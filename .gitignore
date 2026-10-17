@@ -25,3 +25,6 @@ node_modules/
 dist/
 .vite/
 .vitest/
+
+# CHANGELOG.md から生成する同梱ページ
+src/web/public/docs/*/changelog.html
