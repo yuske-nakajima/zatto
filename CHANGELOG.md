@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0](https://github.com/yuske-nakajima/zatto/compare/v1.2.0...v2.0.0) (2026-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **rpc:** REST操作APIを廃止し、POST /rpcへ移行する。 旧サーバーは旧版CLIで停止してから2.0.0を起動する必要がある。 ワークスペースと交換ファイルの保存形式は維持する。
+
+### Features
+
+* **changelog:** 変更履歴の正本から同梱ページを生成 ([d9e9067](https://github.com/yuske-nakajima/zatto/commit/d9e906736f60811d79015c37847966774a122dfa))
+* **docs:** 変更履歴とロゴ下のバージョンを表示 ([bb28a66](https://github.com/yuske-nakajima/zatto/commit/bb28a66a8c88f5b1020dce81467c606db8049587))
+* **rpc:** 操作通信を共通CommandsとJSON-RPCへ統一 ([9e806f0](https://github.com/yuske-nakajima/zatto/commit/9e806f07129392e8f3a8b1bc73530d85cd97ae86)), closes [#75](https://github.com/yuske-nakajima/zatto/issues/75)
+
 ## [1.2.0](https://github.com/yuske-nakajima/zatto/releases/tag/v1.2.0) (2026-10-17)
 
 ## What's Changed
