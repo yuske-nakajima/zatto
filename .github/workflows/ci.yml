@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   ci:
+    if: github.ref != 'refs/heads/codex/fix-release-permissions'
     runs-on: ubuntu-latest
     steps:
       - name: Reject a stale release PR dispatch
@@ -49,3 +50,52 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  release-permissions-probe:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fix-release-permissions'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Require exact diagnostic commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$GITHUB_SHA" = "$EXPECTED_SHA"
+      - name: Probe draft metadata update without publishing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const release_id = 415559897;
+            const tag = 'v2.0.0';
+            const expectedTagSha = 'd12c0e3aa6c810fb4773d64b8c78edf28582d486';
+            const before = (await github.rest.repos.getRelease({owner, repo, release_id})).data;
+            const beforeRef = (await github.rest.git.getRef({owner, repo, ref: `tags/${tag}`})).data;
+            if (!before.draft || before.tag_name !== tag || beforeRef.object.sha !== expectedTagSha) {
+              throw new Error('Release or tag differs from the authorized draft');
+            }
+            const originalBody = before.body;
+            core.info(`Before: draft=${before.draft}, tag=${before.tag_name}, target=${before.target_commitish}, tagSha=${beforeRef.object.sha}`);
+            let firstStatus;
+            try {
+              const first = await github.rest.repos.updateRelease({owner, repo, release_id, tag_name: tag, body: originalBody, draft: true});
+              firstStatus = first.status;
+              core.info(`PATCH without target_commitish: HTTP ${first.status}`);
+            } catch (error) {
+              firstStatus = error.status;
+              core.info(`PATCH without target_commitish: HTTP ${error.status}`);
+              if (error.status !== 403) throw error;
+            }
+            if (firstStatus === 403) {
+              const main = (await github.rest.git.getRef({owner, repo, ref: 'heads/main'})).data;
+              if (main.object.sha !== '3f244b546266048266aec394977dea62eccd8cdf') throw new Error('Main advanced during diagnostic');
+              const second = await github.rest.repos.updateRelease({owner, repo, release_id, tag_name: tag, body: originalBody, draft: true, target_commitish: main.object.sha});
+              core.info(`PATCH targeting default-branch SHA: HTTP ${second.status}`);
+            }
+            const after = (await github.rest.repos.getRelease({owner, repo, release_id})).data;
+            const afterRef = (await github.rest.git.getRef({owner, repo, ref: `tags/${tag}`})).data;
+            if (!after.draft || after.tag_name !== tag || after.body !== originalBody || afterRef.object.sha !== expectedTagSha) {
+              throw new Error('Draft, body, or actual tag changed unexpectedly');
+            }
+            core.info(`After: draft=${after.draft}, tag=${after.tag_name}, target=${after.target_commitish}, tagSha=${afterRef.object.sha}; body unchanged`);
