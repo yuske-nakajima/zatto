@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0](https://github.com/yuske-nakajima/zatto/compare/v3.0.0...v3.1.0) (2026-10-17)
+
+
+### Features
+
+* **view:** Markdownのタスクリストのチェックをプレビューから切り替える ([1fe1871](https://github.com/yuske-nakajima/zatto/commit/1fe1871d82569183b8f81dce7dc2a105c802911b)), closes [#67](https://github.com/yuske-nakajima/zatto/issues/67)
+* **view:** Markdownファイルを閲覧専用で表示する ([0071905](https://github.com/yuske-nakajima/zatto/commit/0071905f1dc61ed5123741ce1b37df1e605288d3))
+* **view:** Markdownファイルを閲覧専用で表示する ([16e8b30](https://github.com/yuske-nakajima/zatto/commit/16e8b30aef131344b704dd04141fe6aeda0468e4)), closes [#67](https://github.com/yuske-nakajima/zatto/issues/67)
+
+
+### Bug Fixes
+
+* **view:** Mermaidの構文エラー時に既定のエラー図を残さない ([e44c5c5](https://github.com/yuske-nakajima/zatto/commit/e44c5c5c703238e28cdc7b1f4a459b7dde4e88bd))
+
 ## [3.0.0](https://github.com/yuske-nakajima/zatto/compare/v2.1.0...v3.0.0) (2026-10-17)
 
 
