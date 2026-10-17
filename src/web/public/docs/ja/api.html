@@ -94,6 +94,11 @@
         <tr><th><code>DELETE /api/workspaces/:id</code></th><td>実ファイルを残してワークスペースを削除します。選択中の場合は残る先頭を選択します。最後の1件は削除できません。</td></tr>
       </tbody></table>
       <p>ブラウザーは<code>x-zatto-workspace-id</code>を送り、選択と不一致なら409になります。不明・削除済みID、不正な名前、最後の1件の削除も409です。ヘッダー省略時は選択中を操作します。開始済みのネイティブ選択は開始元だけに追加し、開始元が削除済みなら拒否します。</p>
+      <h2>お気に入り</h2>
+      <p>セッションの各エントリは任意の<code>favorite: boolean</code>を持ち、省略時はfalseです。星はワークスペース単位で保存し、List順を変えません。保存形式はversion 2を維持します。</p>
+      <h3><code class="operation">PATCH /api/session/:id/favorite</code></h3>
+      <p><code>{ "favorite": true }</code>か<code>{ "favorite": false }</code>を送ります。成功時は204です。変更時は原子的に保存して<code>session:update</code>を通知します。同じ状態の再送は保存も通知もしません。真偽値以外は400、不明なエントリは404、<code>x-zatto-workspace-id</code>の不一致は409です。</p>
+      <p>交換形式version 1はパスだけを保持します。全置換インポートは星を解除し、追加は既存の星を維持します。削除後の再登録は星なしです。検索とAgentコンテキストは選択中のワークスペース全体が対象です。</p>
     </main>
   </body>
 </html>

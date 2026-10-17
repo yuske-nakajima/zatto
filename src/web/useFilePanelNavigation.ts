@@ -73,11 +73,13 @@ function readLocation(useStoredPreference: boolean): FilePanelLocation {
     const panel = parameters.get(PANEL_PARAMETER);
     return {
       view:
-        fileView === "folders"
-          ? "directories"
-          : fileView === null && useStoredPreference
-            ? readFilePanelView()
-            : "list",
+        fileView === "favorites"
+          ? "favorites"
+          : fileView === "folders"
+            ? "directories"
+            : fileView === null && useStoredPreference
+              ? readFilePanelView()
+              : "list",
       isVisible: panel !== "closed",
     };
   } catch {
@@ -105,11 +107,13 @@ function writeLocation(
     setParameter(
       url,
       FILE_VIEW_PARAMETER,
-      location.view === "directories"
-        ? "folders"
-        : preserveExplicitDefaults && fileView === "list"
-          ? "list"
-          : null,
+      location.view === "favorites"
+        ? "favorites"
+        : location.view === "directories"
+          ? "folders"
+          : preserveExplicitDefaults && fileView === "list"
+            ? "list"
+            : null,
     );
     setParameter(
       url,

@@ -1,6 +1,6 @@
 import type { Entry } from "../server/session.js";
 
-export type FilePanelView = "list" | "directories";
+export type FilePanelView = "list" | "directories" | "favorites";
 
 const FILE_PANEL_VIEW_KEY = "zatto:file-panel-view";
 
@@ -33,9 +33,8 @@ export function moveEntry(
 
 export function readFilePanelView(): FilePanelView {
   try {
-    return window.localStorage.getItem(FILE_PANEL_VIEW_KEY) === "directories"
-      ? "directories"
-      : "list";
+    const view = window.localStorage.getItem(FILE_PANEL_VIEW_KEY);
+    return view === "directories" || view === "favorites" ? view : "list";
   } catch {
     return "list";
   }

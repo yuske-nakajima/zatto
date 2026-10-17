@@ -30,5 +30,19 @@ export function workspaceEntryActions(
     if (!(await requestSessionChange("/api/session", request)))
       reportError("Could not remove all entries.");
   }
-  return { removeEntry, clearEntries };
+  async function setFavorite(id: string, favorite: boolean): Promise<void> {
+    const updated = await requestSessionChange(
+      `/api/session/${encodeURIComponent(id)}/favorite`,
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          ...workspaceHeaders(workspaceId),
+        },
+        body: JSON.stringify({ favorite }),
+      },
+    );
+    if (!updated) reportError("Could not update the favorite.");
+  }
+  return { removeEntry, clearEntries, setFavorite };
 }

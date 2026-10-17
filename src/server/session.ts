@@ -2,6 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { writeFileAtomically } from "../shared/atomic-file.js";
+import { updateFavorite } from "./favorite-update.js";
 import { extractTitle, fileExists } from "./session-files.js";
 import { createImportedEntries } from "./session-import.js";
 import { WorkspaceStore } from "./workspace-store.js";
@@ -13,6 +14,7 @@ export interface Entry {
   absPath: string;
   title: string;
   addedAt: number;
+  favorite?: boolean;
 }
 /** Ordered entries belonging to the active workspace. */
 export interface Session {
@@ -165,6 +167,23 @@ export class SessionStore extends WorkspaceStore {
         return { result: false };
       return { entries: ids.map((id) => byId.get(id) as Entry), result: true };
     });
+  }
+  /**
+   * Sets a workspace entry's favorite state without reordering files.
+   * @param id - Entry ID
+   * @param favorite - Desired state
+   * @param workspaceId - Target workspace
+   * @returns Whether the entry was missing, unchanged, or updated
+   * @throws When persistence fails or the workspace no longer exists
+   */
+  async setFavorite(
+    id: string,
+    favorite: boolean,
+    workspaceId = this.activeId(),
+  ) {
+    return this.updateEntries(workspaceId, (entries) =>
+      updateFavorite(entries, id, favorite),
+    );
   }
   /**
    * Clears the target workspace without deleting files.

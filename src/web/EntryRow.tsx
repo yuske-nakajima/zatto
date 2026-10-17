@@ -1,5 +1,6 @@
 import { type DragEvent, useId, useState } from "react";
 import type { Entry } from "../server/session.js";
+import { FavoriteButton } from "./FavoriteButton.js";
 import { fileName } from "./file-panel-model.js";
 import { Icon } from "./icons.js";
 
@@ -12,6 +13,7 @@ interface EntryRowProps {
   onSelect: (id: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
+  onFavorite?: (id: string, favorite: boolean) => Promise<void>;
   onDragStart?: (event: DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnter?: (id: string) => void;
   onDragEnd?: () => void;
@@ -33,6 +35,7 @@ export function EntryRow({
   onSelect,
   onCopyPath,
   onRemove,
+  onFavorite,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -44,6 +47,7 @@ export function EntryRow({
   const draggable = Boolean(onDragStart);
   const rowClassName = [
     "entry-row",
+    !draggable && "entry-row--static",
     isSelected && "entry-row--selected",
     isDragging && "entry-row--dragging",
     isDropTarget && !isDragging && "entry-row--drop-target",
@@ -124,6 +128,7 @@ export function EntryRow({
         </span>
       </button>
       <span className="entry-actions">
+        {onFavorite && <FavoriteButton entry={entry} onFavorite={onFavorite} />}
         <button
           className="entry-path-copy icon-button"
           data-status-description="Copy this file path."

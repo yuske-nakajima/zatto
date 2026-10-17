@@ -1,0 +1,12 @@
+.entry-favorite.icon-button {
+  flex: none;
+  padding: 2px;
+  color: var(--color-icon-default);
+}
+.entry-favorite[aria-pressed="true"] {
+  color: var(--color-text-accent);
+}
+.entry-favorite:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

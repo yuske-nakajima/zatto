@@ -103,7 +103,7 @@ export function App() {
     selectSessionEntry(id, "none");
     search.openResult(id, locator);
   }
-  const { removeEntry, clearEntries } = workspaceEntryActions(
+  const { removeEntry, clearEntries, setFavorite } = workspaceEntryActions(
     workspaceId,
     entries.length > 0,
     setErrorMessage,
@@ -155,6 +155,7 @@ export function App() {
               onClear={clearEntries}
               onSelect={selectEntry}
               onCopyPath={copyPath}
+              onFavorite={setFavorite}
               onRemove={removeEntry}
               onRemoveEntries={createFolderSessionRemover(
                 setErrorMessage,

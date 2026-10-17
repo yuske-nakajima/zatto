@@ -70,6 +70,7 @@ npx @yuske-nakajima/zatto --stop</code></pre>
       <h2>Server executable</h2>
       <p>The package's server entry accepts <code>--port</code>, <code>--instance-id</code>, and <code>--runtime-file</code>. These options support the managed background process; ordinary use should go through the <code>zatto</code> command.</p>
       <h2>Workspace selection</h2><p>Use Workspace in the file panel to create, switch, rename, or delete named collections. Each saves its file paths and List order across restarts. Existing sessions become Default. Selection is shared across browser tabs and CLI: file additions, session import/export, and agent context use the active workspace. Switching resets search; List/Folders and panel preferences stay unchanged. Deletion requires confirmation and preserves disk files. The last workspace cannot be deleted.</p>
+      <h2>Favorites and session exchange</h2><p>Manage stars in the browser. CLI additions do not change existing stars. Exported version 1 session files contain paths only. Replace imports regenerate entries with no stars; merge imports retain stars on existing entries. Stars are scoped to the active workspace.</p>
     </main>
   </body>
 </html>
