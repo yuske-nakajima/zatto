@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
@@ -45,33 +45,37 @@ describe("ブラウザーのAgentコンテキスト同期", () => {
     render(<App />);
     await screen.findByTitle("Alpha preview");
 
-    expect(requests).toContainEqual({
-      url: "agentContext.set",
-      init: expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          activeEntryId: "alpha",
-          view: "preview",
-          workspaceId: "default",
+    await waitFor(() =>
+      expect(requests).toContainEqual({
+        url: "agentContext.set",
+        init: expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            activeEntryId: "alpha",
+            view: "preview",
+            workspaceId: "default",
+          }),
         }),
       }),
-    });
+    );
 
     screen.getByRole("button", { name: "Docs" }).click();
     expect(
       await screen.findByRole("heading", { name: "Documentation" }),
     ).toBeTruthy();
-    expect(requests).toContainEqual({
-      url: "agentContext.set",
-      init: expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          activeEntryId: "alpha",
-          view: "docs",
-          workspaceId: "default",
+    await waitFor(() =>
+      expect(requests).toContainEqual({
+        url: "agentContext.set",
+        init: expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            activeEntryId: "alpha",
+            view: "docs",
+            workspaceId: "default",
+          }),
         }),
       }),
-    });
+    );
   });
 
   test("同期失敗はビューアーの操作を妨げない", async () => {
