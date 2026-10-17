@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { extractReleaseNotes } from "../changelog/entries.mjs";
-import { releaseState } from "./github.mjs";
+import { releaseState, updateRelease } from "./github.mjs";
 import { validateRelease } from "./policy.mjs";
 
 /**
@@ -44,24 +44,14 @@ export function validateCheckout(updateDraftNotes = false) {
   });
   execFileSync("git", ["merge-base", "--is-ancestor", sha, "origin/main"]);
   if (synchronize && release.body?.trim() !== notes) {
-    execFileSync(
-      "gh",
-      [
-        "api",
-        "--method",
-        "PATCH",
-        `repos/${process.env.GITHUB_REPOSITORY}/releases/${release.id}`,
-        "--input",
-        "-",
-      ],
-      {
-        input: JSON.stringify({ body: notes }),
-        encoding: "utf8",
-      },
-    );
-    release.body = notes;
+    const updated = updateRelease(process.env.GITHUB_REPOSITORY, release, sha, {
+      body: notes,
+    });
+    return { ...updated, version: manifest.version };
   }
   return { release, sha, version: manifest.version };
 }
 
-if (process.argv[1] === import.meta.filename) validateCheckout(true);
+if (process.argv[1] && realpathSync(process.argv[1]) === import.meta.filename) {
+  validateCheckout(true);
+}

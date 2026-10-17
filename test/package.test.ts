@@ -190,7 +190,7 @@ describe("npmパッケージ", () => {
     expect(releaseWorkflow).toContain("workflow_dispatch:");
     expect(releaseWorkflow).toContain("id-token: write");
     expect(releaseWorkflow).toContain("pnpm run verify:package");
-    expect(releaseWorkflow).toContain("node scripts/release/publish.mjs");
+    expect(releaseWorkflow).toContain("scripts/release/publish.mjs");
     expect(releaseWorkflow).toContain("googleapis/release-please-action@v4");
     expect(releaseWorkflow).not.toContain("NPM_TOKEN");
   });

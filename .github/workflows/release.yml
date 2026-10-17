@@ -64,8 +64,24 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
     steps:
-      - name: Select verified package path
-        run: echo "ZATTO_RELEASE_TARBALL=$RUNNER_TEMP/zatto-release.tgz" >> "$GITHUB_ENV"
+      - name: Select package and release tooling paths
+        run: |
+          echo "ZATTO_RELEASE_TARBALL=$RUNNER_TEMP/zatto-release.tgz" >> "$GITHUB_ENV"
+          echo "ZATTO_RELEASE_TOOLING=$RUNNER_TEMP/zatto-release-tools" >> "$GITHUB_ENV"
+      - name: Checkout release workflow tools
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up release workflow tools
+        uses: jdx/mise-action@v2
+      - name: Install release tooling dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Test release workflow tools
+        run: pnpm exec vitest run test/release-policy.test.ts test/release-workflow.test.ts
+      - name: Stage release workflow tools outside the package
+        run: |
+          echo "ZATTO_RELEASE_NODE=$(command -v node)" >> "$GITHUB_ENV"
+          node scripts/release/stage.mjs
       - name: Checkout immutable release commit
         uses: actions/checkout@v4
         with:
@@ -76,7 +92,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Validate release provenance and approved notes
-        run: node scripts/release/validate.mjs
+        run: '"$ZATTO_RELEASE_NODE" "$ZATTO_RELEASE_TOOLING/scripts/release/validate.mjs"'
       - name: Generate bundled changelog
         run: node scripts/update-changelog.mjs
 
@@ -87,4 +103,4 @@ jobs:
       - name: Verify package
         run: pnpm run verify:package
       - name: Publish verified package and GitHub Release
-        run: node scripts/release/publish.mjs
+        run: '"$ZATTO_RELEASE_NODE" "$ZATTO_RELEASE_TOOLING/scripts/release/publish.mjs"'

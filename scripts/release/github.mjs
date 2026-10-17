@@ -43,3 +43,62 @@ export function releaseState(repository, tag) {
   }
   return { release, sha: ref.sha };
 }
+
+/**
+ * Update release fields without changing its tag or target commit.
+ * @param {string} repository GitHub owner/repository.
+ * @param {object} release Validated GitHub Release metadata.
+ * @param {string} sha Validated target commit.
+ * @param {object} changes Fields to update on the release.
+ * @returns {{release: object, sha: string}} Re-read and verified release state.
+ * @throws {Error} If the update response or stored release changes identity or content.
+ */
+export function updateRelease(repository, release, sha, changes) {
+  // GitHub removes a draft release tag when tag_name is omitted from an update.
+  const expected = {
+    ...release,
+    ...changes,
+    tag_name: release.tag_name,
+    target_commitish: sha,
+  };
+  const response = JSON.parse(
+    execFileSync(
+      "gh",
+      [
+        "api",
+        "--method",
+        "PATCH",
+        `repos/${repository}/releases/${release.id}`,
+        "--input",
+        "-",
+      ],
+      {
+        input: JSON.stringify({
+          ...changes,
+          tag_name: release.tag_name,
+          target_commitish: sha,
+        }),
+        encoding: "utf8",
+      },
+    ),
+  );
+  assertReleaseUpdate(response, expected);
+  const stored = releaseState(repository, release.tag_name);
+  if (stored.sha !== sha) throw new Error("Release tag changed during update");
+  assertReleaseUpdate(stored.release, expected);
+  return stored;
+}
+
+function assertReleaseUpdate(actual, expected) {
+  for (const field of [
+    "id",
+    "tag_name",
+    "target_commitish",
+    "draft",
+    "prerelease",
+    "body",
+  ]) {
+    if (actual[field] !== expected[field])
+      throw new Error(`GitHub Release update changed ${field}`);
+  }
+}
