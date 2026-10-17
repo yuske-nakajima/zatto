@@ -11,7 +11,7 @@ const START_TIMEOUT_MS = 10_000;
 /**
  * インストール済みパッケージの公開サーバーエントリーを検証する。
  *
- * @param options - consumerディレクトリ、期待version、サーバー環境
+ * @param options - consumerディレクトリ、期待version、期待する通信バージョン、サーバー環境
  * @returns 検証完了時に解決するPromise
  * @throws 公開サブパス、起動、health、cleanupの契約を満たさない場合
  */
@@ -70,7 +70,7 @@ export async function verifyPublicServer(options) {
       health.name !== "zatto" ||
       health.version !== options.expectedVersion ||
       health.instanceId !== instanceId ||
-      health.protocolVersion !== 3
+      health.protocolVersion !== options.expectedProtocolVersion
     ) {
       throw new Error("公開サーバーエントリーのhealthが不正です");
     }

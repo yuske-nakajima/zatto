@@ -22,6 +22,7 @@ describe("AIエージェント向けコンテキストAPI", () => {
     const { app, entries } = await createFixture();
 
     const update = await rpc(app, "agentContext.set", {
+      workspaceId: "default",
       ...{ activeEntryId: entries[1]?.id, view: "search" },
     });
     const response = await rpc(app, "agentContext.get", {});
@@ -68,7 +69,10 @@ describe("AIエージェント向けコンテキストAPI", () => {
   ])("不正なブラウザー状態を拒否する: %j", async (payload) => {
     const { app } = await createFixture();
 
-    const response = await rpc(app, "agentContext.set", { ...payload });
+    const response = await rpc(app, "agentContext.set", {
+      workspaceId: "default",
+      ...payload,
+    });
 
     expect(response.code).toBe(-32602);
     await app.close();
@@ -77,6 +81,7 @@ describe("AIエージェント向けコンテキストAPI", () => {
   test("削除された選択エントリは未選択として返す", async () => {
     const { app, store, entries } = await createFixture();
     await rpc(app, "agentContext.set", {
+      workspaceId: "default",
       ...{ activeEntryId: entries[0]?.id, view: "docs" },
     });
     await store.removeEntry(entries[0]?.id ?? "");

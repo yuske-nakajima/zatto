@@ -3,6 +3,7 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { SERVER_PROTOCOL_VERSION } from "../dist/server/runtime-record.js";
 import { createServerEnvironment } from "./create-server-environment.mjs";
 import { verifyPublicServer } from "./verify-public-server.mjs";
 
@@ -233,6 +234,7 @@ try {
     consumerDirectory,
     environment: serverEnvironment,
     expectedVersion,
+    expectedProtocolVersion: SERVER_PROTOCOL_VERSION,
   });
 
   console.log("npm tarballをnpxで実行します");

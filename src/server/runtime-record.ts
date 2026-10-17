@@ -11,7 +11,9 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-export const SERVER_PROTOCOL_VERSION = 3;
+export const SERVER_PROTOCOL_VERSION = 4;
+/** 2.x servers speak this version; their server.shutdown contract is unchanged. */
+export const PREVIOUS_PROTOCOL_VERSION = 3;
 export const DEFAULT_RUNTIME_FILE = path.join(
   os.homedir(),
   ".config",

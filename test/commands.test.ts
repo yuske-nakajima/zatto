@@ -27,26 +27,45 @@ function fixture() {
   });
   return { store, commands, broadcast };
 }
-test("direct command callers share validation and optional workspace and instance guards", async () => {
+test("direct command callers share validation, workspace targets, and instance guards", async () => {
   const { commands, store, broadcast } = fixture();
   for (const method of [
     "session.get",
-    "session.export",
     "agentContext.get",
     "workspaces.list",
   ] as const) {
     await expect(
-      commands.execute(method, { workspaceId: "stale" }, []),
-    ).rejects.toMatchObject({ code: 1002, data: { kind: "workspace" } });
+      commands.execute(method, { workspaceId: "default" }, []),
+    ).rejects.toMatchObject({ code: -32602 });
     await expect(
       commands.execute(method, { instanceId: "stale" }, []),
     ).rejects.toMatchObject({ code: 1003, data: { kind: "instance" } });
   }
+  for (const [method, params] of [
+    ["session.add", { paths: [] }],
+    ["session.clear", {}],
+    ["session.export", {}],
+  ] as const)
+    await expect(commands.execute(method, params, [])).rejects.toMatchObject({
+      code: -32602,
+    });
   await expect(
-    commands.execute("session.add", { paths: "file" }, []),
+    commands.execute(
+      "session.add",
+      { paths: "file", workspaceId: "default" },
+      [],
+    ),
   ).rejects.toMatchObject({ code: -32602 });
+  for (const method of ["session.clear", "session.export"] as const)
+    await expect(
+      commands.execute(method, { workspaceId: "stale" }, []),
+    ).rejects.toMatchObject({ code: 1002, data: { kind: "workspace" } });
   await expect(
-    commands.execute("session.clear", { workspaceId: "stale" }, []),
+    commands.execute(
+      "agentContext.set",
+      { workspaceId: "stale", activeEntryId: null, view: "preview" },
+      [],
+    ),
   ).rejects.toMatchObject({ code: 1002 });
   expect(store.getSession().entries).toEqual([]);
   expect(broadcast).not.toHaveBeenCalled();
@@ -57,10 +76,14 @@ test("direct commands publish persisted mutations and preserve entry identity", 
   await writeFile(file, "<title>A</title>");
   const added = await commands.execute(
     "session.add",
-    { paths: [file], instanceId: "server" },
+    { paths: [file], instanceId: "server", workspaceId: "default" },
     [],
   );
-  const existing = await commands.execute("session.add", { paths: [file] }, []);
+  const existing = await commands.execute(
+    "session.add",
+    { paths: [file], workspaceId: "default" },
+    [],
+  );
   expect(existing.resolved[0].id).toBe(added.added[0].id);
   expect(existing.added).toEqual([]);
   expect(broadcast).toHaveBeenCalledOnce();
@@ -68,7 +91,10 @@ test("direct commands publish persisted mutations and preserve entry identity", 
   await expect(
     commands.execute(
       "session.import",
-      { exchange: { format: "zatto-session", version: 1, entries: [] } },
+      {
+        exchange: { format: "zatto-session", version: 1, entries: [] },
+        workspaceId: "default",
+      },
       [],
     ),
   ).rejects.toMatchObject({ code: 1003 });

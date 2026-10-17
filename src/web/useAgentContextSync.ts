@@ -4,7 +4,6 @@ import type {
   BrowserAgentContext,
 } from "../shared/agent-context.js";
 import { rpcCall } from "../shared/rpc-client.js";
-import { workspaceParams } from "./workspace-request.js";
 
 interface AgentContextSyncOptions {
   workspaceId?: string | null;
@@ -20,12 +19,12 @@ export function useAgentContextSync({
   enabled,
 }: AgentContextSyncOptions): void {
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !workspaceId) return;
     const context: BrowserAgentContext = { activeEntryId, view };
     const syncContext = () => {
       void rpcCall("agentContext.set", {
         ...context,
-        ...workspaceParams(workspaceId),
+        workspaceId,
       }).catch(() => undefined);
     };
     syncContext();

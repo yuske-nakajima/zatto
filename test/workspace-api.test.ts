@@ -16,7 +16,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(dir, { force: true, recursive: true });
 });
-test("workspace API switches isolated entries and refuses stale clear requests", async () => {
+test("workspace API switches isolated entries and applies requests to the named workspace", async () => {
   const app = await createApp({ sessionStore: store });
   const file = path.join(dir, "one.html");
   await writeFile(file, "<title>One</title>");
@@ -30,15 +30,28 @@ test("workspace API switches isolated entries and refuses stale clear requests",
   expect(
     (await rpc(app, "workspaces.activate", { id: id })).json().entries,
   ).toEqual([]);
+  const second = path.join(dir, "two.html");
+  await writeFile(second, "<title>Two</title>");
   expect(
     (
-      await rpc(app, "session.clear", {
+      await rpc(app, "session.add", {
         workspaceId: initial.activeWorkspaceId,
+        paths: [second],
       })
-    ).code,
-  ).toBe(1002);
+    ).json(),
+  ).toMatchObject({
+    workspaceId: initial.activeWorkspaceId,
+    activeWorkspaceId: id,
+    session: { entries: [] },
+  });
+  expect(store.getSession().entries).toEqual([]);
   await rpc(app, "workspaces.activate", { id: initial.activeWorkspaceId });
-  expect(store.getSession().entries).toHaveLength(1);
+  expect(store.getSession().entries).toHaveLength(2);
+  expect(
+    (await rpc(app, "session.clear", { workspaceId: "missing" })).code,
+  ).toBe(1002);
+  expect((await rpc(app, "session.clear", { workspaceId: id })).code).toBe(0);
+  expect(store.getSession().entries).toHaveLength(2);
   expect(
     (await rpc(app, "workspaces.rename", { id: id, ...{ name: "Renamed" } }))
       .code,
@@ -91,7 +104,10 @@ test("a native picker started in a workspace adds only to that workspace after s
   });
   const initial = store.getWorkspaceState().activeWorkspaceId;
   const other = await store.createWorkspace("Other");
-  const picking = rpc(app, "session.pickFiles", { instanceId: "server" });
+  const picking = rpc(app, "session.pickFiles", {
+    workspaceId: "default",
+    instanceId: "server",
+  });
   void picking.then(() => {});
   await ready;
   await store.switchWorkspace(other.id);
@@ -133,10 +149,13 @@ test("a clear queued behind an addition publishes the empty committed collection
   const app = await createApp({ sessionStore: localStore, realtimeHub: hub });
   const file = path.join(dir, "queued.html");
   await writeFile(file, "<title>Queued</title>");
-  const adding = rpc(app, "session.add", { ...{ paths: [file] } });
+  const adding = rpc(app, "session.add", {
+    workspaceId: "default",
+    ...{ paths: [file] },
+  });
   void adding.then(() => {});
   await started;
-  const clearing = rpc(app, "session.clear", {});
+  const clearing = rpc(app, "session.clear", { workspaceId: "default" });
   void clearing.then(() => {});
   await new Promise((resolve) => setImmediate(resolve));
   finishWrite();

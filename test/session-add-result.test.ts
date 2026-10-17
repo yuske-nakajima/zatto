@@ -22,6 +22,7 @@ test("returns requested existing and added entries in input order without duplic
   const [first] = await store.addEntries([a]);
   const app = await createApp({ sessionStore: store });
   const response = await rpc(app, "session.add", {
+    workspaceId: "default",
     ...{ paths: [b, a, b, path.join(dir, "missing")] },
   });
   expect(response.code).toBe(0);

@@ -152,6 +152,7 @@ describe("zatto server", () => {
     const app = await createApp({ sessionStore: store });
 
     const addResponse = await rpc(app, "session.add", {
+      workspaceId: "default",
       ...{ paths: [htmlPath] },
     });
 
@@ -162,10 +163,15 @@ describe("zatto server", () => {
     expect(sessionResponse.code).toBe(0);
     expect(sessionResponse.json().entries).toHaveLength(1);
 
-    const deleteResponse = await rpc(app, "session.remove", { id: addedId });
+    const deleteResponse = await rpc(app, "session.remove", {
+      workspaceId: "default",
+      id: addedId,
+    });
     expect(deleteResponse.code).toBe(0);
 
-    const clearResponse = await rpc(app, "session.clear", {});
+    const clearResponse = await rpc(app, "session.clear", {
+      workspaceId: "default",
+    });
     expect(clearResponse.code).toBe(0);
 
     await app.close();
@@ -238,12 +244,14 @@ describe("zatto server", () => {
     });
 
     const rejectedResponse = await rpc(app, "session.pickFiles", {
+      workspaceId: "default",
       instanceId: "other-instance",
     });
     expect(rejectedResponse.code).toBe(1003);
     expect(pickFiles).not.toHaveBeenCalled();
 
     const acceptedResponse = await rpc(app, "session.pickFiles", {
+      workspaceId: "default",
       instanceId: "managed-instance",
     });
     expect(acceptedResponse.code).toBe(0);
@@ -272,6 +280,7 @@ describe("zatto server", () => {
     });
 
     const response = await rpc(app, "session.pickFiles", {
+      workspaceId: "default",
       instanceId: "managed-instance",
     });
 
@@ -298,12 +307,14 @@ describe("zatto server", () => {
       },
     });
     const firstResponsePromise = rpc(app, "session.pickFiles", {
+      workspaceId: "default",
       instanceId: "managed-instance",
     });
     await vi.waitFor(() => {
       expect(pickFiles).toHaveBeenCalledOnce();
     });
     const secondResponse = await rpc(app, "session.pickFiles", {
+      workspaceId: "default",
       instanceId: "managed-instance",
     });
 
@@ -330,6 +341,7 @@ describe("zatto server", () => {
     });
 
     const response = await rpc(app, "session.reorder", {
+      workspaceId: "default",
       ...{ ids: [second.id, first.id] },
     });
     const message = JSON.parse(await updatePromise) as {
@@ -345,12 +357,15 @@ describe("zatto server", () => {
     });
 
     const duplicateResponse = await rpc(app, "session.reorder", {
+      workspaceId: "default",
       ...{ ids: [first.id, first.id] },
     });
     const missingResponse = await rpc(app, "session.reorder", {
+      workspaceId: "default",
       ...{ ids: [first.id] },
     });
     const unknownResponse = await rpc(app, "session.reorder", {
+      workspaceId: "default",
       ...{ ids: [first.id, "unknown"] },
     });
 
@@ -436,6 +451,7 @@ describe("zatto server", () => {
     });
 
     const response = await rpc(app, "session.add", {
+      workspaceId: "default",
       ...{ paths: [htmlPath] },
     });
     const message = JSON.parse(await updatePromise) as {
@@ -459,7 +475,10 @@ describe("zatto server", () => {
     const deleteUpdatePromise = new Promise<string>((resolve) => {
       socket.once("message", (data) => resolve(data.toString()));
     });
-    const deleteResponse = await rpc(app, "session.remove", { id: addedId });
+    const deleteResponse = await rpc(app, "session.remove", {
+      workspaceId: "default",
+      id: addedId,
+    });
     const deleteMessage = JSON.parse(await deleteUpdatePromise) as {
       type: string;
       entries: unknown[];

@@ -39,7 +39,7 @@ export function sessionCommands(context: CommandContext) {
     "session.add": async ({ paths, workspaceId }) => {
       const result = await store.addEntriesWithResults(
         paths.map((path) => resolve(path)),
-        context.workspace(workspaceId),
+        workspaceId,
       );
       if (result.added.length) await context.publish();
       return {
@@ -49,18 +49,14 @@ export function sessionCommands(context: CommandContext) {
       };
     },
     "session.setFavorite": async ({ id, favorite, workspaceId }) => {
-      const result = await store.setFavorite(
-        id,
-        favorite,
-        context.workspace(workspaceId),
-      );
+      const result = await store.setFavorite(id, favorite, workspaceId);
       if (result === "missing")
         throw domainError("notFound", "Entry not found.");
       if (result === "updated") await context.publish();
       return null;
     },
     "session.reorder": async ({ ids, workspaceId }) => {
-      if (!(await store.reorderEntries(ids, context.workspace(workspaceId))))
+      if (!(await store.reorderEntries(ids, workspaceId)))
         throw new CommandError(
           -32602,
           "`ids` には現在の全エントリを重複なく指定してください",
@@ -69,30 +65,31 @@ export function sessionCommands(context: CommandContext) {
       return null;
     },
     "session.removeMany": async ({ ids, workspaceId }) => {
-      if (!(await store.removeEntries(ids, context.workspace(workspaceId))))
+      if (!(await store.removeEntries(ids, workspaceId)))
         throw domainError("notFound", "エントリが見つかりません");
       await context.publish();
       return null;
     },
     "session.remove": async ({ id, workspaceId }) => {
-      if (!(await store.removeEntry(id, context.workspace(workspaceId))))
+      if (!(await store.removeEntry(id, workspaceId)))
         throw domainError("notFound", "エントリが見つかりません");
       await context.publish();
       return null;
     },
     "session.clear": async ({ workspaceId }) => {
-      await store.clear(context.workspace(workspaceId));
+      await store.clear(context.existingWorkspace(workspaceId));
       await context.publish();
       return null;
     },
-    "session.export": () => createSessionExchange(store.getSession().entries),
+    "session.export": ({ workspaceId }) =>
+      createSessionExchange(store.getWorkspace(workspaceId).entries),
     "session.import": async ({
       exchange,
       mode = "replace",
       instanceId,
       workspaceId,
     }) => {
-      const target = context.workspace(workspaceId);
+      const target = workspaceId;
       context.identity(instanceId);
       const paths = parseSessionExchange(exchange).entries.map(
         (entry) => entry.path,

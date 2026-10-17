@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { parseCliArgs, runCli } from "../src/cli/index.js";
 import {
   acquireServerLock,
+  PREVIOUS_PROTOCOL_VERSION,
   releaseServerRuntime,
   SERVER_PROTOCOL_VERSION,
   writeServerRecord,
@@ -63,6 +64,14 @@ describe("zatto CLI", () => {
       )
       .mockImplementationOnce(
         rpcFixture(async () =>
+          jsonResponse({
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
+          }),
+        ),
+      )
+      .mockImplementationOnce(
+        rpcFixture(async () =>
           jsonResponse(
             {
               added: [],
@@ -91,10 +100,11 @@ describe("zatto CLI", () => {
     expect(spawnServer).not.toHaveBeenCalled();
     expect(openBrowser).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenNthCalledWith(
-      2,
+      3,
       "http://127.0.0.1:7010/rpc",
       rpcRequest("session.add", {
         paths: [path.resolve("a.html"), path.resolve("b.html")],
+        workspaceId: "default",
       }),
     );
     expect(stdout).toHaveBeenCalledWith("http://127.0.0.1:7010/");
@@ -113,6 +123,14 @@ describe("zatto CLI", () => {
             version: "2.0.0",
             instanceId: "requested-instance",
             protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
+      )
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
           }),
         ),
       )
@@ -174,6 +192,14 @@ describe("zatto CLI", () => {
             version: "2.0.0",
             instanceId: "running-instance",
             protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
+      )
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
           }),
         ),
       )
@@ -358,6 +384,81 @@ describe("zatto CLI", () => {
       rpcRequest("server.shutdown", { instanceId: "running-instance" }),
     );
     expect(stdout).toHaveBeenCalledWith("zatto サーバーを停止しました (7010)");
+  });
+
+  test("前版のserverへは操作を送らず、新版CLIでの停止を案内する", async () => {
+    await writeServerRecord(runtimeFilePath, {
+      instanceId: "previous-instance",
+      pid: process.pid,
+      port: 7011,
+      protocolVersion: PREVIOUS_PROTOCOL_VERSION,
+    });
+    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementationOnce(
+      rpcFixture(async () =>
+        jsonResponse({
+          name: "zatto",
+          version: "2.1.0",
+          instanceId: "previous-instance",
+          protocolVersion: PREVIOUS_PROTOCOL_VERSION,
+        }),
+      ),
+    );
+    const spawnServer = vi.fn();
+    const stderr = vi.fn();
+
+    const exitCode = await runCli(["a.html"], {
+      fetch,
+      spawnServer,
+      stderr,
+      runtimeFilePath,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(spawnServer).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("zatto --port 7011 --stop"),
+    );
+  });
+
+  test("--stopで前版のserverを停止する", async () => {
+    await writeServerRecord(runtimeFilePath, {
+      instanceId: "previous-instance",
+      pid: process.pid,
+      port: 7011,
+      protocolVersion: PREVIOUS_PROTOCOL_VERSION,
+    });
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.1.0",
+            instanceId: "previous-instance",
+            protocolVersion: PREVIOUS_PROTOCOL_VERSION,
+          }),
+        ),
+      )
+      .mockImplementationOnce(
+        rpcFixture(async () => jsonResponse({ ok: true }, 202)),
+      )
+      .mockRejectedValueOnce(new Error("停止済み"));
+    const stdout = vi.fn();
+
+    const exitCode = await runCli(["--stop"], {
+      fetch,
+      stdout,
+      runtimeFilePath,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:7011/rpc",
+      rpcRequest("server.shutdown", { instanceId: "previous-instance" }),
+    );
+    expect(stdout).toHaveBeenCalledWith("zatto サーバーを停止しました (7011)");
   });
 
   test("--stopは旧serverを停止せず更新案内を返す", async () => {

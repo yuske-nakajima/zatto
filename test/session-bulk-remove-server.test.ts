@@ -53,6 +53,7 @@ describe("session.removeMany", () => {
     });
 
     const response = await rpc(app, "session.removeMany", {
+      workspaceId: "default",
       ...{ ids: [entries[0].id, entries[2].id] },
     });
     const message = JSON.parse(await updatePromise);
@@ -98,6 +99,7 @@ describe("session.removeMany", () => {
         : payload;
 
     const response = await rpc(app, "session.removeMany", {
+      workspaceId: "default",
       ...normalizedPayload,
     });
 
@@ -117,6 +119,7 @@ describe("session.removeMany", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.removeMany", {
+      workspaceId: "default",
       ...{ ids: [entry.id, "missing"] },
     });
 
@@ -148,6 +151,7 @@ describe("session.removeMany", () => {
     });
 
     const response = await rpc(app, "session.removeMany", {
+      workspaceId: "default",
       ...{ ids: [entry.id] },
     });
 

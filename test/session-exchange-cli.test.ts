@@ -86,6 +86,14 @@ describe("session exchange CLI", () => {
         ),
       )
       .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
+          }),
+        ),
+      )
+      .mockImplementationOnce(
         rpcFixture(async () => jsonResponse({ entries: [] })),
       );
     const openBrowser = vi.fn();
@@ -100,11 +108,12 @@ describe("session exchange CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(fetch).toHaveBeenNthCalledWith(
-      2,
+      3,
       "http://127.0.0.1:7010/rpc",
       rpcRequest("session.import", {
         exchange: exchange,
         instanceId: "running-instance",
+        workspaceId: "default",
       }),
     );
     expect(openBrowser).not.toHaveBeenCalled();
@@ -158,6 +167,14 @@ describe("session exchange CLI", () => {
           }),
         ),
       )
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            activeWorkspaceId: "default",
+            workspaces: [{ id: "default", name: "Default" }],
+          }),
+        ),
+      )
       .mockImplementationOnce(rpcFixture(async () => jsonResponse(exchange)));
     const openBrowser = vi.fn();
     const stdout = vi.fn();
@@ -171,9 +188,9 @@ describe("session exchange CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(fetch).toHaveBeenNthCalledWith(
-      2,
+      3,
       "http://127.0.0.1:7010/rpc",
-      rpcRequest("session.export", {}),
+      rpcRequest("session.export", { workspaceId: "default" }),
     );
     expect(JSON.parse(await readFile(exchangeFilePath, "utf8"))).toEqual(
       exchange,

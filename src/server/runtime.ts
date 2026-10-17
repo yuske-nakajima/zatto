@@ -63,6 +63,7 @@ export {
 export {
   createServerRecordIfAbsent,
   DEFAULT_RUNTIME_FILE,
+  PREVIOUS_PROTOCOL_VERSION,
   readServerRecord,
   removeOwnedServerRecord,
   resolveRuntimeFilePath,

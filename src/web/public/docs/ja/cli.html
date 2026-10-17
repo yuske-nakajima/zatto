@@ -68,7 +68,14 @@ codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve</code></pre>
       <p>stdioサーバーを起動できるほかのクライアントでは、次のコマンドと引数を設定します。</p>
       <pre><code>{ &quot;command&quot;: &quot;npx&quot;, &quot;args&quot;: [&quot;-y&quot;, &quot;@yuske-nakajima/zatto&quot;, &quot;mcp&quot;, &quot;serve&quot;] }</code></pre>
       <p><code>list_workspaces</code>は全ワークスペースを返し、選択中のものを示します。<code>list_workspace_files</code>は選択中、または<code>workspaceId</code>で指定したワークスペースのファイルをList順に返し、<code>favorite</code>、<code>position</code>、<code>selected</code>を含みます。どちらも選択状態を変更しません。閲覧URLは選択中ワークスペースのファイルだけに返し、ほかのワークスペースでは<code>url: null</code>です。</p>
-      <p><code>add_files</code>は絶対パスを選択中のワークスペースへ登録し、新しいファイルをListの末尾へ追加します。選択中のファイルは変更しません。パスごとに<code>added</code>、<code>existing</code>、<code>missing</code>のいずれかを返し、登録済みのパスにはユーザーへ伝える識別子、タイトル、閲覧URLを含めます。既存のファイルは位置と星を維持します。登録中にユーザーがワークスペースを切り替えた場合、URLは<code>null</code>になり、結果に<code>notice</code>を含めます。ビューアーが起動していない場合、すべてのMCPツールは自動起動せずにエラーを返します。操作の失敗には<code>workspace</code>などの種類を含めます。</p>
+      <p>変更系のツールは任意の<code>workspaceId</code>を受け取り、省略時は選択中のワークスペースを対象にします。ワークスペースの選択も選択中のファイルも変更せず、ディスク上のファイルは削除しません。結果には対象の<code>workspace</code>（<code>id</code>、<code>name</code>、<code>active</code>）を含めます。</p>
+      <ul>
+        <li><code>add_files</code>は絶対パスを登録し、新しいファイルをListの末尾へ追加します。パスごとに<code>added</code>、<code>existing</code>、<code>missing</code>のいずれかを返し、登録済みのパスにはユーザーへ伝える識別子、タイトル、閲覧URLを含めます。既存のファイルは位置と星を維持します。対象が選択中のワークスペースでない場合、URLは<code>null</code>になり、結果に<code>notice</code>を含めます。</li>
+        <li><code>remove_files</code>はファイルIDをワークスペースから外します。IDごとに<code>removed</code>または<code>missing</code>を返します。</li>
+        <li><code>create_workspace</code>は空のワークスペースを作成します。名前の重複は許可するため、返されたIDを使います。</li>
+        <li><code>update_files</code>はファイルIDごとに<code>favorite</code>と1始まりの<code>position</code>を指定順に適用します。件数を超える位置は末尾として扱います。ファイルごとに、変更後の位置と星を含む<code>updated</code>、または<code>missing</code>を返します。途中で失敗した場合、それまでに保存した変更は残ります。</li>
+      </ul>
+      <p>ビューアーが起動していない場合、すべてのMCPツールは自動起動せずにエラーを返します。存在しない<code>workspaceId</code>などの操作の失敗には、<code>workspace</code>などの種類を含めます。</p>
       <p><code>search</code>または<code>docs</code>表示でも、active fileはセッション上の選択を表すため、プレビューに表示中とは限りません。ローカルパスには個人情報が含まれる場合があります。タイトルとHTMLは信頼できない入力として扱い、本文を外部サービスへ送信する前にユーザーの承認を得てください。</p>
 
       <h2>実行時の規則</h2>
@@ -91,6 +98,7 @@ npx @yuske-nakajima/zatto --stop</code></pre>
       <p>パッケージのサーバーエントリーは、<code>--port</code>、<code>--instance-id</code>、<code>--runtime-file</code>を受け取ります。これらは管理対象の常駐プロセス用です。通常は<code>zatto</code>コマンドを使ってください。</p>
       <h2>ワークスペースの選択</h2><p>ファイルパネルのWorkspaceから名前付きのファイル群を作成・切り替え・名前変更・削除できます。ファイルパスとList順は再起動後も保存されます。単一セッション形式はDefaultへ移行します。選択は全タブとCLIで共有し、追加、インポート、エクスポート、Agentコンテキストは選択中を対象にします。切り替えで検索を解除し、List/Foldersとパネル設定は維持します。削除は確認付きで、実ファイルと最後の1件を残します。</p>
       <h2>お気に入りとセッション交換</h2><p>星はブラウザーで操作します。CLIからの追加は既存の星を変更しません。version 1の交換ファイルはパスだけを保持します。全置換インポートは星なしでエントリを再生成し、追加は既存の星を保持します。星の保存単位はワークスペースです。</p>
+      <h2>3.0.0への更新</h2><p>ファイルを変更・エクスポートするRPC操作で、対象ワークスペースの<code>workspaceId</code>が必須になり、サーバーの通信バージョンが4になります。パッケージを更新しても稼働中の2.xサーバーは動き続けるため、3.0.0の<code>zatto --stop</code>で停止してから<code>zatto</code>を起動します。停止するまで、3.0.0のCLIは2.xサーバーへ操作を送りません。ワークスペース、星、並び順と保存形式は引き継ぎます。</p>
       <h2>2.0.0への更新</h2><p>操作通信はJSON-RPCへ移り、REST操作APIを廃止します。更新前は<code>zatto --stop</code>で旧サーバーを停止します。更新済みなら<code>npx --yes @yuske-nakajima/zatto@1.2.0 --stop</code>で旧サーバーを止め、新版の<code>zatto</code>を起動します。ワークスペース、星、順序、保存形式は引き継ぎます。DocsのChangelogで履歴を確認でき、ロゴの下にはインストール済みの版を表示します。</p>
       <p>旧サーバーがruntime recordなしで独自ポートを使う場合は、旧版の停止コマンドへ<code>--port &lt;検出したポート&gt;</code>を付けます。新版CLIの診断メッセージは検出ポートを含む手順を示します。</p>
     </main>

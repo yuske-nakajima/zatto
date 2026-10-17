@@ -33,6 +33,7 @@ describe("session merge API", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       mode: "merge",
       exchange: exchange([existingPath, addedPath]),
     });
@@ -58,6 +59,7 @@ describe("session merge API", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       mode: "merge",
       exchange: exchange([addedPath, alias]),
     });
@@ -76,6 +78,7 @@ describe("session merge API", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       mode: "merge",
       exchange: exchange([addedPath, path.join(tempDir, "missing.html")]),
     });
@@ -92,6 +95,7 @@ describe("session merge API", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       mode: "append",
       exchange: exchange([]),
     });

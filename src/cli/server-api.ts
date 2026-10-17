@@ -1,5 +1,6 @@
 import { APP_NAME } from "../meta.js";
 import {
+  PREVIOUS_PROTOCOL_VERSION,
   SERVER_PROTOCOL_VERSION,
   type ServerRecord,
 } from "../server/runtime.js";
@@ -92,7 +93,30 @@ export async function requestShutdown(
 }
 
 /**
- * Replaces the managed server session from an exchange document.
+ * Reads the workspace the user has selected, which CLI operations target.
+ *
+ * @param record - Runtime identity of the target server
+ * @param fetchFn - Fetch implementation used for the request
+ * @returns The selected workspace ID
+ * @throws {Error} When the server rejects the request
+ */
+export async function activeWorkspaceId(
+  record: ServerRecord,
+  fetchFn: typeof globalThis.fetch,
+): Promise<string> {
+  const state = await rpcCall(
+    "workspaces.list",
+    { instanceId: record.instanceId },
+    {
+      endpoint: `${serverUrl(record.port)}rpc`,
+      fetch: fetchFn,
+    },
+  );
+  return state.activeWorkspaceId;
+}
+
+/**
+ * Replaces the selected workspace from an exchange document.
  *
  * @param record - Runtime identity of the target server
  * @param exchange - Validated session exchange document
@@ -107,7 +131,11 @@ export async function importSession(
 ): Promise<void> {
   await rpcCall(
     "session.import",
-    { exchange, instanceId: record.instanceId },
+    {
+      exchange,
+      instanceId: record.instanceId,
+      workspaceId: await activeWorkspaceId(record, fetchFn),
+    },
     {
       endpoint: `${serverUrl(record.port)}rpc`,
       fetch: fetchFn,
@@ -116,7 +144,7 @@ export async function importSession(
 }
 
 /**
- * Fetches the managed server session as an exchange document.
+ * Fetches the selected workspace as an exchange document.
  *
  * @param record - Runtime identity of the target server
  * @param fetchFn - Fetch implementation used for the request
@@ -130,7 +158,10 @@ export async function exportSession(
   return parseSessionExchange(
     await rpcCall(
       "session.export",
-      { instanceId: record.instanceId },
+      {
+        instanceId: record.instanceId,
+        workspaceId: await activeWorkspaceId(record, fetchFn),
+      },
       {
         endpoint: `${serverUrl(record.port)}rpc`,
         fetch: fetchFn,
@@ -139,8 +170,18 @@ export async function exportSession(
   );
 }
 
+/** Returns the protocol version a probed server reported, when it reported one. */
+export function probedProtocol(probe: HealthProbe): unknown {
+  return "identity" in probe ? probe.identity.protocolVersion : undefined;
+}
+
 /** Migration instructions never invoke legacy write operations from this client. */
-export function legacyServerMessage(port: number): string {
+export function legacyServerMessage(
+  port: number,
+  protocolVersion?: unknown,
+): string {
+  if (protocolVersion === PREVIOUS_PROTOCOL_VERSION)
+    return `旧 zatto サーバーが起動しています (${port})。zatto --port ${port} --stop で停止してから、新版を起動してください。`;
   return `旧 zatto サーバーが起動しています (${port})。更新前の zatto --port ${port} --stop、または npx --yes @yuske-nakajima/zatto@1.2.0 --port ${port} --stop で停止してから、新版を起動してください。`;
 }
 

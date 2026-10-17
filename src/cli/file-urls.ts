@@ -1,6 +1,6 @@
 import type { ServerRecord } from "../server/runtime.js";
 import { rpcCall } from "../shared/rpc-client.js";
-import { serverUrl } from "./server-api.js";
+import { activeWorkspaceId, serverUrl } from "./server-api.js";
 
 interface FileEntry {
   id: string;
@@ -27,7 +27,11 @@ export async function addFiles(
 ): Promise<FileResult> {
   const body = await rpcCall(
     "session.add",
-    { paths: files, instanceId: record.instanceId },
+    {
+      paths: files,
+      instanceId: record.instanceId,
+      workspaceId: await activeWorkspaceId(record, fetchFn),
+    },
     {
       endpoint: `${serverUrl(record.port)}rpc`,
       fetch: fetchFn,

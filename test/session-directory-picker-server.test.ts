@@ -77,6 +77,7 @@ describe("session.pickDirectory", () => {
       });
 
       const response = await rpc(app, "session.pickDirectory", {
+        workspaceId: "default",
         ...{ mode },
         instanceId: "managed-instance",
       });
@@ -118,6 +119,7 @@ describe("session.pickDirectory", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "recursive" },
       instanceId: "managed-instance",
     });
@@ -144,6 +146,7 @@ describe("session.pickDirectory", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...payload,
       instanceId: instanceId,
     });
@@ -162,6 +165,7 @@ describe("session.pickDirectory", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "direct" },
       instanceId: "managed-instance",
     });

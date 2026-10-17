@@ -85,7 +85,7 @@ export function useNativeEntryPicker({
   function beginPicker(
     kind: Exclude<NativePickerPending, null>,
     capability: NativePickerCapability,
-  ): { instanceId: string; workspaceId?: string } | null {
+  ): { instanceId: string; workspaceId: string } | null {
     if (!capability.available || !capability.instanceId || pendingRef.current) {
       return null;
     }

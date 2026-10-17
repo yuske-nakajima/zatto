@@ -3,12 +3,12 @@ import type { RpcMethod, RpcParams } from "../../shared/rpc-contract.js";
 import { CommandError } from "./errors.js";
 
 const id = z.string().min(1);
-const workspaceId = id.optional();
+const workspaceId = id;
 const instanceId = id.optional();
 const ids = z.array(id);
 const name = z.string().trim().min(1).max(100);
 const empty = z.strictObject({});
-const guards = { workspaceId, instanceId };
+const guards = { instanceId };
 const schemas = {
   "server.health": empty,
   "server.shutdown": z.strictObject(guards),
@@ -32,7 +32,7 @@ const schemas = {
   }),
   "session.remove": z.strictObject({ ...guards, id, workspaceId }),
   "session.clear": z.strictObject({ ...guards, workspaceId }),
-  "session.export": z.strictObject(guards),
+  "session.export": z.strictObject({ ...guards, workspaceId }),
   "session.import": z.strictObject({
     ...guards,
     exchange: z.unknown(),
