@@ -7,8 +7,10 @@ import type {
 } from "../server/workspace-state.js";
 import type { AgentContext, BrowserAgentContext } from "./agent-context.js";
 import type {
+  ActiveReview,
   ReviewAuthor,
-  ReviewRequest,
+  ReviewEvent,
+  ReviewListener,
   ReviewThread,
   TextAnchor,
 } from "./review.js";
@@ -177,21 +179,29 @@ export interface RpcMethods {
     params: RequestContext & { threadId: string; resolved: boolean };
     result: ReviewThread;
   };
-  "review.request": {
-    params: WorkspaceParams & { entryId: string; session?: string };
-    result: ReviewRequest;
+  "review.start": {
+    params: WorkspaceParams & { entryId: string; session: string };
+    result: ActiveReview;
   };
-  "review.requests": {
+  "review.finish": {
+    params: RequestContext & { reviewId: string };
+    result: null;
+  };
+  "review.states": {
     params: RequestContext;
-    result: { requests: ReviewRequest[] };
+    result: { reviews: ActiveReview[]; listeners: ReviewListener[] };
   };
-  "review.complete": {
-    params: RequestContext & { requestId: string };
+  "review.listen": {
+    params: RequestContext & { session: string };
+    result: ReviewListener;
+  };
+  "review.unlisten": {
+    params: RequestContext & { session: string };
     result: null;
   };
-  "review.cancel": {
-    params: RequestContext & { requestId: string };
-    result: null;
+  "review.take": {
+    params: RequestContext & { session: string };
+    result: { events: ReviewEvent[] };
   };
   "search.query": {
     params: RequestContext & { query: string };

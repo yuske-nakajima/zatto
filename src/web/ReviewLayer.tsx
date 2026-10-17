@@ -58,6 +58,7 @@ export function ReviewLayer({
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isRecipientMenuOpen, setIsRecipientMenuOpen] = useState(false);
   const [layoutVersion, setLayoutVersion] = useState(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: フレームの差し替えごとに読み直す
@@ -196,21 +197,67 @@ export function ReviewLayer({
 
   return (
     <>
-      {review.requests.map((request) => (
-        <div className="review-request" key={request.id} role="status">
-          <span>
-            Review requested
-            {request.session ? ` by ${request.session}` : ""}
-          </span>
+      {review.activeReview ? (
+        <div className="review-banner" role="status">
+          <span>In review with {review.activeReview.session}</span>
           <button
             type="button"
-            data-status-description="Finish the review and return the open comments to the waiting command."
-            onClick={() => void review.finishReview(request.id)}
+            data-status-description="Finish the review and send the open comments to the LLM session."
+            onClick={() => {
+              if (review.activeReview)
+                void review.finishReview(review.activeReview.id);
+            }}
           >
             Finish review
           </button>
         </div>
-      ))}
+      ) : (
+        <div className="review-start">
+          <button
+            type="button"
+            className="review-panel-toggle"
+            aria-expanded={isRecipientMenuOpen}
+            data-status-description="Review this file with a waiting LLM session; your comments are sent to it."
+            onClick={() => setIsRecipientMenuOpen((open) => !open)}
+          >
+            Start review
+          </button>
+          {isRecipientMenuOpen && (
+            <div className="review-panel" role="menu" aria-label="LLM sessions">
+              {review.listeners.length === 0 ? (
+                <p className="review-empty">
+                  No LLM session is waiting. Ask an LLM to run{" "}
+                  <code>zatto review --inbox --session &lt;id&gt;</code>.
+                </p>
+              ) : (
+                <ol>
+                  {review.listeners.map((listener) => (
+                    <li key={listener.session}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="review-panel-item"
+                        onClick={async () => {
+                          if (await review.startReview(listener.session))
+                            setIsRecipientMenuOpen(false);
+                        }}
+                      >
+                        <span className="review-panel-body">
+                          {listener.session}
+                        </span>
+                        <span className="review-panel-meta">
+                          Waiting since{" "}
+                          {new Date(listener.lastSeenAt).toLocaleTimeString()}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {popover?.kind === "selection" && popoverPosition && (
         <button
           type="button"

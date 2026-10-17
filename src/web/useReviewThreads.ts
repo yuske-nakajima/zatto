@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import type { ServerMessage } from "../shared/protocol.js";
 import type {
-  ReviewRequest,
+  ActiveReview,
+  ReviewListener,
   ReviewThread,
   TextAnchor,
 } from "../shared/review.js";
@@ -12,21 +13,27 @@ const USER = { kind: "user" } as const;
 
 export interface ReviewThreads {
   threads: ReviewThread[];
-  requests: ReviewRequest[];
+  /** The review of the selected entry, if the user is reviewing it with an LLM session. */
+  activeReview: ActiveReview | null;
+  /** Entries under review in any workspace, for labelling the file list. */
+  reviewingEntryIds: ReadonlySet<string>;
+  /** LLM sessions waiting to receive a review. */
+  listeners: ReviewListener[];
+  startReview: (session: string) => Promise<boolean>;
   create: (anchor: TextAnchor | null, body: string) => Promise<boolean>;
   reply: (threadId: string, body: string) => Promise<boolean>;
   edit: (threadId: string, commentId: string, body: string) => Promise<boolean>;
   remove: (threadId: string, commentId: string) => Promise<boolean>;
   resolve: (threadId: string, resolved: boolean) => Promise<boolean>;
-  finishReview: (requestId: string) => Promise<boolean>;
+  finishReview: (reviewId: string) => Promise<boolean>;
 }
 
 /**
- * Loads the review threads of the selected entry and the pending review requests, following server updates.
+ * Loads the review threads of the selected entry and the review states, following server updates.
  * @param workspaceId - Displayed workspace
  * @param entryId - Selected entry
  * @param reportError - Visible error reporter
- * @returns Threads, requests, and operations
+ * @returns Threads, review states, and operations
  */
 export function useReviewThreads(
   workspaceId: string | null,
@@ -34,7 +41,8 @@ export function useReviewThreads(
   reportError: (message: string) => void,
 ): ReviewThreads {
   const [threads, setThreads] = useState<ReviewThread[]>([]);
-  const [requests, setRequests] = useState<ReviewRequest[]>([]);
+  const [reviews, setReviews] = useState<ActiveReview[]>([]);
+  const [listeners, setListeners] = useState<ReviewListener[]>([]);
 
   const refresh = useCallback(async () => {
     if (!workspaceId || !entryId) {
@@ -59,7 +67,10 @@ export function useReviewThreads(
       (message.entryId === entryId || message.entryId === "")
     )
       void refresh();
-    if (message.type === "review:requests") setRequests(message.requests);
+    if (message.type === "review:states") {
+      setReviews(message.reviews);
+      setListeners(message.listeners);
+    }
   });
 
   useEffect(
@@ -70,8 +81,11 @@ export function useReviewThreads(
   const isSessionLoaded = workspaceId !== null;
   useEffect(() => {
     if (!isSessionLoaded) return;
-    void rpcCall("review.requests", {})
-      .then((result) => setRequests(result.requests))
+    void rpcCall("review.states", {})
+      .then((result) => {
+        setReviews(result.reviews);
+        setListeners(result.listeners);
+      })
       .catch(() => undefined);
   }, [isSessionLoaded]);
 
@@ -91,7 +105,14 @@ export function useReviewThreads(
 
   return {
     threads,
-    requests: requests.filter((request) => request.entryId === entryId),
+    activeReview: reviews.find((review) => review.entryId === entryId) ?? null,
+    reviewingEntryIds: new Set(reviews.map((review) => review.entryId)),
+    listeners,
+    startReview: (session) =>
+      run(async () => {
+        if (!workspaceId || !entryId) throw new Error("No entry");
+        await rpcCall("review.start", { workspaceId, entryId, session });
+      }, "Could not start the review."),
     create: (anchor, body) =>
       run(async () => {
         if (!workspaceId || !entryId) throw new Error("No entry");
@@ -123,9 +144,9 @@ export function useReviewThreads(
         () => rpcCall("review.resolve", { threadId, resolved }),
         "Could not update the thread.",
       ),
-    finishReview: (requestId) =>
+    finishReview: (reviewId) =>
       run(
-        () => rpcCall("review.complete", { requestId }),
+        () => rpcCall("review.finish", { reviewId }),
         "Could not finish the review.",
       ),
   };

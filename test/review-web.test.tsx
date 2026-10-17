@@ -40,8 +40,21 @@ class FakeWebSocket extends EventTarget {
 
 describe("レビューのコメント", () => {
   let calls: Array<{ method: string; params: Record<string, unknown> }>;
+  let states: { reviews: unknown[]; listeners: unknown[] };
 
   beforeEach(() => {
+    states = {
+      reviews: [
+        {
+          id: "r1",
+          entryId: "plan",
+          workspaceId: "default",
+          session: "zatto:a99c",
+          createdAt: 1,
+        },
+      ],
+      listeners: [],
+    };
     window.history.replaceState(null, "", "/?entry=plan");
     vi.stubGlobal("WebSocket", FakeWebSocket);
     calls = [];
@@ -55,20 +68,17 @@ describe("レビューのコメント", () => {
             if (method === "session.get") return Response.json({ entries });
             if (method === "review.list")
               return Response.json({ threads: [thread] });
-            if (method === "review.requests")
+            if (method === "review.states") return Response.json(states);
+            if (method === "review.start")
               return Response.json({
-                requests: [
-                  {
-                    id: "r1",
-                    entryId: "plan",
-                    workspaceId: "default",
-                    session: "zatto:a99c",
-                    createdAt: 1,
-                  },
-                ],
+                id: "r2",
+                entryId: "plan",
+                workspaceId: "default",
+                session: String(params.session),
+                createdAt: 2,
               });
             if (method === "review.reply") return Response.json(thread);
-            if (method === "review.complete")
+            if (method === "review.finish")
               return new Response(null, { status: 204 });
             return new Response(null, { status: 204 });
           },
@@ -115,20 +125,61 @@ describe("レビューのコメント", () => {
     );
   });
 
-  test("確認依頼を表示し、確認を終えると依頼を完了させる", async () => {
+  test("レビュー中のファイルにラベルと送り先を表示し、レビューを終えられる", async () => {
     render(<App />);
     await screen.findByTitle("Plan preview");
 
     expect(
-      (await screen.findByText("Review requested by zatto:a99c")).textContent,
-    ).toBe("Review requested by zatto:a99c");
+      (await screen.findByText("In review with zatto:a99c")).textContent,
+    ).toBe("In review with zatto:a99c");
+    expect(screen.getByText("In review").className).toBe("entry-review-label");
     fireEvent.click(screen.getByRole("button", { name: "Finish review" }));
 
     await waitFor(() =>
       expect(calls).toContainEqual({
-        method: "review.complete",
-        params: { requestId: "r1" },
+        method: "review.finish",
+        params: { reviewId: "r1" },
       }),
     );
+  });
+
+  test("待機中のセッションを選んでレビューを始める", async () => {
+    states = {
+      reviews: [],
+      listeners: [{ session: "zatto:inbox", lastSeenAt: Date.now() }],
+    };
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Start review" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: /zatto:inbox/ }));
+
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        method: "review.start",
+        params: {
+          workspaceId: "default",
+          entryId: "plan",
+          session: "zatto:inbox",
+        },
+      }),
+    );
+    expect(screen.queryByText("In review")).toBeNull();
+  });
+
+  test("待機中のセッションがなければ、待たせる方法を案内する", async () => {
+    states = { reviews: [], listeners: [] };
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Start review" }),
+    );
+
+    expect(
+      screen.getByRole("menu", { name: "LLM sessions" }).textContent,
+    ).toContain("No LLM session is waiting.");
   });
 });

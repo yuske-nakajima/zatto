@@ -3,6 +3,7 @@ import type { Entry } from "../server/session.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { fileName } from "./file-panel-model.js";
 import { Icon } from "./icons.js";
+import { useIsReviewing } from "./review-status-context.js";
 
 interface EntryRowProps {
   entry: Entry;
@@ -42,6 +43,7 @@ export function EntryRow({
   onDrop,
 }: EntryRowProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const isReviewing = useIsReviewing(entry.id);
   const tooltipId = useId();
   const pathDescriptionId = `entry-path-${entry.id}`;
   const draggable = Boolean(onDragStart);
@@ -112,6 +114,7 @@ export function EntryRow({
         <span className="entry-copy">
           <strong data-tooltip={entry.title}>{entry.title}</strong>
           <small data-tooltip={entry.absPath}>{fileName(entry.absPath)}</small>
+          {isReviewing && <span className="entry-review-label">In review</span>}
           <span className="visually-hidden" id={pathDescriptionId}>
             {entry.absPath}
           </span>

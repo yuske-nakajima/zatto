@@ -186,38 +186,127 @@ describe("review threads", () => {
     });
   });
 
-  test("確認依頼は依頼ごとに完了を通知し、完了・取消の後は一覧から消える", async () => {
+  test("レビュー中のファイルへのユーザーのコメントだけを、送り先のセッションへ届ける", async () => {
     const { commands, broadcast, entry } = await fixture();
-    const first = await commands.execute(
-      "review.request",
+    await commands.execute("review.listen", { session: "zatto:a99c" }, []);
+    await expect(
+      commands.execute("review.states", {}, []),
+    ).resolves.toMatchObject({
+      reviews: [],
+      listeners: [{ session: "zatto:a99c" }],
+    });
+    const before = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: null,
+        author: USER,
+        body: "レビュー前",
+      },
+      [],
+    );
+    const review = await commands.execute(
+      "review.start",
       { workspaceId: "default", entryId: entry.id, session: "zatto:a99c" },
       [],
     );
-    const second = await commands.execute(
-      "review.request",
-      { workspaceId: "default", entryId: entry.id },
+    await expect(
+      commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId: entry.id, session: "zatto:a99c" },
+        [],
+      ),
+    ).resolves.toEqual(review);
+
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: ANCHOR,
+        author: USER,
+        body: "具体例は？",
+      },
       [],
     );
-    await expect(
-      commands.execute("review.requests", {}, []),
-    ).resolves.toMatchObject({
-      requests: [{ id: first.id, session: "zatto:a99c" }, { id: second.id }],
+    await commands.execute(
+      "review.reply",
+      {
+        threadId: thread.id,
+        author: { kind: "llm", session: "zatto:a99c" },
+        body: "LLM の返信は届けない",
+      },
+      [],
+    );
+    await commands.execute(
+      "review.reply",
+      { threadId: before.id, author: USER, body: "返信も届く" },
+      [],
+    );
+    expect(broadcast).toHaveBeenCalledWith({
+      type: "review:event",
+      session: "zatto:a99c",
     });
 
-    await commands.execute("review.complete", { requestId: first.id }, []);
-    await commands.execute("review.cancel", { requestId: second.id }, []);
-
-    const completions = broadcast.mock.calls
-      .map(([message]) => message)
-      .filter((message) => message.type === "review:completed");
-    expect(completions).toEqual([
-      { type: "review:completed", requestId: first.id },
-    ]);
-    await expect(commands.execute("review.requests", {}, [])).resolves.toEqual({
-      requests: [],
+    const base = {
+      reviewId: review.id,
+      entryId: entry.id,
+      workspaceId: "default",
+    };
+    await expect(
+      commands.execute("review.take", { session: "zatto:a99c" }, []),
+    ).resolves.toEqual({
+      events: [
+        { kind: "comment", ...base, threadId: thread.id },
+        { kind: "comment", ...base, threadId: before.id },
+      ],
     });
     await expect(
-      commands.execute("review.complete", { requestId: first.id }, []),
+      commands.execute("review.take", { session: "zatto:a99c" }, []),
+    ).resolves.toEqual({ events: [] });
+
+    await commands.execute("review.finish", { reviewId: review.id }, []);
+    await expect(
+      commands.execute("review.take", { session: "zatto:a99c" }, []),
+    ).resolves.toEqual({ events: [{ kind: "finished", ...base }] });
+    await expect(
+      commands.execute("review.states", {}, []),
+    ).resolves.toMatchObject({ reviews: [] });
+    await expect(
+      commands.execute("review.finish", { reviewId: review.id }, []),
     ).rejects.toMatchObject({ code: 1001 });
+
+    await commands.execute("review.unlisten", { session: "zatto:a99c" }, []);
+    await expect(commands.execute("review.states", {}, [])).resolves.toEqual({
+      reviews: [],
+      listeners: [],
+    });
+  });
+
+  test("別のセッションを選ぶと、レビューの送り先が切り替わる", async () => {
+    const { commands, entry } = await fixture();
+    const first = await commands.execute(
+      "review.start",
+      { workspaceId: "default", entryId: entry.id, session: "a" },
+      [],
+    );
+    const second = await commands.execute(
+      "review.start",
+      { workspaceId: "default", entryId: entry.id, session: "b" },
+      [],
+    );
+
+    expect(second.id).not.toBe(first.id);
+    await expect(
+      commands.execute("review.states", {}, []),
+    ).resolves.toMatchObject({ reviews: [{ id: second.id, session: "b" }] });
+    await expect(
+      commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId: entry.id },
+        [],
+      ),
+    ).rejects.toMatchObject({ code: -32602 });
   });
 });

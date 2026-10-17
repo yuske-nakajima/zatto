@@ -188,9 +188,10 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
 
-資料の確認を依頼するときは、LLMが`zatto review <file> --session <id>`を実行します。
-コマンドはファイルを開いて待ちます。プレビューで文章を選んでコメントのスレッドを立て、**Finish review**を押すと、コマンドは未解決のスレッドを表示して終了します。
-LLMはそれを受けて資料を直し、`reply_review_thread`で返信します。
+LLMと資料について話すときは、LLMが`zatto review <file> --session <id>`または`zatto review --inbox --session <id>`で待ちます。
+ファイルで**Start review**を押して待機中のセッションを選ぶか、LLMにレビューを始めてもらうと、ファイル一覧にIn reviewのラベルが付きます。
+コメントや返信を書くたびに待っているコマンドがスレッドを受け取り、LLMは`zatto review reply`または`reply_review_thread`で答えてから再び待ちます。
+**Finish review**でレビューを終えます。
 
 MCPクライアントへ一度登録して使います。
 グローバルにインストールした場合は、`npx -y @yuske-nakajima/zatto`の代わりに`zatto`を使います。
@@ -400,7 +401,7 @@ curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
 ファイルを変更・エクスポートする操作は、対象のワークスペースを`workspaceId`で必ず指定します。選択中でないワークスペースも指定できます。
 ネイティブ選択、インポート、停止ではサーバーの`instanceId`を引数で照合します。
 成功結果は`result`、失敗は`error.code`と`error.data`へ返します。
-全33メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
+全35メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
 
 ネイティブフォルダー選択ではserver.healthのinstanceIdを使います。プレースホルダーを置き換えて実行してください。
 

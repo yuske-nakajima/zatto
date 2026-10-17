@@ -2,6 +2,7 @@ import { AppViewer } from "./AppViewer.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
+import { ReviewingEntriesProvider } from "./review-status-context.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { useAgentContextSync } from "./useAgentContextSync.js";
@@ -130,77 +131,79 @@ export function App() {
     docs.open();
   }
   return (
-    <StatusBarFrame
-      isDocsVisible={docs.isVisible}
-      docsButtonRef={docs.triggerRef}
-      onToggleDocs={toggleDocs}
-    >
-      <ResizableLayout
-        isFilePanelVisible={filePanel.isVisible}
-        filePanel={
-          filePanel.isVisible ? (
-            <FilePanel
-              workspaceControls={
-                <WorkspaceControls
-                  state={workspaceState}
-                  reportError={setErrorMessage}
-                />
-              }
-              entries={entries}
-              selectedId={selectedId}
-              view={filePanel.view}
-              draggedId={entryReordering.draggedId}
-              dropTargetId={entryReordering.dropTargetId}
+    <ReviewingEntriesProvider value={review.reviewingEntryIds}>
+      <StatusBarFrame
+        isDocsVisible={docs.isVisible}
+        docsButtonRef={docs.triggerRef}
+        onToggleDocs={toggleDocs}
+      >
+        <ResizableLayout
+          isFilePanelVisible={filePanel.isVisible}
+          filePanel={
+            filePanel.isVisible ? (
+              <FilePanel
+                workspaceControls={
+                  <WorkspaceControls
+                    state={workspaceState}
+                    reportError={setErrorMessage}
+                  />
+                }
+                entries={entries}
+                selectedId={selectedId}
+                view={filePanel.view}
+                draggedId={entryReordering.draggedId}
+                dropTargetId={entryReordering.dropTargetId}
+                canPickFiles={filePicker.available}
+                canPickDirectory={directoryPicker.available}
+                nativePickerPending={pickerControl.pending}
+                sessionTransferPending={sessionTransfer.pending}
+                isSessionLoaded={isSessionLoaded}
+                isSearchVisible={search.isVisible}
+                hasSearchState={search.hasState}
+                searchButtonRef={search.triggerRef}
+                onViewChange={filePanel.setView}
+                onClear={clearEntries}
+                onSelect={selectEntry}
+                onCopyPath={copyPath}
+                onFavorite={setFavorite}
+                onRemove={removeEntry}
+                onRemoveEntries={createFolderSessionRemover(
+                  setErrorMessage,
+                  workspaceId,
+                )}
+                onDragStart={entryReordering.handleDragStart}
+                onDragEnter={entryReordering.setDropTargetId}
+                onDragEnd={entryReordering.resetDragState}
+                onDrop={entryReordering.reorderEntries}
+                onPickFiles={pickerControl.openFiles}
+                onPickDirectory={pickerControl.openDirectory}
+                onOpenSearch={openSearch}
+                onImportSession={sessionTransfer.importFile}
+                onExportSession={sessionTransfer.exportFile}
+              />
+            ) : null
+          }
+          viewer={
+            <AppViewer
+              search={search}
+              docs={docs}
+              selectedEntry={selectedEntry}
+              reloadVersion={reloadVersion}
+              isFilePanelVisible={filePanel.isVisible}
+              errorMessage={errorMessage}
+              copyFeedback={copyFeedback}
               canPickFiles={filePicker.available}
-              canPickDirectory={directoryPicker.available}
-              nativePickerPending={pickerControl.pending}
-              sessionTransferPending={sessionTransfer.pending}
-              isSessionLoaded={isSessionLoaded}
-              isSearchVisible={search.isVisible}
-              hasSearchState={search.hasState}
-              searchButtonRef={search.triggerRef}
-              onViewChange={filePanel.setView}
-              onClear={clearEntries}
-              onSelect={selectEntry}
+              isFilePickerOpen={pickerControl.isOpen}
+              onSelect={selectSearchResult}
+              onToggleFilePanel={filePanel.toggleVisibility}
               onCopyPath={copyPath}
-              onFavorite={setFavorite}
               onRemove={removeEntry}
-              onRemoveEntries={createFolderSessionRemover(
-                setErrorMessage,
-                workspaceId,
-              )}
-              onDragStart={entryReordering.handleDragStart}
-              onDragEnter={entryReordering.setDropTargetId}
-              onDragEnd={entryReordering.resetDragState}
-              onDrop={entryReordering.reorderEntries}
               onPickFiles={pickerControl.openFiles}
-              onPickDirectory={pickerControl.openDirectory}
-              onOpenSearch={openSearch}
-              onImportSession={sessionTransfer.importFile}
-              onExportSession={sessionTransfer.exportFile}
+              review={review}
             />
-          ) : null
-        }
-        viewer={
-          <AppViewer
-            search={search}
-            docs={docs}
-            selectedEntry={selectedEntry}
-            reloadVersion={reloadVersion}
-            isFilePanelVisible={filePanel.isVisible}
-            errorMessage={errorMessage}
-            copyFeedback={copyFeedback}
-            canPickFiles={filePicker.available}
-            isFilePickerOpen={pickerControl.isOpen}
-            onSelect={selectSearchResult}
-            onToggleFilePanel={filePanel.toggleVisibility}
-            onCopyPath={copyPath}
-            onRemove={removeEntry}
-            onPickFiles={pickerControl.openFiles}
-            review={review}
-          />
-        }
-      />
-    </StatusBarFrame>
+          }
+        />
+      </StatusBarFrame>
+    </ReviewingEntriesProvider>
   );
 }

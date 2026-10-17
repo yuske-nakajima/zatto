@@ -98,14 +98,27 @@ function reviewThread(value: unknown): boolean {
     )
   );
 }
-function reviewRequest(value: unknown): boolean {
+function activeReview(value: unknown): boolean {
   return (
     object(value) &&
     text(value.id) &&
     text(value.entryId) &&
     text(value.workspaceId) &&
-    number(value.createdAt) &&
-    (value.session === undefined || text(value.session))
+    text(value.session) &&
+    number(value.createdAt)
+  );
+}
+function reviewListener(value: unknown): boolean {
+  return object(value) && text(value.session) && number(value.lastSeenAt);
+}
+function reviewEvent(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.reviewId) &&
+    text(value.entryId) &&
+    text(value.workspaceId) &&
+    ((value.kind === "comment" && text(value.threadId)) ||
+      value.kind === "finished")
   );
 }
 /** Validates command results before clients consume untrusted wire data. */
@@ -188,12 +201,20 @@ export function isRpcResult<M extends RpcMethod>(
       return reviewThread(value);
     case "review.delete":
       return value === null || reviewThread(value);
-    case "review.request":
-      return reviewRequest(value);
-    case "review.requests":
-      return object(value) && list(value.requests, reviewRequest);
-    case "review.complete":
-    case "review.cancel":
+    case "review.start":
+      return activeReview(value);
+    case "review.states":
+      return (
+        object(value) &&
+        list(value.reviews, activeReview) &&
+        list(value.listeners, reviewListener)
+      );
+    case "review.listen":
+      return reviewListener(value);
+    case "review.take":
+      return object(value) && list(value.events, reviewEvent);
+    case "review.finish":
+    case "review.unlisten":
       return value === null;
     case "markdown.setTask":
       return object(value) && text(value.revision);

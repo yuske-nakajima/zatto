@@ -26,17 +26,41 @@ export interface ReviewThread {
   comments: ReviewComment[];
 }
 
-/** A pending request from a waiting command for the user to review a document. */
-export interface ReviewRequest {
+/** A file the user is reviewing with an LLM session; the session receives the user's comments on it. */
+export interface ActiveReview {
   id: string;
   entryId: string;
   workspaceId: string;
-  session?: string;
+  session: string;
   createdAt: number;
 }
+
+/** An LLM session waiting through `zatto review`, offered to the user as a review recipient. */
+export interface ReviewListener {
+  session: string;
+  lastSeenAt: number;
+}
+
+/** Something the waiting LLM session must handle: a new user comment, or the user finishing a review. */
+export type ReviewEvent =
+  | {
+      kind: "comment";
+      reviewId: string;
+      entryId: string;
+      workspaceId: string;
+      threadId: string;
+    }
+  | {
+      kind: "finished";
+      reviewId: string;
+      entryId: string;
+      workspaceId: string;
+    };
 
 export const REVIEW_LIMITS = {
   bodyLength: 10_000,
   anchorTextLength: 2_000,
   contextLength: 64,
+  /** Listeners not seen for this long are not offered as recipients. */
+  listenerTtlMs: 30 * 60 * 1000,
 } as const;

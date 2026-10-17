@@ -31,10 +31,11 @@
           <tr><td>Select a file</td><td><code>GET /f/:id/</code></td><td>Loads the HTML in the preview iframe; relative resources use <code>GET /f/:id/*</code>.</td></tr>
           <tr><td>Open a Docs page</td><td><code>GET /docs/*</code></td><td>Loads the selected locale and slug in a same-origin iframe without creating a session entry.</td></tr>
           <tr><td>Receive session or file changes</td><td><code>WS /ws</code></td><td>Updates the file panel, preview, and search state.</td></tr>
-          <tr><td>Load comment threads</td><td><code>review.list</code> / <code>review.requests</code></td><td>Loads the threads of the selected file and pending review requests, following <code>review:update</code> and <code>review:requests</code> events.</td></tr>
+          <tr><td>Load comment threads</td><td><code>review.list</code> / <code>review.states</code></td><td>Loads the threads of the selected file, the files under review, and the waiting LLM sessions, following <code>review:update</code> and <code>review:states</code> events. Files under review are labelled In review in the file list.</td></tr>
           <tr><td>Comment / Reply / Edit / Delete</td><td><code>review.create</code> / <code>review.reply</code> / <code>review.edit</code> / <code>review.delete</code></td><td>Saves the thread and refreshes the highlights.</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>Resolved threads are no longer highlighted.</td></tr>
-          <tr><td>Finish review</td><td><code>review.complete</code></td><td>Ends the request; the waiting <code>zatto review</code> prints the open threads.</td></tr>
+          <tr><td>Start review</td><td><code>review.start</code></td><td>Puts the file under review with the chosen waiting LLM session; later comments and replies are sent to it.</td></tr>
+          <tr><td>Finish review</td><td><code>review.finish</code></td><td>Ends the review; the LLM session receives the open threads.</td></tr>
           <tr><td>Toggle a Markdown task checkbox</td><td><code>markdown.setTask</code></td><td>Writes the checkbox state to the file; when the file changed, reloads the preview with its latest content.</td></tr>
           <tr><td>Search files</td><td><code>search.query</code></td><td>Shows fixed-string source matches and truncation status.</td></tr>
           <tr><td>Select HTML or Markdown files</td><td><code>session.pickFiles</code></td><td>Opens the native file dialog and selects the first added entry.</td></tr>

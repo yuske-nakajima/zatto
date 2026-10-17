@@ -11,7 +11,7 @@ export const HELP_TEXT = `Usage: zatto [options] [file...]
 Commands:
   agent <usage|context> AIエージェント向けの利用方法とコンテキストを表示する
   mcp <usage|serve>     MCPの接続情報を表示またはstdioサーバーを起動する
-  review <file>         確認を依頼し、確認が終わると未解決のコメントを表示する
+  review <file|--inbox> レビュー中のファイルへのコメントを待ち、届いた内容を表示する
 
 Options:
   --port <n>      初回起動時のサーバーポート (default: ${DEFAULT_PORT})
