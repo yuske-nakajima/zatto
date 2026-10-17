@@ -38,6 +38,14 @@ async function invoke(body: unknown, files: string[]) {
     )
     .mockImplementationOnce(
       rpcFixture(async () =>
+        Response.json({
+          activeWorkspaceId: "default",
+          workspaces: [{ id: "default", name: "Default" }],
+        }),
+      ),
+    )
+    .mockImplementationOnce(
+      rpcFixture(async () =>
         Response.json(
           {
             workspaceId: "default",

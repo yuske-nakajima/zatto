@@ -28,13 +28,14 @@ export const RPC_ERROR = {
 } as const;
 /** Empty named parameters. */
 export type EmptyParams = Record<string, never>;
-/** Optional identity and active-workspace preconditions for command invocation. */
+/** Optional server identity precondition for command invocation. */
 export interface RequestContext {
-  workspaceId?: string;
   instanceId?: string;
 }
-/** Workspace-aware command preconditions. */
-export type WorkspaceParams = RequestContext;
+/** Commands that change files of the named workspace, selected or not. */
+export interface WorkspaceParams extends RequestContext {
+  workspaceId: string;
+}
 /** Session snapshot with server capabilities. */
 export interface SessionResult extends Session, WorkspaceState {
   serverIdentity?: { instanceId: string };
@@ -78,12 +79,11 @@ export interface RpcMethods {
   };
   "session.remove": { params: WorkspaceParams & { id: string }; result: null };
   "session.clear": { params: WorkspaceParams; result: null };
-  "session.export": { params: RequestContext; result: SessionExchange };
+  "session.export": { params: WorkspaceParams; result: SessionExchange };
   "session.import": {
     params: WorkspaceParams & {
       exchange: SessionExchange;
       mode?: "replace" | "merge";
-      instanceId?: string;
     };
     result: Session;
   };

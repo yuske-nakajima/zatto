@@ -1,4 +1,5 @@
 import {
+  PREVIOUS_PROTOCOL_VERSION,
   readServerRecord,
   removeOwnedServerRecord,
   SERVER_PROTOCOL_VERSION,
@@ -6,6 +7,7 @@ import {
   serverProcessIsAlive,
 } from "../server/runtime.js";
 import {
+  type HealthProbe,
   legacyServerMessage,
   probeHealth,
   requestShutdown,
@@ -33,9 +35,9 @@ export async function stopRecordedServer(
     (await recoverRecordFromLock(dependencies));
   if (record) {
     const probe = await probeHealth(record.port, dependencies.fetch, record);
-    if (probe.kind === "legacy" || probe.kind === "same-instance-incompatible")
+    if (probe.kind === "legacy" || isUnstoppable(probe))
       throw new Error(legacyServerMessage(record.port));
-    if (probe.kind === "compatible") {
+    if (probe.kind === "compatible" || isPreviousProtocol(probe)) {
       await requestShutdown(record.port, dependencies.fetch, record.instanceId);
       await waitForStopped(record, dependencies);
       return { port: record.port, stopped: true };
@@ -49,7 +51,7 @@ export async function stopRecordedServer(
       record.protocolVersion !== SERVER_PROTOCOL_VERSION &&
       serverProcessIsAlive(record.pid)
     )
-      throw new Error(legacyServerMessage(record.port));
+      throw new Error(legacyServerMessage(record.port, record.protocolVersion));
     await removeOwnedServerRecord(
       dependencies.runtimeFilePath,
       record.instanceId,
@@ -62,10 +64,7 @@ export async function stopRecordedServer(
     dependencies.fetch,
   );
   if (!unmanaged) return { port: preferredPort, stopped: false };
-  if (
-    unmanaged.probe.kind === "legacy" ||
-    unmanaged.probe.kind === "same-instance-incompatible"
-  )
+  if (unmanaged.probe.kind === "legacy" || isUnstoppable(unmanaged.probe))
     throw new Error(legacyServerMessage(unmanaged.port));
   const instanceId =
     "identity" in unmanaged.probe &&
@@ -75,6 +74,19 @@ export async function stopRecordedServer(
   await requestShutdown(unmanaged.port, dependencies.fetch, instanceId);
   await waitForUnmanagedStopped(unmanaged.port, dependencies);
   return { port: unmanaged.port, stopped: true };
+}
+
+function isPreviousProtocol(probe: HealthProbe): boolean {
+  return (
+    probe.kind === "same-instance-incompatible" &&
+    probe.identity.protocolVersion === PREVIOUS_PROTOCOL_VERSION
+  );
+}
+
+function isUnstoppable(probe: HealthProbe): boolean {
+  return (
+    probe.kind === "same-instance-incompatible" && !isPreviousProtocol(probe)
+  );
 }
 
 async function waitForStopped(

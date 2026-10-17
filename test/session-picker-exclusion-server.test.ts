@@ -52,10 +52,14 @@ describe("native picker exclusion and failures", () => {
       const requestFor = (method: string) =>
         method === "session.pickDirectory"
           ? rpc(app, "session.pickDirectory", {
+              workspaceId: "default",
               mode: "direct",
               instanceId: "managed-instance",
             })
-          : rpc(app, "session.pickFiles", { instanceId: "managed-instance" });
+          : rpc(app, "session.pickFiles", {
+              workspaceId: "default",
+              instanceId: "managed-instance",
+            });
 
       const activeResponsePromise = requestFor(activeUrl);
       await vi.waitFor(() => {
@@ -98,6 +102,7 @@ describe("native picker exclusion and failures", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "recursive" },
       instanceId: "managed-instance",
     });
@@ -141,6 +146,7 @@ describe("native picker exclusion and failures", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "recursive" },
       instanceId: "managed-instance",
     });
@@ -172,6 +178,7 @@ describe("native picker exclusion and failures", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "direct" },
       instanceId: "managed-instance",
     });

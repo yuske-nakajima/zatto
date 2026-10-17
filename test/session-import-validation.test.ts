@@ -73,6 +73,7 @@ describe("session import path validation", () => {
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       exchange: {
         format: "zatto-session",
         version: 1,

@@ -14,7 +14,7 @@ export function queryCommands(context: CommandContext) {
     "agentContext.get": () =>
       context.agentContextStore.getContext(context.sessionStore),
     "agentContext.set": ({ activeEntryId, view, workspaceId }) => {
-      context.workspace(workspaceId);
+      context.activeWorkspace(workspaceId);
       if (
         activeEntryId !== null &&
         !context.sessionStore.getEntry(activeEntryId)

@@ -175,7 +175,10 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 | `get_context` / `get_active_file` / `list_open_files` | 選択中のファイル、選択中ワークスペースのファイル、現在の表示を取得 |
 | `list_workspaces` | 全ワークスペースと選択中のワークスペースを取得 |
 | `list_workspace_files` | ワークスペースを切り替えずに、任意のワークスペースのファイルをList順・星・選択状態付きで取得 |
-| `add_files` | 絶対パスを選択中のワークスペースへ登録し、パスごとの結果と閲覧URLを返す |
+| `add_files` | 絶対パスを任意のワークスペース（省略時は選択中）へ登録し、パスごとの結果と閲覧URLを返す |
+| `remove_files` | 任意のワークスペースからファイルを外す。ディスク上のファイルは削除しない |
+| `create_workspace` | 選択を変えずに空のワークスペースを作成する |
+| `update_files` | 任意のワークスペースで星とList上の位置（1始まり）を変更する |
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
 
@@ -315,6 +318,13 @@ Trusted Publisherの対象は、このリポジトリの`release.yml`です。�
 設定、確認する文章の範囲、再試行の手順は[リリース運用](https://github.com/yuske-nakajima/zatto/blob/main/docs/releasing.md)を参照してください。
 版の選定は[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
 
+## 3.0.0への更新
+
+3.0.0では、ファイルを変更・エクスポートするRPC操作で、対象ワークスペースの`workspaceId`が必須になり、サーバーの通信バージョンが4になります。
+パッケージを更新しても、稼働中の2.xサーバーは動き続けます。3.0.0の`zatto --stop`で停止してから`zatto`を起動してください。
+停止するまで、3.0.0のCLIは2.xサーバーへ操作を送りません。
+保存済みワークスペース、星、並び順と交換ファイルは引き継ぎます。
+
 ## 2.0.0への更新と内部設計
 
 2.0.0はREST操作APIを廃止し、CLI、Web UI、MCPの内部通信をJSON-RPCへ統一します。
@@ -375,12 +385,12 @@ curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   --data '{"jsonrpc":"2.0","id":2,"method":"session.get","params":{}}'
 ```
 
-登録は`session.add`へ`{ "paths": [...] }`、並べ替えは`session.reorder`へ全IDを送ります。
+登録は`session.add`へ`{ "workspaceId": "...", "paths": [...] }`、並べ替えは`session.reorder`へ全IDを送ります。
 `session.removeMany`は既知のID群を原子的に一覧から外し、実ファイルは残します。
+ファイルを変更・エクスポートする操作は、対象のワークスペースを`workspaceId`で必ず指定します。選択中でないワークスペースも指定できます。
 ネイティブ選択、インポート、停止ではサーバーの`instanceId`を引数で照合します。
-選択中のワークスペースを前提にする操作には`workspaceId`も指定できます。
 成功結果は`result`、失敗は`error.code`と`error.data`へ返します。
-全21メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
+全22メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
 
 ネイティブフォルダー選択ではserver.healthのinstanceIdを使います。プレースホルダーを置き換えて実行してください。
 

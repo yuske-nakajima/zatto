@@ -98,6 +98,7 @@ describe("directory import filesystem changes", () => {
     });
 
     const response = await rpc(app, "session.pickDirectory", {
+      workspaceId: "default",
       ...{ mode: "recursive" },
       instanceId: "managed-instance",
     });

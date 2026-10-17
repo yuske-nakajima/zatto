@@ -32,6 +32,7 @@ describe("session mutation notifications", () => {
     const logError = vi.spyOn(app.log, "error");
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       exchange: {
         format: "zatto-session",
         version: 1,

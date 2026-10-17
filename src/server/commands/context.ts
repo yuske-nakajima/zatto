@@ -18,7 +18,10 @@ export interface CommandOptions {
 /** Validated command dependencies and mutation guards. */
 export interface CommandContext extends CommandOptions {
   publish: () => Promise<void>;
-  workspace: (expected?: string) => string;
+  /** Rejects a workspace other than the shared active selection. */
+  activeWorkspace: (expected: string) => string;
+  /** Rejects a workspace ID that does not exist. */
+  existingWorkspace: (id: string) => string;
   identity: (expected?: string, required?: boolean) => void;
 }
 /** Deferred effects that may run only after the transport sends all responses. */
@@ -35,13 +38,17 @@ export function createCommandContext(options: CommandOptions): CommandContext {
   let pending = Promise.resolve();
   return {
     ...options,
-    workspace(expected) {
+    activeWorkspace(expected) {
       const id = options.sessionStore.getWorkspaceState().activeWorkspaceId;
-      if (expected !== undefined && expected !== id)
+      if (expected !== id)
         throw domainError(
           "workspace",
           "Workspace changed. Retry from the active workspace.",
         );
+      return id;
+    },
+    existingWorkspace(id) {
+      options.sessionStore.getWorkspace(id);
       return id;
     },
     identity(expected, required = false) {

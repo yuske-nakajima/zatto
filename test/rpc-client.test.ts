@@ -70,9 +70,11 @@ describe("shared JSON-RPC client", () => {
         data: { kind: "workspace" },
       },
     }));
-    const error = await rpcCall("session.clear", {}, { fetch }).catch(
-      (error) => error,
-    );
+    const error = await rpcCall(
+      "session.clear",
+      { workspaceId: "w" },
+      { fetch },
+    ).catch((error) => error);
     expect(error).toBeInstanceOf(RpcClientError);
     expect(error).toMatchObject({
       code: 1002,

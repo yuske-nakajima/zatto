@@ -34,7 +34,9 @@ describe("session exchange API", () => {
     await store.reorderEntries([second.id, first.id]);
     const app = await createApp({ sessionStore: store });
 
-    const response = await rpc(app, "session.export", {});
+    const response = await rpc(app, "session.export", {
+      workspaceId: "default",
+    });
 
     expect(response.code).toBe(0);
     expect(response.json()).toEqual({
@@ -60,6 +62,7 @@ describe("session exchange API", () => {
     });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       exchange: {
         format: "zatto-session",
         version: 1,
@@ -106,6 +109,7 @@ describe("session exchange API", () => {
     });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       exchange: { format: "zatto-session", version: 1, entries: [] },
       instanceId: "other",
     });
@@ -122,7 +126,10 @@ describe("session exchange API", () => {
     const onSessionChanged = vi.fn();
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
-    const response = await rpc(app, "session.import", { exchange: "{broken" });
+    const response = await rpc(app, "session.import", {
+      workspaceId: "default",
+      exchange: "{broken",
+    });
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
@@ -178,6 +185,7 @@ describe("session exchange API", () => {
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
     const response = await rpc(app, "session.import", {
+      workspaceId: "default",
       exchange: createPayload(),
     });
 

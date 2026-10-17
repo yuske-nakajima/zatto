@@ -188,7 +188,10 @@ configuration changes are intentionally outside `zatto`.
 | `get_context` / `get_active_file` / `list_open_files` | Read the selected file, the files of the selected workspace, and the current view |
 | `list_workspaces` | Read every workspace and the selected one |
 | `list_workspace_files` | Read files of any workspace in List order with stars and selection, without switching workspaces |
-| `add_files` | Register absolute paths in the selected workspace and return the status and viewer URL per path |
+| `add_files` | Register absolute paths in any workspace (the selected one by default) and return the status and viewer URL per path |
+| `remove_files` | Remove file ids from any workspace without deleting files on disk |
+| `create_workspace` | Create an empty workspace without changing the selection |
+| `update_files` | Set stars and one-based List positions in any workspace |
 
 The MCP tools never start the viewer and report an error when it is not running.
 
@@ -333,6 +336,14 @@ See [release operations](https://github.com/yuske-nakajima/zatto/blob/main/docs/
 and the [versioning policy](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)
 for setup, review scope and retry instructions.
 
+## Updating to 3.0.0
+
+3.0.0 requires `workspaceId`, the target workspace, on RPC operations that change or
+export files, and raises the server protocol version to 4. A 2.x server keeps running
+after the package is updated: stop it with `zatto --stop` from 3.0.0, then run `zatto`.
+Until it is stopped, the 3.0.0 CLI does not send operations to it.
+Saved workspaces, stars, List order and exchange files are retained.
+
 ## Updating to 2.0.0 and extending Zatto
 
 2.0.0 removes REST operation APIs. CLI, Web UI and internal MCP calls use JSON-RPC.
@@ -393,12 +404,13 @@ curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   --data '{"jsonrpc":"2.0","id":2,"method":"session.get","params":{}}'
 ```
 
-Use `session.add` with `{ "paths": [...] }` to register files and `session.reorder`
-with every entry ID to reorder them. `session.removeMany` removes known IDs atomically
-without deleting files. Native pickers, import and shutdown validate `instanceId` in
-params. Pass `workspaceId` when an operation depends on the active selection.
+Use `session.add` with `{ "workspaceId": "...", "paths": [...] }` to register files and
+`session.reorder` with every entry ID to reorder them. `session.removeMany` removes known
+IDs atomically without deleting files. Operations that change or export files require
+`workspaceId`, the target workspace, which need not be the selected one. Native pickers,
+import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 21 methods, parameters, results and errors.
+The built-in API documentation describes all 22 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 

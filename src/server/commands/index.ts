@@ -49,14 +49,8 @@ export function createCommands(options: CommandOptions): Commands {
       const params = commandParams(method, rawParams);
       try {
         if (method !== "server.health") {
-          const guards = params as {
-            workspaceId?: string;
-            instanceId?: string;
-          };
-          if (guards.workspaceId !== undefined)
-            context.workspace(guards.workspaceId);
-          if (guards.instanceId !== undefined)
-            context.identity(guards.instanceId, true);
+          const { instanceId } = params as { instanceId?: string };
+          if (instanceId !== undefined) context.identity(instanceId, true);
         }
         let result: unknown;
         if (method === "server.health")

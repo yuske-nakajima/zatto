@@ -33,7 +33,7 @@ export function pickerCommands(context: CommandContext) {
   }
   return {
     "session.pickFiles": async ({ instanceId, workspaceId }) => {
-      const target = context.workspace(workspaceId);
+      const target = context.existingWorkspace(workspaceId);
       context.identity(instanceId, true);
       const picker = context.pickFiles;
       if (!picker)
@@ -46,7 +46,7 @@ export function pickerCommands(context: CommandContext) {
       });
     },
     "session.pickDirectory": async ({ instanceId, workspaceId, mode }) => {
-      const target = context.workspace(workspaceId);
+      const target = context.existingWorkspace(workspaceId);
       context.identity(instanceId, true);
       const picker = context.pickDirectory;
       if (!picker)

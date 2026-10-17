@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
@@ -41,20 +41,29 @@ describe("Zatto MCP server", () => {
         "list_workspaces",
         "list_workspace_files",
         "add_files",
+        "remove_files",
+        "create_workspace",
+        "update_files",
       ],
     });
   });
 
-  test("読取りツールと登録ツールを注釈で区別する", async () => {
+  test("読取り・変更・削除・作成のツールを注釈で区別する", async () => {
     const { client } = await connect((await fixture()).connection);
     const tools = await client.listTools();
 
     expect(tools.tools.map(({ name }) => name)).toEqual(MCP_USAGE.tools);
+    const changes = [
+      "add_files",
+      "remove_files",
+      "create_workspace",
+      "update_files",
+    ];
     for (const tool of tools.tools) {
       expect(tool.annotations).toMatchObject({
-        readOnlyHint: tool.name !== "add_files",
-        destructiveHint: false,
-        idempotentHint: true,
+        readOnlyHint: !changes.includes(tool.name),
+        destructiveHint: tool.name === "remove_files",
+        idempotentHint: tool.name !== "create_workspace",
         openWorldHint: false,
       });
     }
@@ -221,6 +230,139 @@ describe("Zatto MCP server", () => {
     expect(store.getSession().entries).toEqual([]);
   });
 
+  test("選択中でないワークスペースへ登録し、選択とURLの扱いを結果で示す", async () => {
+    const { connection, store, files } = await fixture();
+    const research = await store.createWorkspace("Research");
+    const { client } = await connect(connection);
+
+    const result = (await toolResult(client, "add_files", {
+      paths: [files.a],
+      workspaceId: research.id,
+    })) as { files: Array<{ id: string }> };
+
+    expect(result).toEqual({
+      workspace: { id: research.id, name: "Research", active: false },
+      files: [
+        {
+          path: files.a,
+          status: "added",
+          id: result.files[0].id,
+          title: "A",
+          url: null,
+        },
+      ],
+      notice:
+        'The workspace "Research" is not selected in the viewer. Ask the user to select it before opening these files.',
+    });
+    expect(store.getWorkspace(research.id).entries).toHaveLength(1);
+    expect(store.getSession().entries).toEqual([]);
+    expect(store.getWorkspaceState().activeWorkspaceId).toBe("default");
+  });
+
+  test("指定したファイルだけをワークスペースから外し、ディスクには残す", async () => {
+    const { connection, store, files } = await fixture();
+    const research = await store.createWorkspace("Research");
+    const [a, b] = await store.addEntries([files.a, files.b], research.id);
+    const { client } = await connect(connection);
+
+    await expect(
+      toolResult(client, "remove_files", {
+        entryIds: [a.id, "missing", a.id],
+        workspaceId: research.id,
+      }),
+    ).resolves.toEqual({
+      workspace: { id: research.id, name: "Research", active: false },
+      files: [
+        { id: a.id, status: "removed", title: "A", path: files.a },
+        { id: "missing", status: "missing" },
+      ],
+    });
+    expect(store.getWorkspace(research.id).entries).toEqual([b]);
+    await expect(readFile(files.a, "utf8")).resolves.toContain("A");
+    await expect(
+      toolResult(client, "remove_files", { entryIds: ["missing"] }),
+    ).resolves.toEqual({
+      workspace: { id: "default", name: "Default", active: true },
+      files: [{ id: "missing", status: "missing" }],
+    });
+  });
+
+  test("同じ名前でもワークスペースを作成し、選択を切り替えない", async () => {
+    const { connection, store } = await fixture();
+    const { client } = await connect(connection);
+
+    const first = (await toolResult(client, "create_workspace", {
+      name: " Notes ",
+    })) as { workspace: { id: string } };
+    const second = (await toolResult(client, "create_workspace", {
+      name: "Notes",
+    })) as { workspace: { id: string } };
+
+    expect(first).toEqual({
+      workspace: { id: first.workspace.id, name: "Notes", active: false },
+    });
+    expect(second.workspace.id).not.toBe(first.workspace.id);
+    expect(store.getWorkspaceState()).toEqual({
+      activeWorkspaceId: "default",
+      workspaces: [
+        { id: "default", name: "Default" },
+        { id: first.workspace.id, name: "Notes" },
+        { id: second.workspace.id, name: "Notes" },
+      ],
+    });
+  });
+
+  test("お気に入りと並び順を指定順に適用し、変更後の位置を返す", async () => {
+    const { connection, store, broadcast, files } = await fixture();
+    const research = await store.createWorkspace("Research");
+    const [a, b, c] = await store.addEntries(
+      [files.a, files.b, files.c],
+      research.id,
+    );
+    const { client } = await connect(connection);
+
+    await expect(
+      toolResult(client, "update_files", {
+        workspaceId: research.id,
+        files: [
+          { entryId: c.id, position: 1, favorite: true },
+          { entryId: a.id, position: 99 },
+          { entryId: "missing", favorite: true },
+        ],
+      }),
+    ).resolves.toEqual({
+      workspace: { id: research.id, name: "Research", active: false },
+      files: [
+        {
+          id: c.id,
+          status: "updated",
+          title: "C",
+          position: 1,
+          favorite: true,
+        },
+        {
+          id: a.id,
+          status: "updated",
+          title: "A",
+          position: 3,
+          favorite: false,
+        },
+        { id: "missing", status: "missing" },
+      ],
+    });
+    expect(store.getWorkspace(research.id).entries.map(({ id }) => id)).toEqual(
+      [c.id, b.id, a.id],
+    );
+    expect(store.getWorkspaceState().activeWorkspaceId).toBe("default");
+    expect(broadcast).toHaveBeenCalledTimes(2);
+
+    const invalid = await client.callTool({
+      name: "update_files",
+      arguments: { files: [{ entryId: a.id }] },
+    });
+    expect(invalid.isError).toBe(true);
+  });
+
   test("サーバー未起動などの接続エラーをツールエラーとして返す", async () => {
     const { client } = await connect(async () => {
       throw new Error("zatto サーバーは起動していません");
@@ -229,7 +371,7 @@ describe("Zatto MCP server", () => {
     for (const name of MCP_USAGE.tools) {
       const result = await client.callTool({
         name,
-        arguments: name === "add_files" ? { paths: ["/tmp/a.html"] } : {},
+        arguments: TOOL_ARGUMENTS[name] ?? {},
       });
       expect(result.isError).toBe(true);
       expect(result.content).toEqual([
@@ -241,6 +383,13 @@ describe("Zatto MCP server", () => {
     }
   });
 });
+
+const TOOL_ARGUMENTS: Record<string, Record<string, unknown>> = {
+  add_files: { paths: ["/tmp/a.html"] },
+  remove_files: { entryIds: ["a"] },
+  create_workspace: { name: "Notes" },
+  update_files: { files: [{ entryId: "a", favorite: true }] },
+};
 
 async function fixture() {
   const store = new SessionStore(path.join(dir, "session.json"));

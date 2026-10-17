@@ -16,7 +16,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
   await rm(dir, { force: true, recursive: true });
 });
-test("favorite API validates explicit booleans, publishes changes once, and rejects stale workspaces", async () => {
+test("favorite API validates explicit booleans, publishes changes once, and targets an unselected workspace", async () => {
   const store = new SessionStore(path.join(dir, "session.json"));
   await store.load();
   const file = path.join(dir, "page.html");
@@ -32,13 +32,19 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
     { favorite: 1 },
   ]) {
     expect(
-      (await rpc(app, "session.setFavorite", { id: entry.id, ...payload }))
-        .code,
+      (
+        await rpc(app, "session.setFavorite", {
+          workspaceId: "default",
+          id: entry.id,
+          ...payload,
+        })
+      ).code,
     ).toBe(-32602);
   }
   expect(
     (
       await rpc(app, "session.setFavorite", {
+        workspaceId: "default",
         id: "missing",
         ...{ favorite: true },
       })
@@ -48,6 +54,7 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
     expect(
       (
         await rpc(app, "session.setFavorite", {
+          workspaceId: "default",
           id: entry.id,
           ...{ favorite: true },
         })
@@ -58,7 +65,9 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
     type: "session:update",
     entries: [{ id: entry.id, favorite: true }],
   });
-  expect((await rpc(app, "session.export", {})).json()).toEqual({
+  expect(
+    (await rpc(app, "session.export", { workspaceId: "default" })).json(),
+  ).toEqual({
     format: "zatto-session",
     version: 1,
     entries: [{ path: file }],
@@ -73,9 +82,9 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
         workspaceId: "default",
       })
     ).code,
-  ).toBe(1002);
+  ).toBe(0);
   await store.switchWorkspace("default");
-  expect(store.getEntry(entry.id)?.favorite).toBe(true);
+  expect(store.getEntry(entry.id)?.favorite).toBe(false);
   await app.close();
 });
 test("persistence errors return failure without publishing or changing favorites", async () => {
@@ -97,6 +106,7 @@ test("persistence errors return failure without publishing or changing favorites
   expect(
     (
       await rpc(app, "session.setFavorite", {
+        workspaceId: "default",
         id: entry.id,
         ...{ favorite: true },
       })
