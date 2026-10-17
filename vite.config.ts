@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -10,6 +11,13 @@ const WEB_APP_ICON_NAMES = new Set([
 
 export default defineConfig({
   root: "src/web",
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      JSON.parse(
+        readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+      ).version,
+    ),
+  },
   plugins: [react()],
   build: {
     outDir: "../../dist/web",

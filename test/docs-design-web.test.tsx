@@ -12,6 +12,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 const docsStyles = readFileSync(resolve("src/web/docs.css"), "utf8");
 const statusStyles = readFileSync(resolve("src/web/status-bar.css"), "utf8");
@@ -32,7 +33,7 @@ describe("built-in documentation design", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ entries })),
+      vi.fn(rpcFixture(async () => Response.json({ entries }))),
     );
   });
 

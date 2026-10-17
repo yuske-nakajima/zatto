@@ -17,6 +17,7 @@ export function FilePanelHeader() {
           <img src={zattoLogoBlack} alt="zatto" />
         </picture>
       </h1>
+      <p className="app-version">v{__APP_VERSION__}</p>
     </header>
   );
 }

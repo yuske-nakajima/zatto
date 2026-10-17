@@ -9,6 +9,7 @@ import {
   SERVER_PROTOCOL_VERSION,
   writeServerRecord,
 } from "../src/server/runtime.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -50,14 +51,30 @@ describe("zatto CLI", () => {
     });
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "running-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "running-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse({ added: [] }, 201));
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse(
+            {
+              added: [],
+              resolved: [],
+              workspaceId: "default",
+              activeWorkspaceId: "default",
+              session: { entries: [] },
+            },
+            201,
+          ),
+        ),
+      );
     const spawnServer = vi.fn();
     const openBrowser = vi.fn();
     const stdout = vi.fn();
@@ -75,12 +92,9 @@ describe("zatto CLI", () => {
     expect(openBrowser).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      "http://127.0.0.1:7010/api/session/add",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          paths: [path.resolve("a.html"), path.resolve("b.html")],
-        }),
+      "http://127.0.0.1:7010/rpc",
+      rpcRequest("session.add", {
+        paths: [path.resolve("a.html"), path.resolve("b.html")],
       }),
     );
     expect(stdout).toHaveBeenCalledWith("http://127.0.0.1:7010/");
@@ -88,18 +102,34 @@ describe("zatto CLI", () => {
 
   test("recordがなければdetachedサーバーを起動して記録されたポートへ合流する", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>();
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < 20; index += 1) {
       fetch.mockRejectedValueOnce(new Error("接続失敗"));
     }
     fetch
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "requested-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "requested-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse({ added: [] }, 201));
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse(
+            {
+              added: [],
+              resolved: [],
+              workspaceId: "default",
+              activeWorkspaceId: "default",
+              session: { entries: [] },
+            },
+            201,
+          ),
+        ),
+      );
     const spawnServer = vi.fn(async (_port, instanceId) => {
       await writeServerRecord(runtimeFilePath, {
         instanceId,
@@ -137,14 +167,30 @@ describe("zatto CLI", () => {
     });
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "running-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "running-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse({ added: [] }, 201));
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse(
+            {
+              added: [],
+              resolved: [],
+              workspaceId: "default",
+              activeWorkspaceId: "default",
+              session: { entries: [] },
+            },
+            201,
+          ),
+        ),
+      );
     const spawnServer = vi.fn();
 
     const exitCode = await runCli(["--port", "9000", "a.html"], {
@@ -156,8 +202,8 @@ describe("zatto CLI", () => {
     expect(exitCode).toBe(0);
     expect(spawnServer).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenLastCalledWith(
-      "http://127.0.0.1:7010/api/session/add",
-      expect.anything(),
+      "http://127.0.0.1:7010/rpc",
+      rpcRequest("session.add", {}),
     );
   });
 
@@ -168,12 +214,15 @@ describe("zatto CLI", () => {
       port: 7010,
       protocolVersion: 99,
     });
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
-      jsonResponse({
-        name: "zatto",
-        instanceId: "incompatible-instance",
-        protocolVersion: 99,
-      }),
+    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementationOnce(
+      rpcFixture(async () =>
+        jsonResponse({
+          name: "zatto",
+          version: "2.0.0",
+          instanceId: "incompatible-instance",
+          protocolVersion: 99,
+        }),
+      ),
     );
     const spawnServer = vi.fn();
     const stderr = vi.fn();
@@ -188,7 +237,7 @@ describe("zatto CLI", () => {
     expect(exitCode).toBe(1);
     expect(spawnServer).not.toHaveBeenCalled();
     expect(stderr).toHaveBeenCalledWith(
-      "記録された zatto サーバーと互換性を確認できませんでした (7010)",
+      expect.stringContaining("旧 zatto サーバー"),
     );
   });
 
@@ -226,9 +275,11 @@ describe("zatto CLI", () => {
   });
 
   test("既定portで旧serverを検出した場合は重複起動しない", async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(jsonResponse({ name: "zatto", version: "0.1.0" }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
+      String(input).endsWith("/rpc")
+        ? new Response(null, { status: 404 })
+        : jsonResponse({ name: "zatto", version: "1.2.0" }),
+    );
     const spawnServer = vi.fn();
     const stderr = vi.fn();
 
@@ -242,16 +293,18 @@ describe("zatto CLI", () => {
     expect(exitCode).toBe(1);
     expect(spawnServer).not.toHaveBeenCalled();
     expect(stderr).toHaveBeenCalledWith(
-      "runtime recordのない zatto サーバーがポート 6280 で起動しています。`zatto --stop` で停止してから再実行してください",
+      expect.stringContaining("@1.2.0 --port 6280 --stop"),
     );
   });
 
   test("--port指定時も既定範囲の旧serverを検出する", async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValueOnce(new Error("9000は未使用"))
-      .mockRejectedValueOnce(new Error("6280は未使用"))
-      .mockResolvedValueOnce(jsonResponse({ name: "zatto", version: "0.1.0" }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = new URL(String(input));
+      if (url.port !== "6281") throw new Error("unused port");
+      return url.pathname === "/rpc"
+        ? new Response(null, { status: 404 })
+        : jsonResponse({ name: "zatto", version: "1.2.0" });
+    });
     const spawnServer = vi.fn();
     const stderr = vi.fn();
 
@@ -264,9 +317,7 @@ describe("zatto CLI", () => {
 
     expect(exitCode).toBe(1);
     expect(spawnServer).not.toHaveBeenCalled();
-    expect(stderr).toHaveBeenCalledWith(
-      "runtime recordのない zatto サーバーがポート 6281 で起動しています。`zatto --stop` で停止してから再実行してください",
-    );
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("6281"));
   });
 
   test("--stopでrecordに記録されたサーバーを停止する", async () => {
@@ -278,14 +329,19 @@ describe("zatto CLI", () => {
     });
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          name: "zatto",
-          instanceId: "running-instance",
-          protocolVersion: SERVER_PROTOCOL_VERSION,
-        }),
+      .mockImplementationOnce(
+        rpcFixture(async () =>
+          jsonResponse({
+            name: "zatto",
+            version: "2.0.0",
+            instanceId: "running-instance",
+            protocolVersion: SERVER_PROTOCOL_VERSION,
+          }),
+        ),
       )
-      .mockResolvedValueOnce(jsonResponse({ ok: true }, 202))
+      .mockImplementationOnce(
+        rpcFixture(async () => jsonResponse({ ok: true }, 202)),
+      )
       .mockRejectedValueOnce(new Error("停止済み"));
     const stdout = vi.fn();
 
@@ -298,67 +354,55 @@ describe("zatto CLI", () => {
     expect(exitCode).toBe(0);
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      "http://127.0.0.1:7010/api/shutdown",
-      {
-        method: "POST",
-        headers: { "x-zatto-instance-id": "running-instance" },
-      },
+      "http://127.0.0.1:7010/rpc",
+      rpcRequest("server.shutdown", { instanceId: "running-instance" }),
     );
     expect(stdout).toHaveBeenCalledWith("zatto サーバーを停止しました (7010)");
   });
 
-  test("--stopはrecordがない場合に旧serverも停止できる", async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(jsonResponse({ name: "zatto", version: "0.1.0" }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true }, 202))
-      .mockRejectedValueOnce(new Error("停止済み"));
-    const stdout = vi.fn();
-
-    const exitCode = await runCli(["--stop"], {
-      fetch,
-      stdout,
-      runtimeFilePath,
-    });
-
-    expect(exitCode).toBe(0);
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "http://127.0.0.1:6280/api/shutdown",
-      { method: "POST" },
+  test("--stopは旧serverを停止せず更新案内を返す", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
+      String(input).endsWith("/rpc")
+        ? new Response(null, { status: 404 })
+        : jsonResponse({ name: "zatto", version: "1.2.0" }),
     );
+    const stderr = vi.fn();
+    expect(await runCli(["--stop"], { fetch, stderr, runtimeFilePath })).toBe(
+      1,
+    );
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("@1.2.0 --port 6280 --stop"),
+    );
+    expect(
+      fetch.mock.calls.every(([input, init]) =>
+        String(input).endsWith("/api/health")
+          ? !init?.method
+          : JSON.parse(String(init?.body)).method === "server.health",
+      ),
+    ).toBe(true);
   });
 
-  test("--stopは同じinstanceの異なるprotocolも停止する", async () => {
+  test("--stopは異なるprotocolの同じinstanceを停止しない", async () => {
     await writeServerRecord(runtimeFilePath, {
       instanceId: "incompatible-instance",
       pid: process.pid,
       port: 7010,
       protocolVersion: SERVER_PROTOCOL_VERSION,
     });
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async () =>
         jsonResponse({
           name: "zatto",
+          version: "2.0.0",
           instanceId: "incompatible-instance",
           protocolVersion: 99,
         }),
-      )
-      .mockResolvedValueOnce(jsonResponse({ ok: true }, 202))
-      .mockRejectedValueOnce(new Error("停止済み"));
-
-    await expect(runCli(["--stop"], { fetch, runtimeFilePath })).resolves.toBe(
-      0,
+      ),
     );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "http://127.0.0.1:7010/api/shutdown",
-      {
-        method: "POST",
-        headers: { "x-zatto-instance-id": "incompatible-instance" },
-      },
-    );
+    expect(
+      await runCli(["--stop"], { fetch, runtimeFilePath, stderr: vi.fn() }),
+    ).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   test("ファイルなしで既存サーバーのビューアーを開く", async () => {
@@ -368,12 +412,15 @@ describe("zatto CLI", () => {
       port: 7010,
       protocolVersion: SERVER_PROTOCOL_VERSION,
     });
-    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
-      jsonResponse({
-        name: "zatto",
-        instanceId: "running-instance",
-        protocolVersion: SERVER_PROTOCOL_VERSION,
-      }),
+    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementationOnce(
+      rpcFixture(async () =>
+        jsonResponse({
+          name: "zatto",
+          version: "2.0.0",
+          instanceId: "running-instance",
+          protocolVersion: SERVER_PROTOCOL_VERSION,
+        }),
+      ),
     );
     const openBrowser = vi.fn();
     const stdout = vi.fn();

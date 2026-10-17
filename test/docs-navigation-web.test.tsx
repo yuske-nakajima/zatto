@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -29,10 +30,12 @@ describe("built-in documentation navigation", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries })
-          : Response.json({ query: "alpha", files: [], totalMatches: 0 }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries })
+            : Response.json({ query: "alpha", files: [], totalMatches: 0 }),
+        ),
       ),
     );
   });
@@ -82,6 +85,26 @@ describe("built-in documentation navigation", () => {
     );
     expect(window.location.search).toContain("doc=api");
     expect(window.location.search).not.toContain("lang=");
+  });
+
+  test("Changelogを開き、言語と履歴を復元する", async () => {
+    window.history.replaceState(null, "", "/?entry=a&doc=api&lang=ja");
+    render(<App />);
+    await act(async () => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByRole("button", { name: "Changelog" }));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/ja/changelog.html");
+    const savedUrl = relativeUrl();
+    const savedState = window.history.state;
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/en/changelog.html");
+    act(() => dispatchHistory(savedUrl, savedState));
+    expect(
+      screen.getByTitle("Changelog documentation").getAttribute("src"),
+    ).toBe("/docs/ja/changelog.html");
   });
 
   test("不正なDocs URLをGetting startedと英語へreplace正規化する", async () => {

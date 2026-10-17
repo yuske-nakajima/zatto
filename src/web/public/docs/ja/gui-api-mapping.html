@@ -27,29 +27,30 @@
       <table>
         <thead><tr><th>GUIの動作</th><th>サーバー操作</th><th>UIへの反映</th></tr></thead>
         <tbody>
-          <tr><td>ビューアーを開く</td><td><code>GET /api/session</code></td><td>表示順のエントリ、サーバー識別子、選択機能の利用可否を読み込みます。</td></tr>
+          <tr><td>ビューアーを開く</td><td><code>session.get</code></td><td>表示順のエントリ、サーバー識別子、選択機能の利用可否を読み込みます。</td></tr>
           <tr><td>ファイルを選択</td><td><code>GET /f/:id/</code></td><td>プレビューiframeへHTMLを読み込みます。相対リソースには<code>GET /f/:id/*</code>を使います。</td></tr>
           <tr><td>Docsページを開く</td><td><code>GET /docs/*</code></td><td>セッションエントリを作らず、選択した言語とページを同一オリジンのiframeへ読み込みます。</td></tr>
           <tr><td>セッション・ファイル変更を受信</td><td><code>WS /ws</code></td><td>ファイルパネル、プレビュー、検索状態を更新します。</td></tr>
-          <tr><td>HTMLファイルを検索</td><td><code>GET /api/search</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>
-          <tr><td>Select HTML files</td><td><code>POST /api/session/pick</code></td><td>ネイティブファイル選択を開き、追加した最初のエントリを選択します。</td></tr>
-          <tr><td>Add folder…</td><td><code>POST /api/session/pick-directory</code></td><td>選択した直下・再帰範囲を使い、追加した最初のエントリを選択します。</td></tr>
-          <tr><td>ドラッグで並べ替え</td><td><code>PATCH /api/session/order</code></td><td>完全な表示順を永続化します。</td></tr>
-          <tr><td>ファイル行またはプレビューから1件削除</td><td><code>DELETE /api/session/:id</code></td><td>ディスク上のファイルを削除せず、選択中のエントリをセッションから外します。</td></tr>
-          <tr><td>フォルダー行を削除</td><td><code>DELETE /api/session/entries</code></td><td>配下の全セッションエントリを原子的に削除します。</td></tr>
-          <tr><td>セッションを消去</td><td><code>DELETE /api/session</code></td><td>確認後、全セッションエントリを削除します。</td></tr>
-          <tr><td>Import session…</td><td><code>PUT /api/session</code></td><td>選択したモードに従い、全置換または未登録パスの追加を行います。</td></tr>
-          <tr><td>Export session…</td><td><code>GET /api/session/export</code></td><td>セッションを変更せず、表示順またはパス順のJSONをダウンロードします。</td></tr>
-          <tr><td>選択・メイン表示を変更</td><td><code>PUT /api/agent/context</code></td><td>読み取り専用のエージェントクライアント向けに、一時的なパスと表示状態を通知します。</td></tr>
+          <tr><td>HTMLファイルを検索</td><td><code>search.query</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>
+          <tr><td>Select HTML files</td><td><code>session.pickFiles</code></td><td>ネイティブファイル選択を開き、追加した最初のエントリを選択します。</td></tr>
+          <tr><td>Add folder…</td><td><code>session.pickDirectory</code></td><td>選択した直下・再帰範囲を使い、追加した最初のエントリを選択します。</td></tr>
+          <tr><td>ドラッグで並べ替え</td><td><code>session.reorder</code></td><td>完全な表示順を永続化します。</td></tr>
+          <tr><td>ファイル行またはプレビューから1件削除</td><td><code>session.remove</code></td><td>ディスク上のファイルを削除せず、選択中のエントリをセッションから外します。</td></tr>
+          <tr><td>フォルダー行を削除</td><td><code>session.removeMany</code></td><td>配下の全セッションエントリを原子的に削除します。</td></tr>
+          <tr><td>セッションを消去</td><td><code>session.clear</code></td><td>確認後、全セッションエントリを削除します。</td></tr>
+          <tr><td>Import session…</td><td><code>session.import</code></td><td>選択したモードに従い、全置換または未登録パスの追加を行います。</td></tr>
+          <tr><td>Export session…</td><td><code>session.export</code></td><td>セッションを変更せず、表示順またはパス順のJSONをダウンロードします。</td></tr>
+          <tr><td>選択・メイン表示を変更</td><td><code>agentContext.set</code></td><td>読み取り専用のエージェントクライアント向けに、一時的なパスと表示状態を通知します。</td></tr>
         </tbody>
       </table>
 
       <h2>直接のGUI操作がないAPI</h2>
-      <p><code>POST /api/session/add</code>は、CLIが位置引数のパスを追加するときに使います。<code>GET /api/health</code>は互換サーバーの識別、<code>POST /api/shutdown</code>は停止コマンドで使います。</p>
+      <p><code>session.add</code>は、CLIが位置引数のパスを追加するときに使います。<code>server.health</code>は互換サーバーの識別、<code>server.shutdown</code>は停止コマンドで使います。</p>
       <p class="note">Docsは組み込みコンテンツです。セッションエントリにはならず、List、Folders、HTML検索、インポート、エクスポート、削除、並べ替えの対象外です。</p>
-      <h2>ワークスペース操作</h2><p>Workspaceは<code>GET /api/session</code>のワークスペース情報を読み、<code>PUT /api/workspaces/:id/activate</code>で選択します。New workspaceは<code>POST /api/workspaces</code>で作成後に選択します。Renameは<code>PATCH /api/workspaces/:id</code>、確認後の削除は<code>DELETE /api/workspaces/:id</code>です。WebSocketで全タブの選択・ファイル群・順序を同期します。ブラウザーは表示中のIDを送信し、切り替え前の操作を拒否できるようにします。</p>
-      <h2>お気に入り操作</h2><p>行の星は<code>PATCH /api/session/:id/favorite</code>へ明示的な真偽値を送ります。<code>aria-pressed</code>で状態を示し、EnterとSpaceで操作できます。Favoritesはエントリをブラウザーで絞り込み、履歴に<code>fileView=favorites</code>を保存します。更新は<code>session:update</code>で同期し、List全体の順序は維持します。Favoritesにはドラッグ用の操作部を表示せず、Clear Allを無効にします。</p>
+      <h2>ワークスペース操作</h2><p>Workspaceは<code>session.get</code>のワークスペース情報を読み、<code>workspaces.activate</code>で選択します。New workspaceは<code>workspaces.create</code>で作成後に選択します。Renameは<code>workspaces.rename</code>、確認後の削除は<code>workspaces.delete</code>です。WebSocketで全タブの選択・ファイル群・順序を同期します。ブラウザーは表示中のIDを送信し、切り替え前の操作を拒否できるようにします。</p>
+      <h2>お気に入り操作</h2><p>行の星は<code>session.setFavorite</code>へ明示的な真偽値を送ります。<code>aria-pressed</code>で状態を示し、EnterとSpaceで操作できます。Favoritesはエントリをブラウザーで絞り込み、履歴に<code>fileView=favorites</code>を保存します。更新は<code>session:update</code>で同期し、List全体の順序は維持します。Favoritesにはドラッグ用の操作部を表示せず、Clear Allを無効にします。</p>
       <p>CLIのファイル指定は、トップURLに続けてタイトルとエントリのリンクを表示します。リンクはブラウザーのURLから対象を選ぶため、登録先のワークスペースを選択した状態で開いてください。追加応答は既存と新規の両方を解決し、List順を変更しません。</p>
+      <h2>JSON-RPC</h2><p>表の操作名は<code>POST /rpc</code>へ送るメソッドです。ファイル配信とイベントは記載したHTTP・WS経路を維持します。引数・結果・エラーはAPIページで確認できます。ロゴの下に配布版、Docs内にオフラインのChangelogを表示します。</p>
     </main>
   </body>
 </html>

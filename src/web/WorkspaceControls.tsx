@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WorkspaceState } from "../server/workspace-state.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import "./workspace.css";
 
 interface WorkspaceControlsProps {
@@ -24,31 +25,21 @@ export function WorkspaceControls({
     ({ id }) => id === state.activeWorkspaceId,
   );
   async function change(
-    url: string,
-    method: string,
-    name?: string,
+    action: "create" | "rename" | "activate" | "delete",
+    id: string,
+    name = "",
   ): Promise<void> {
     setPending(true);
     reportError(null);
     try {
-      const response = await fetch(url, {
-        method,
-        ...(name === undefined
-          ? {}
-          : {
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ name }),
-            }),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      if (method === "POST") {
-        const created = (await response.json()) as { id: string };
-        const activation = await fetch(
-          `/api/workspaces/${encodeURIComponent(created.id)}/activate`,
-          { method: "PUT" },
-        );
-        if (!activation.ok) throw new Error(`HTTP ${activation.status}`);
-      }
+      if (action === "create") {
+        const created = await rpcCall("workspaces.create", { name });
+        await rpcCall("workspaces.activate", { id: created.id });
+      } else if (action === "rename")
+        await rpcCall("workspaces.rename", { id, name });
+      else if (action === "activate")
+        await rpcCall("workspaces.activate", { id });
+      else await rpcCall("workspaces.delete", { id });
     } catch {
       reportError("Could not update the workspace.");
     } finally {
@@ -65,14 +56,9 @@ export function WorkspaceControls({
       reportError("Workspace name must contain 1–100 characters.");
       return;
     }
-    void change(
-      create
-        ? "/api/workspaces"
-        : `/api/workspaces/${encodeURIComponent(activeWorkspaceId)}`,
-      create ? "POST" : "PATCH",
-      name.trim(),
-    );
+    void change(create ? "create" : "rename", activeWorkspaceId, name.trim());
   }
+
   function removeWorkspace(): void {
     if (
       !window.confirm(
@@ -80,11 +66,9 @@ export function WorkspaceControls({
       )
     )
       return;
-    void change(
-      `/api/workspaces/${encodeURIComponent(activeWorkspaceId)}`,
-      "DELETE",
-    );
+    void change("delete", activeWorkspaceId);
   }
+
   return (
     <section className="workspace-controls" aria-label="Workspace controls">
       <label htmlFor="workspace-select">Workspace</label>
@@ -93,12 +77,7 @@ export function WorkspaceControls({
         id="workspace-select"
         value={state.activeWorkspaceId}
         disabled={pending}
-        onChange={(event) =>
-          void change(
-            `/api/workspaces/${encodeURIComponent(event.target.value)}/activate`,
-            "PUT",
-          )
-        }
+        onChange={(event) => void change("activate", event.target.value)}
       >
         {state.workspaces.map(({ id, name }) => (
           <option key={id} value={id}>

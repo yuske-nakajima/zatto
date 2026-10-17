@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { SearchResponse } from "../src/shared/search.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -68,23 +69,25 @@ describe("HTML search requests", () => {
     let firstSignal: AbortSignal | undefined;
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-        if (input === "/api/session") {
-          return Promise.resolve(Response.json({ entries }));
-        }
-        if (String(input).includes("alpha")) {
-          firstSignal = init?.signal ?? undefined;
-          return firstSearch;
-        }
-        return Promise.resolve(
-          Response.json({
-            query: "beta",
-            totalMatches: 0,
-            truncated: false,
-            files: [],
-          }),
-        );
-      }),
+      vi.fn(
+        rpcFixture((input: RequestInfo | URL, init?: RequestInit) => {
+          if (input === "session.get") {
+            return Promise.resolve(Response.json({ entries }));
+          }
+          if (JSON.parse(String(init?.body)).query === "alpha") {
+            firstSignal = init?.signal ?? undefined;
+            return firstSearch;
+          }
+          return Promise.resolve(
+            Response.json({
+              query: "beta",
+              totalMatches: 0,
+              truncated: false,
+              files: [],
+            }),
+          );
+        }),
+      ),
     );
     render(<App />);
     await act(async () => vi.runAllTimersAsync());

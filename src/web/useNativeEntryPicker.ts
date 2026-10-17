@@ -1,7 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import type { NativePickerCapability } from "./native-picker-capability.js";
-import { workspaceHeaders } from "./workspace-request.js";
+import { workspaceParams } from "./workspace-request.js";
 
 export type DirectoryPickerMode = "direct" | "recursive";
 export type NativePickerPending = "files" | "directory" | null;
@@ -48,7 +49,7 @@ export function useNativeEntryPicker({
     const request = beginPicker("files", fileCapability);
     if (!request) return;
     try {
-      const result = await sendPickerRequest("/api/session/pick", request);
+      const result = await rpcCall("session.pickFiles", request);
       if (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
         selectFirstAddedEntry(result, selectEntry);
     } catch {
@@ -59,13 +60,13 @@ export function useNativeEntryPicker({
   }
 
   async function openDirectory(mode: DirectoryPickerMode): Promise<void> {
-    const request = beginPicker("directory", directoryCapability, mode);
+    const request = beginPicker("directory", directoryCapability);
     if (!request) return;
     try {
-      const result = await sendPickerRequest(
-        "/api/session/pick-directory",
-        request,
-      );
+      const result = await rpcCall("session.pickDirectory", {
+        ...request,
+        mode,
+      });
       if (isCurrentWorkspace && !isCurrentWorkspace(workspaceId ?? null))
         return;
       if (!result.cancelled && result.added.length === 0) {
@@ -84,8 +85,7 @@ export function useNativeEntryPicker({
   function beginPicker(
     kind: Exclude<NativePickerPending, null>,
     capability: NativePickerCapability,
-    mode?: DirectoryPickerMode,
-  ): RequestInit | null {
+  ): { instanceId: string; workspaceId?: string } | null {
     if (!capability.available || !capability.instanceId || pendingRef.current) {
       return null;
     }
@@ -93,13 +93,8 @@ export function useNativeEntryPicker({
     setPending(kind);
     setErrorMessage(null);
     return {
-      method: "POST",
-      headers: {
-        ...(mode ? { "content-type": "application/json" } : {}),
-        "x-zatto-instance-id": capability.instanceId,
-        ...workspaceHeaders(workspaceId),
-      },
-      ...(mode ? { body: JSON.stringify({ mode }) } : {}),
+      instanceId: capability.instanceId,
+      ...workspaceParams(workspaceId),
     };
   }
 
@@ -133,15 +128,6 @@ export function useNativeEntryPicker({
     openFiles,
     openDirectory,
   };
-}
-
-async function sendPickerRequest(
-  endpoint: string,
-  request: RequestInit,
-): Promise<PickerResult> {
-  const response = await fetch(endpoint, request);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return (await response.json()) as PickerResult;
 }
 
 function selectFirstAddedEntry(

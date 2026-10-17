@@ -11,6 +11,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -38,41 +39,43 @@ describe("session import search history", () => {
   test("import後のBackとForwardで旧検索状態を復元しない", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn<typeof globalThis.fetch>(async (input, init) => {
-        if (input === "/api/session?mode=replace" && init?.method === "PUT") {
-          return Response.json({ entries: importedEntries });
-        }
-        if (input === "/api/session") {
+      vi.fn<typeof globalThis.fetch>(
+        rpcFixture(async (input) => {
+          if (input === "session.import") {
+            return Response.json({ entries: importedEntries });
+          }
+          if (input === "session.get") {
+            return Response.json({
+              entries: initialEntries,
+              serverIdentity: { instanceId: "managed" },
+            });
+          }
           return Response.json({
-            entries: initialEntries,
-            serverIdentity: { instanceId: "managed" },
+            query: "needle",
+            totalMatches: 1,
+            truncated: false,
+            files: [
+              {
+                entryId: "a",
+                title: "Alpha",
+                fileName: "a.html",
+                absPath: "/work/a.html",
+                matchCount: 1,
+                truncated: false,
+                lines: [
+                  {
+                    lineNumber: 1,
+                    startOffset: 0,
+                    lineText: "needle",
+                    truncated: false,
+                    ranges: [{ start: 0, length: 6 }],
+                  },
+                ],
+              },
+            ],
           });
-        }
-        return Response.json({
-          query: "needle",
-          totalMatches: 1,
-          truncated: false,
-          files: [
-            {
-              entryId: "a",
-              title: "Alpha",
-              fileName: "a.html",
-              absPath: "/work/a.html",
-              matchCount: 1,
-              truncated: false,
-              lines: [
-                {
-                  lineNumber: 1,
-                  startOffset: 0,
-                  lineText: "needle",
-                  truncated: false,
-                  ranges: [{ start: 0, length: 6 }],
-                },
-              ],
-            },
-          ],
-        });
-      }),
+        }),
+      ),
     );
     const user = userEvent.setup();
     render(<App />);

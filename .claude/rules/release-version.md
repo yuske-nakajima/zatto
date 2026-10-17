@@ -1,20 +1,19 @@
-# PR のバージョン更新
+# リリースPRとバージョン
 
-YOU MUST `package.json` の `version` をバージョンの正本として扱うこと。
-YOU MUST リリース対象の PR 作成を依頼された作業では、PR を作成する前にバージョンを1回だけ更新すること。
-YOU MUST バージョンを固定値で検証するスクリプトとテストも、同じ更新で同期すること。
-YOU MUST 複数種の変更を含む PR では、最も影響が大きい変更に合わせてバージョンを選ぶこと。
-YOU MUST `0.x` では、利用者向け機能の追加と非互換な公開契約の変更で minor を上げること。
-YOU MUST `0.x` では、リリース対象となる後方互換な修正と内部変更で patch を上げること。
-YOU MUST `1.x` 以降では、非互換な公開契約の変更で major を上げること。
-YOU MUST `1.x` 以降では、後方互換な機能追加で minor、リリース対象となる後方互換な修正と内部変更で patch を上げること。
-YOU MUST 公開物へ影響しないリポジトリ保守だけの PR では、リリースなしとしてバージョン更新を省略してよい。
-YOU MUST `main` のバージョンが進んだ場合は、最新の `main` を基準に同じ変更種別を適用し直すこと。
-YOU MUST 過去のバージョンを付け直さず、詳細な判断基準は `docs/versioning.md` に従うこと。
+YOU MUST `package.json` の `version` を配布版の正本として扱うこと。
+YOU MUST 通常の機能・修正PRではバージョンを加算せず、release-pleaseが作成するリリースPRで更新すること。
+YOU MUST PRのタイトルとsquashコミットにConventional Commitsを使い、公開契約の非互換変更には `!` または `BREAKING CHANGE:` を付けること。
+YOU MUST 後方互換な機能追加は `feat`、修正は `fix` とし、公開物の文書・内部処理の変更もリリース設定の対象種別で分類すること。
+YOU MUST リリースPRでは `package.json`、`.release-please-manifest.json`、`CHANGELOG.md` の版と内容を照合すること。
+YOU MUST 同梱ChangelogとGitHub Releaseの本文を、リリースPRで承認した `CHANGELOG.md` の該当節から生成すること。
+YOU MUST 通常ビルドにGitHubへの接続を追加せず、履歴をオフラインで生成すること。
+YOU MUST バージョンの固定値をテストや検証スクリプトへ重複定義しないこと。
+YOU MUST 公開済みのバージョンとタグを付け直さず、詳細は `docs/versioning.md` と `docs/releasing.md` に従うこと。
 
 ## リリースの案内
 
-YOU MUST リリース対象の PR 作成時に、バージョンの変更種別と更新内容をユーザーへ説明すること。
-YOU MUST リリース対象の変更が `main` へマージされたことを確認したら、npm の公開状況を確認すること。
-YOU MUST npm へ未公開の場合は、Release workflow による公開が必要であることと実行方法をユーザーへ案内すること。
-YOU MUST 案内はユーザーからの催促を待たず、該当する作業の報告に含めること。
+YOU MUST 通常PRの作成時に、リリース要否と変更種別をユーザーへ説明すること。
+YOU MUST 通常PRのmainマージを確認したら、自動生成されたリリースPRの状態を確認して案内すること。
+YOU MUST リリースPRのマージを確認したら、Release workflowとnpmの公開状況を確認すること。
+YOU MUST 公開失敗時は実行ログと対象タグを確認し、同じタグの再試行手順を案内すること。
+YOU MUST ユーザーからの催促を待たず、該当する作業の報告に次の操作を含めること。

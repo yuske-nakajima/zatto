@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { AgentContextStore } from "../src/server/agent-context.js";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -20,18 +21,13 @@ describe("AIエージェント向けコンテキストAPI", () => {
   test("セッションとブラウザー状態からコンテキストを生成する", async () => {
     const { app, entries } = await createFixture();
 
-    const update = await app.inject({
-      method: "PUT",
-      url: "/api/agent/context",
-      payload: { activeEntryId: entries[1]?.id, view: "search" },
+    const update = await rpc(app, "agentContext.set", {
+      ...{ activeEntryId: entries[1]?.id, view: "search" },
     });
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/agent/context",
-    });
+    const response = await rpc(app, "agentContext.get", {});
 
-    expect(update.statusCode).toBe(204);
-    expect(response.statusCode).toBe(200);
+    expect(update.code).toBe(0);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({
       schemaVersion: 1,
       activeFile: {
@@ -50,10 +46,7 @@ describe("AIエージェント向けコンテキストAPI", () => {
   test("ブラウザー状態がない場合もセッション一覧を返す", async () => {
     const { app, entries } = await createFixture();
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/agent/context",
-    });
+    const response = await rpc(app, "agentContext.get", {});
 
     expect(response.json()).toEqual({
       schemaVersion: 1,
@@ -75,29 +68,20 @@ describe("AIエージェント向けコンテキストAPI", () => {
   ])("不正なブラウザー状態を拒否する: %j", async (payload) => {
     const { app } = await createFixture();
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/agent/context",
-      payload,
-    });
+    const response = await rpc(app, "agentContext.set", { ...payload });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.code).toBe(-32602);
     await app.close();
   });
 
   test("削除された選択エントリは未選択として返す", async () => {
     const { app, store, entries } = await createFixture();
-    await app.inject({
-      method: "PUT",
-      url: "/api/agent/context",
-      payload: { activeEntryId: entries[0]?.id, view: "docs" },
+    await rpc(app, "agentContext.set", {
+      ...{ activeEntryId: entries[0]?.id, view: "docs" },
     });
     await store.removeEntry(entries[0]?.id ?? "");
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/agent/context",
-    });
+    const response = await rpc(app, "agentContext.get", {});
 
     expect(response.json()).toMatchObject({
       activeFile: null,
@@ -118,10 +102,7 @@ describe("AIエージェント向けコンテキストAPI", () => {
     if (!entry) throw new Error("fixture entry is missing");
     entry.title = "\u001b\u202e";
 
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/agent/context",
-    });
+    const response = await rpc(app, "agentContext.get", {});
 
     expect(response.json().openFiles[0]).toEqual({
       title: path.basename(entry.absPath),

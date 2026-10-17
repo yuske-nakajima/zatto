@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import {
   parseSessionExchange,
   type SessionExchange,
   sortSessionExchangeEntriesByPath,
 } from "../shared/session-exchange.js";
-import { workspaceHeaders } from "./workspace-request.js";
+import { workspaceParams } from "./workspace-request.js";
 
 export type SessionTransferPending = "import" | "export" | null;
 export type SessionImportMode = "replace" | "merge";
@@ -45,17 +46,12 @@ export function useSessionTransfer(options: SessionTransferOptions) {
         !options.isCurrentWorkspace(options.workspaceId ?? null)
       )
         return;
-      const response = await fetch(`/api/session?mode=${mode}`, {
-        method: "PUT",
-        headers: {
-          ...importHeaders(options.instanceId),
-          ...workspaceHeaders(options.workspaceId),
-        },
-        body: JSON.stringify(exchange),
+      const session = await rpcCall("session.import", {
+        exchange,
+        mode,
+        ...workspaceParams(options.workspaceId),
+        ...(options.instanceId ? { instanceId: options.instanceId } : {}),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const session = (await response.json()) as { entries?: unknown };
-      if (!isEntryArray(session.entries)) throw new Error("Invalid session");
       if (
         options.isCurrentWorkspace &&
         !options.isCurrentWorkspace(options.workspaceId ?? null)
@@ -74,13 +70,10 @@ export function useSessionTransfer(options: SessionTransferOptions) {
     if (!beginTransfer("export")) return;
     options.setErrorMessage(null);
     try {
-      const response = await (options.workspaceId
-        ? fetch("/api/session/export", {
-            headers: workspaceHeaders(options.workspaceId),
-          })
-        : fetch("/api/session/export"));
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const exchange = parseSessionExchange((await response.json()) as unknown);
+      const exchange = await rpcCall(
+        "session.export",
+        workspaceParams(options.workspaceId),
+      );
       downloadSessionExchange(
         order === "sort"
           ? {
@@ -109,28 +102,6 @@ export function useSessionTransfer(options: SessionTransferOptions) {
   }
 
   return { pending, importFile, exportFile };
-}
-
-function importHeaders(instanceId: string | null): Record<string, string> {
-  return {
-    "content-type": "application/json",
-    ...(instanceId ? { "x-zatto-instance-id": instanceId } : {}),
-  };
-}
-
-function isEntryArray(value: unknown): value is Entry[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (entry) =>
-        typeof entry === "object" &&
-        entry !== null &&
-        typeof (entry as Partial<Entry>).id === "string" &&
-        typeof (entry as Partial<Entry>).absPath === "string" &&
-        typeof (entry as Partial<Entry>).title === "string" &&
-        typeof (entry as Partial<Entry>).addedAt === "number",
-    )
-  );
 }
 
 function downloadSessionExchange(exchange: SessionExchange): void {

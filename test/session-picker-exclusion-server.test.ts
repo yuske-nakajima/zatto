@@ -6,6 +6,7 @@ import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("native picker exclusion and failures", () => {
   let tempDir: string;
@@ -21,8 +22,8 @@ describe("native picker exclusion and failures", () => {
   });
 
   test.each([
-    ["directory", "/api/session/pick-directory", "/api/session/pick"],
-    ["file", "/api/session/pick", "/api/session/pick-directory"],
+    ["directory", "session.pickDirectory", "session.pickFiles"],
+    ["file", "session.pickFiles", "session.pickDirectory"],
   ])(
     "%s pickerの表示中はもう一方のpickerを拒否する",
     async (activePicker, activeUrl, rejectedUrl) => {
@@ -48,29 +49,28 @@ describe("native picker exclusion and failures", () => {
         pickDirectory,
         serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
       });
-      const requestFor = (url: string) => ({
-        method: "POST" as const,
-        url,
-        headers: { "x-zatto-instance-id": "managed-instance" },
-        payload: url.endsWith("pick-directory")
-          ? { mode: "direct" }
-          : undefined,
-      });
+      const requestFor = (method: string) =>
+        method === "session.pickDirectory"
+          ? rpc(app, "session.pickDirectory", {
+              mode: "direct",
+              instanceId: "managed-instance",
+            })
+          : rpc(app, "session.pickFiles", { instanceId: "managed-instance" });
 
-      const activeResponsePromise = app.inject(requestFor(activeUrl));
+      const activeResponsePromise = requestFor(activeUrl);
       await vi.waitFor(() => {
         expect(
           activePicker === "directory" ? pickDirectory : pickFiles,
         ).toHaveBeenCalledOnce();
       });
-      const rejectedResponse = await app.inject(requestFor(rejectedUrl));
+      const rejectedResponse = await requestFor(rejectedUrl);
 
-      expect(rejectedResponse.statusCode).toBe(409);
+      expect(rejectedResponse.code).toBe(1005);
       expect(
         activePicker === "directory" ? pickFiles : pickDirectory,
       ).not.toHaveBeenCalled();
       finishPicking?.();
-      expect((await activeResponsePromise).statusCode).toBe(200);
+      expect((await activeResponsePromise).code).toBe(0);
       await app.close();
     },
   );
@@ -97,14 +97,12 @@ describe("native picker exclusion and failures", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "recursive" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "recursive" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(404);
+    expect(response.code).toBe(1001);
     expect(store.getSession()).toEqual({ entries: [existingEntry] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     expect(addEntries).not.toHaveBeenCalled();
@@ -142,14 +140,12 @@ describe("native picker exclusion and failures", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "recursive" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "recursive" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.code).toBe(-32603);
     expect(store.getSession()).toEqual({ entries: [existingEntry] });
     expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
     expect(onSessionChanged).not.toHaveBeenCalled();
@@ -175,14 +171,12 @@ describe("native picker exclusion and failures", () => {
       serverIdentity: { instanceId: "managed-instance", protocolVersion: 1 },
     });
 
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/session/pick-directory",
-      headers: { "x-zatto-instance-id": "managed-instance" },
-      payload: { mode: "direct" },
+    const response = await rpc(app, "session.pickDirectory", {
+      ...{ mode: "direct" },
+      instanceId: "managed-instance",
     });
 
-    expect(response.statusCode).toBe(201);
+    expect(response.code).toBe(0);
     expect(response.json()).toEqual({
       cancelled: false,
       added: [],

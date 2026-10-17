@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
 import type { WorkspaceState } from "../server/workspace-state.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import {
   type NativePickerCapabilities,
   readNativePickerCapabilities,
@@ -12,7 +13,6 @@ import {
 import {
   parseServerMessage,
   resolveSelectedEntryIdAndUpdateUrl,
-  type SessionResponse,
 } from "./session-message.js";
 import type { SessionImportMode } from "./useSessionTransfer.js";
 
@@ -68,13 +68,7 @@ export function useSessionEntries(
   useEffect(() => {
     let active = true;
     const updateVersion = socketUpdateRef.current;
-    fetch("/api/session")
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        return (await response.json()) as SessionResponse;
-      })
+    rpcCall("session.get", {})
       .then((session) => {
         if (active) {
           if (updateVersion === socketUpdateRef.current) {

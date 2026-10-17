@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { rpc } from "./rpc-server-helper.js";
 
 describe("session mutation notifications", () => {
   let tempDir: string | undefined;
@@ -30,17 +31,15 @@ describe("session mutation notifications", () => {
     });
     const logError = vi.spyOn(app.log, "error");
 
-    const response = await app.inject({
-      method: "PUT",
-      url: "/api/session",
-      payload: {
+    const response = await rpc(app, "session.import", {
+      exchange: {
         format: "zatto-session",
         version: 1,
         entries: [{ path: htmlPath }],
       },
     });
 
-    expect(response.statusCode).toBe(200);
+    expect(response.code).toBe(0);
     expect(store.getSession().entries).toHaveLength(1);
     expect(logError).toHaveBeenCalledWith(
       observerError,

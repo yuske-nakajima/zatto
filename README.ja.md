@@ -272,32 +272,43 @@ pnpm video:render
 
 ## リリース
 
-初回公開は、npmへログインした端末の`main`ブランチから実行します。
+通常PRを`main`へマージすると、release-pleaseがリリース用PRを作成・更新します。
+そのPRのバージョンと`CHANGELOG.md`を確認し、マージすると公開処理が始まります。
+通常PRではバージョンを変えず、Conventional Commitsで変更種別を伝えます。
+非互換変更には`!`または`BREAKING CHANGE:`を付けます。
 
-```bash
-pnpm verify:package
-npm publish --access public
-```
+Release workflowはGitHub Releaseの下書きとタグを作成し、タグの配布物を検証します。
+検証したtarballをnpmへ公開してから、GitHub Releaseを公開します。
+承認した変更履歴は、GitHub Releaseとアプリ内Docsの両方に使います。
+公開に失敗したときは、対象タグを指定して再試行できます。
 
-初回公開後、GitHub ActionsをnpmのTrusted Publisherとして登録します。
+GitHub ActionsによるPR作成の許可と、npmのTrusted Publisher設定が必要です。
+Trusted Publisherの対象は、このリポジトリの`release.yml`です。個人用トークンは使いません。
+設定、確認する文章の範囲、再試行の手順は[リリース運用](https://github.com/yuske-nakajima/zatto/blob/main/docs/releasing.md)を参照してください。
+版の選定は[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
 
-```bash
-npm trust github @yuske-nakajima/zatto \
-  --file release.yml \
-  --repo yuske-nakajima/zatto \
-  --allow-publish
-```
+## 2.0.0への更新と内部設計
 
-以降のリリースでは[バージョニング方針](https://github.com/yuske-nakajima/zatto/blob/main/docs/versioning.md)に従います。
-`package.json`を正本としてバージョンを更新し、テストとスクリプトの固定値も同期します。
-変更を`main`へマージした後、Release workflowを手動で実行します。
+2.0.0はREST操作APIを廃止し、CLI、Web UI、MCPの内部通信をJSON-RPCへ統一します。
+更新前に`zatto --stop`でサーバーを停止してください。
+更新済みの場合は`npx --yes @yuske-nakajima/zatto@1.2.0 --stop`で旧サーバーを停止し、新版の`zatto`を起動します。
+旧サーバーを検出した新版CLIは、登録や新規起動を中止し、記録削除や自動killをせず移行手順を案内します。
+保存済みワークスペース、星、並び順と交換ファイルは引き継ぎます。
+runtime recordがなく旧サーバーが独自ポートを使う場合は、停止コマンドへ`--port <検出したポート>`を付けます。
 
-```bash
-gh workflow run release.yml --ref main
-```
+アプリ内Docsに変更履歴を同梱し、ロゴの下にはインストール済みの版を表示します。
+設計と機能追加の手順は[アーキテクチャ](https://github.com/yuske-nakajima/zatto/blob/main/docs/architecture.md)にまとめています。
+エージェントは`AGENTS.md`から`.claude/rules/`を読み、共通Commandsと共有RPC契約を使って拡張します。
+アーキテクチャの選定を変える場合は、実装前にユーザーとの壁打ちで合意します。
 
-workflowは品質チェックとパッケージ検証を実行します。
-検証に成功すると、npmへの公開、バージョンタグの作成、GitHub Releaseの作成を進めます。
+### 同梱Changelogの更新
+
+`CHANGELOG.md`を、リリースノートと英日Docsページの正本として使います。
+v1.2.0までの17リリースは原文を引き継ぎ、以降の履歴はリリースPRで追加します。
+英日どちらのページでも、変更履歴の本文は原文の言語を維持します。
+`node scripts/update-changelog.mjs`でオフライン生成でき、ビルド時にも再生成します。
+未公開版のメモや公開状態を示す固定文言は、別のデータとして持ちません。
+通常のビルドとインストール済みzattoはGitHubへの接続を必要としません。
 
 ## デバッグ
 
@@ -323,68 +334,35 @@ ZATTO_RUNTIME_FILE=/tmp/zatto-server.json \
   node bin/zatto.js --no-open page.html
 ```
 
-ヘルスチェックとセッションの確認:
+操作APIはHTTP上のJSON-RPC 2.0です。REST操作ルートは提供しません。
+実際のポートをruntime fileから読み、要求を送ります。
 
 ```bash
 ZATTO_PORT=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).port")
-ZATTO_INSTANCE_ID=$(node -p "JSON.parse(require('fs').readFileSync('/tmp/zatto-server.json')).instanceId")
-curl "http://127.0.0.1:${ZATTO_PORT}/api/health"
-curl "http://127.0.0.1:${ZATTO_PORT}/api/session"
-curl "http://127.0.0.1:${ZATTO_PORT}/api/session/export"
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"server.health","params":{}}'
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":2,"method":"session.get","params":{}}'
 ```
 
-HTMLファイルをAPIから追加:
+登録は`session.add`へ`{ "paths": [...] }`、並べ替えは`session.reorder`へ全IDを送ります。
+`session.removeMany`は既知のID群を原子的に一覧から外し、実ファイルは残します。
+ネイティブ選択、インポート、停止ではサーバーの`instanceId`を引数で照合します。
+選択中のワークスペースを前提にする操作には`workspaceId`も指定できます。
+成功結果は`result`、失敗は`error.code`と`error.data`へ返します。
+全21メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
+
+ネイティブフォルダー選択ではserver.healthのinstanceIdを使います。プレースホルダーを置き換えて実行してください。
 
 ```bash
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/add" \
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   -H 'content-type: application/json' \
-  --data "{\"paths\":[\"$PWD/page.html\"]}"
-```
-
-ネイティブフォルダーピッカーを開き、選択したフォルダーからHTMLを追加します。
-`direct`は直下のみ、`recursive`はツリー配下すべてを対象にします。
-このAPIは、管理対象サーバーがmacOSのフォルダーピッカーを提供する場合に利用できます。
-
-```bash
-# 直下のみ
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
+  --data '{"jsonrpc":"2.0","id":3,"method":"session.pickDirectory","params":{"instanceId":"<server-instance-id>","mode":"direct"}}'
+curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
   -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data '{"mode":"direct"}'
-
-# ツリー配下すべて
-curl -X POST "http://127.0.0.1:${ZATTO_PORT}/api/session/pick-directory" \
-  -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data '{"mode":"recursive"}'
-```
-
-`GET /api/session`で取得したIDを、表示順ですべて指定して並べ替え:
-
-```bash
-curl -X PATCH "http://127.0.0.1:${ZATTO_PORT}/api/session/order" \
-  -H 'content-type: application/json' \
-  --data '{"ids":["<entry-id-2>","<entry-id-1>"]}'
-```
-
-複数のエントリを、1回の原子的なセッション更新で削除します。
-
-```bash
-curl -X DELETE "http://127.0.0.1:${ZATTO_PORT}/api/session/entries" \
-  -H 'content-type: application/json' \
-  --data '{"ids":["<entry-id-1>","<entry-id-2>"]}'
-```
-
-検証済みのセッションJSONをインポートします。
-サーバー識別子により、接続先が変わったブラウザーやCLIからの置き換えを防ぎます。
-`?mode=merge`を付けると、既存エントリを維持して未登録パスを末尾へ追加します。
-`mode`を省略すると、CLI互換のためセッションを全置換します。
-
-```bash
-curl -X PUT "http://127.0.0.1:${ZATTO_PORT}/api/session" \
-  -H 'content-type: application/json' \
-  -H "x-zatto-instance-id: ${ZATTO_INSTANCE_ID}" \
-  --data "$(cat saved-session.json)"
+  --data '{"jsonrpc":"2.0","id":4,"method":"session.pickDirectory","params":{"instanceId":"<server-instance-id>","mode":"recursive"}}'
 ```
 
 管理対象のサーバーを停止:

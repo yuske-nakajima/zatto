@@ -4,6 +4,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
 import { WorkspaceControls } from "../src/web/WorkspaceControls.js";
+import { rpcFixture, rpcMethod, rpcRequest } from "./rpc-client-fixture.js";
 
 class Socket extends EventTarget {
   static current: Socket;
@@ -44,14 +45,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 test("switching clears search, selects available entries, and sends clear to the displayed workspace", async () => {
-  const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>
-    input === "/api/session"
-      ? Response.json({
-          entries: [first],
-          activeWorkspaceId: "default",
-          workspaces: states,
-        })
-      : Response.json({ files: [], totalMatches: 0, truncated: false }),
+  const fetch = vi.fn<typeof globalThis.fetch>(
+    rpcFixture(async (input) =>
+      input === "session.get"
+        ? Response.json({
+            entries: [first],
+            activeWorkspaceId: "default",
+            workspaces: states,
+          })
+        : Response.json({ files: [], totalMatches: 0, truncated: false }),
+    ),
   );
   vi.stubGlobal("fetch", fetch);
   vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -67,9 +70,10 @@ test("switching clears search, selects available entries, and sends clear to the
     screen.getByRole("combobox", { name: "Workspace" }),
     "research",
   );
-  expect(fetch).toHaveBeenCalledWith("/api/workspaces/research/activate", {
-    method: "PUT",
-  });
+  expect(fetch).toHaveBeenCalledWith(
+    "/rpc",
+    rpcRequest("workspaces.activate", { id: "research" }),
+  );
   update("research");
   await screen.findByTitle("Two preview");
   expect(screen.queryByRole("searchbox")).toBeNull();
@@ -79,10 +83,10 @@ test("switching clears search, selects available entries, and sends clear to the
       .value,
   ).toBe("research");
   await user.click(screen.getByRole("button", { name: "Clear all" }));
-  expect(fetch).toHaveBeenCalledWith("/api/session", {
-    method: "DELETE",
-    headers: { "x-zatto-workspace-id": "research" },
-  });
+  expect(fetch).toHaveBeenCalledWith(
+    "/rpc",
+    rpcRequest("session.clear", { workspaceId: "research" }),
+  );
 });
 test.each([false, true])(
   "a delayed picker does not override selection after workspace changes (return: %s)",
@@ -91,17 +95,19 @@ test.each([false, true])(
     const pending = new Promise<Response>((resolve) => {
       finish = resolve;
     });
-    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
-      if (input === "/api/session")
-        return Response.json({
-          entries: [first],
-          activeWorkspaceId: "default",
-          workspaces: states,
-          filePicker: { available: true, instanceId: "server" },
-        });
-      if (input === "/api/session/pick") return pending;
-      return Response.json({});
-    });
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async (input) => {
+        if (input === "session.get")
+          return Response.json({
+            entries: [first],
+            activeWorkspaceId: "default",
+            workspaces: states,
+            filePicker: { available: true, instanceId: "server" },
+          });
+        if (input === "session.pickFiles") return pending;
+        return Response.json({});
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<App />);
@@ -126,8 +132,8 @@ test.each([false, true])(
   },
 );
 test("workspace creation activates its returned ID and deletion requires confirmation", async () => {
-  const fetch = vi.fn<typeof globalThis.fetch>(async () =>
-    Response.json({ id: "created", name: "Notes" }),
+  const fetch = vi.fn<typeof globalThis.fetch>(
+    rpcFixture(async () => Response.json({ id: "created", name: "Notes" })),
   );
   vi.stubGlobal("fetch", fetch);
   vi.spyOn(window, "prompt").mockReturnValue("Notes");
@@ -141,13 +147,16 @@ test("workspace creation activates its returned ID and deletion requires confirm
   );
   await user.click(screen.getByRole("button", { name: "New workspace" }));
   await waitFor(() =>
-    expect(fetch).toHaveBeenCalledWith("/api/workspaces/created/activate", {
-      method: "PUT",
-    }),
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("workspaces.activate", { id: "created" }),
+    ),
   );
   await user.click(screen.getByRole("button", { name: "Delete" }));
   expect(confirm).toHaveBeenCalledOnce();
-  expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(
-    false,
-  );
+  expect(
+    fetch.mock.calls.some(
+      ([, init]) => rpcMethod(init) === "workspaces.delete",
+    ),
+  ).toBe(false);
 });

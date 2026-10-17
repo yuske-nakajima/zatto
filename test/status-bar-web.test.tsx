@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture } from "./rpc-client-fixture.js";
 
 const statusBarStyles = readFileSync(resolve("src/web/status-bar.css"), "utf8");
 const entries: Entry[] = [
@@ -30,7 +31,7 @@ describe("操作説明ステータスバー", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ entries })),
+      vi.fn(rpcFixture(async () => Response.json({ entries }))),
     );
   });
 

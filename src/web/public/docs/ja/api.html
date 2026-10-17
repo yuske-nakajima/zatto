@@ -16,6 +16,7 @@
       th, td { padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); text-align: left; vertical-align: top; }
       th { white-space: nowrap; }
       code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, CanvasText 9%, Canvas); }
+      pre { overflow-x: auto; padding: 16px; background: color-mix(in srgb, CanvasText 6%, Canvas); border-radius: 8px; }
       .lead { margin-top: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
       .operation { display: inline-block; min-width: 16rem; }
       @media (max-width: 660px) { main { padding: 24px 18px 48px; } .operation { min-width: 0; } table, tbody, tr, th, td { display: block; } th { border: 0; padding-bottom: 2px; } td { padding-top: 2px; } }
@@ -23,83 +24,82 @@
   </head>
   <body>
     <main>
-      <h1>ローカルサーバーAPI</h1>
-      <p class="lead">サーバーはループバックで待ち受けます。HTMLや静的アセット以外は、ブラウザーとCLIがJSONで通信します。</p>
-
-      <h2>ヘルスチェックとライフサイクル</h2>
-      <h3><code class="operation">GET /api/health</code></h3>
-      <p><code>name</code>と<code>version</code>を返します。管理対象サーバーでは、<code>instanceId</code>と<code>protocolVersion</code>も返します。</p>
-      <h3><code class="operation">POST /api/shutdown</code></h3>
-      <p><code>202</code>を返して停止を予約します。管理対象サーバーでは<code>x-zatto-instance-id</code>が必須で、不一致は<code>409</code>です。</p>
-
-      <h2>セッション</h2>
-      <h3><code class="operation">GET /api/session</code></h3>
-      <p>表示順のエントリ、サーバー識別子、ネイティブのファイル・フォルダー選択機能を返します。</p>
-      <h3><code class="operation">POST /api/session/add</code></h3>
-      <p>本文は<code>{ "paths": ["page.html"] }</code>です。パスを絶対パスへ解決し、存在していてセッションに未登録のパスを1回だけ追加します。HTMLの拡張子は必須ではありません。<code>201</code>と<code>added</code>、<code>session</code>を返します。</p>
-      <p>応答には<code>resolved</code>（指定した既存・追加エントリを指定順で重複除去）、<code>workspaceId</code>（登録先）、<code>activeWorkspaceId</code>（応答時の選択）も含めます。解決結果は追加と同じ直列化処理で取得し、切り替え先のファイル群と混同しません。<code>added</code>と<code>session</code>の形式は維持し、<code>session</code>は応答時の選択先を返します。存在しないパスは除外します。ディレクトリを含む読取りエラーは追加全体を中止し、保存失敗時も変更を確定しません。</p>
-      <h3><code class="operation">POST /api/session/pick</code></h3>
-      <p>管理対象のネイティブファイル選択を開きます。<code>x-zatto-instance-id</code>が必要です。利用不可は<code>501</code>、別の選択画面が開いている場合は<code>409</code>です。</p>
-      <h3><code class="operation">POST /api/session/pick-directory</code></h3>
-      <p>本文は<code>{ "mode": "direct" }</code>または<code>{ "mode": "recursive" }</code>です。識別子、利用可否、同時に1つだけ開く規則はファイル選択と同じです。</p>
-      <h3><code class="operation">PATCH /api/session/order</code></h3>
-      <p>本文は<code>{ "ids": [...] }</code>です。全エントリIDを重複なく1回ずつ指定します。成功時は<code>204</code>です。</p>
-      <h3><code class="operation">DELETE /api/session/:id</code></h3>
-      <p>1件のエントリを削除します。不明なIDは<code>404</code>、成功時は<code>204</code>です。</p>
-      <h3><code class="operation">DELETE /api/session/entries</code></h3>
-      <p>本文は<code>{ "ids": [...] }</code>です。空でない既知のIDを重複なく指定します。処理は原子的で、成功時は<code>204</code>です。</p>
-      <h3><code class="operation">DELETE /api/session</code></h3>
-      <p>全エントリを削除し、<code>204</code>を返します。</p>
-
-      <h2>セッション交換</h2>
-      <h3><code class="operation">GET /api/session/export</code></h3>
-      <p>表示順で<code>{ "format": "zatto-session", "version": 1, "entries": [{ "path": ... }] }</code>を返します。</p>
-      <h3><code class="operation">PUT /api/session</code></h3>
-      <p>version 1の交換JSONを検証します。既定の<code>?mode=replace</code>は全置換、<code>?mode=merge</code>は未登録パスの追加です。管理対象サーバーでは<code>x-zatto-instance-id</code>が必要です。</p>
-
-      <h2>検索</h2>
-      <h3><code class="operation">GET /api/search</code></h3>
-      <p><code>q</code>の大文字・小文字を区別しない固定文字列をHTMLソースから検索します。空文字は結果なしです。クエリーはUTF-16で256コード単位までで、ファイル、件数、応答量の上限到達時は<code>truncated</code>を返します。</p>
-
-      <h2>AIエージェント向けコンテキスト</h2>
-      <h3><code class="operation">GET /api/agent/context</code></h3>
-      <p>schema version 1として、選択中のファイルまたは<code>null</code>、表示順の全ファイル、現在の<code>preview</code>、<code>search</code>、<code>docs</code>表示を返します。各ファイルには、候補選定用の信頼できない<code>title</code>と、識別に使う絶対<code>path</code>が入ります。タイトルは、空白の統一、Unicode制御文字・書式制御文字の削除、Unicodeコードポイント単位で200文字への制限を行います。正規化後に空の場合はファイル名を使います。プレビュー以外では、active fileはセッション上の選択を表し、表示中とは限りません。HTML本文は返しません。</p>
-      <h3><code class="operation">PUT /api/agent/context</code></h3>
-      <p>ブラウザーが<code>{ "activeEntryId": string | null, "view": ... }</code>を通知します。この一時状態は永続化せず、セッション交換JSONにも含めません。</p>
-
-      <h2>プレビューとリアルタイム更新</h2>
-      <table>
-        <tbody>
-          <tr><th><code>GET /f/:id/</code></th><td>選択したエントリのHTMLを返します。</td></tr>
-          <tr><th><code>GET /f/:id/*</code></th><td>MIME付きで相対アセットを返します。エントリの基点ディレクトリ外へのアクセスは拒否します。</td></tr>
-          <tr><th><code>WS /ws</code></th><td>セッション変更時に<code>session:update</code>、監視ファイル変更時に<code>file:changed</code>を送ります。</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Webリソース</h2>
-      <table>
-        <tbody>
-          <tr><th><code>GET /</code></th><td>ビルド済みWebアプリを返します。存在しない場合はサービス利用不可ページを返します。</td></tr>
-          <tr><th><code>GET /manifest.webmanifest</code></th><td>Webアプリマニフェストを返します。</td></tr>
-          <tr><th><code>GET /assets/*</code></th><td>assetsディレクトリ外への移動を拒否し、フロントエンドアセットを返します。</td></tr>
-          <tr><th><code>GET /docs/*</code></th><td>docsディレクトリ外への移動を拒否し、組み込みドキュメントを返します。</td></tr>
-        </tbody>
-      </table>
-      <h2>ワークスペース</h2>
-      <p>選択は全タブとCLIで共有します。セッションAPI、検索、プレビュー、インポート、エクスポート、Agentコンテキストは選択中のワークスペースを対象にします。<code>GET /api/session</code>と<code>session:update</code>は<code>entries</code>に加え、<code>activeWorkspaceId</code>と<code>workspaces: [{ id, name }]</code>を返します。</p>
-      <table><tbody>
-        <tr><th><code>GET /api/workspaces</code></th><td>選択IDとワークスペース名の一覧を返します。</td></tr>
-        <tr><th><code>POST /api/workspaces</code></th><td><code>{ "name": "Research" }</code>で空のワークスペースを作成し、201でIDと名前を返します。選択は変更しません。</td></tr>
-        <tr><th><code>PUT /api/workspaces/:id/activate</code></th><td>選択を保存し、エントリとワークスペース情報を通知します。</td></tr>
-        <tr><th><code>PATCH /api/workspaces/:id</code></th><td><code>{ "name": "Research" }</code>で名前を変更します。前後の空白を除いた名前は1〜100文字です。</td></tr>
-        <tr><th><code>DELETE /api/workspaces/:id</code></th><td>実ファイルを残してワークスペースを削除します。選択中の場合は残る先頭を選択します。最後の1件は削除できません。</td></tr>
-      </tbody></table>
-      <p>ブラウザーは<code>x-zatto-workspace-id</code>を送り、選択と不一致なら409になります。不明・削除済みID、不正な名前、最後の1件の削除も409です。ヘッダー省略時は選択中を操作します。開始済みのネイティブ選択は開始元だけに追加し、開始元が削除済みなら拒否します。</p>
-      <h2>お気に入り</h2>
-      <p>セッションの各エントリは任意の<code>favorite: boolean</code>を持ち、省略時はfalseです。星はワークスペース単位で保存し、List順を変えません。保存形式はversion 2を維持します。</p>
-      <h3><code class="operation">PATCH /api/session/:id/favorite</code></h3>
-      <p><code>{ "favorite": true }</code>か<code>{ "favorite": false }</code>を送ります。成功時は204です。変更時は原子的に保存して<code>session:update</code>を通知します。同じ状態の再送は保存も通知もしません。真偽値以外は400、不明なエントリは404、<code>x-zatto-workspace-id</code>の不一致は409です。</p>
-      <p>交換形式version 1はパスだけを保持します。全置換インポートは星を解除し、追加は既存の星を維持します。削除後の再登録は星なしです。検索とAgentコンテキストは選択中のワークスペース全体が対象です。</p>
+      <h1>JSON-RPC API</h1>
+      <p class="lead">全21操作は<code>POST /rpc</code>へ<code>application/json</code>で送信します。2.0.0でREST操作ルートを廃止し、静的配信とWebSocket通知は維持します。</p>
+      <h2>要求と応答</h2>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 1,
+  &quot;method&quot;: &quot;session.get&quot;,
+  &quot;params&quot;: {}
+}</code></pre>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 2,
+  &quot;method&quot;: &quot;session.setFavorite&quot;,
+  &quot;params&quot;: {
+    &quot;id&quot;: &quot;entry-id&quot;,
+    &quot;favorite&quot;: true,
+    &quot;workspaceId&quot;: &quot;default&quot;
+  }
+}</code></pre>
+      <pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 2,
+  &quot;result&quot;: null
+}</code></pre>
+      <p>引数は名前付きのオブジェクトです。paramsの省略は空オブジェクトを表します。IDは文字列、数値、nullを受け取り、応答は同じIDとresultまたはerrorの一方を返します。完了を確認する操作にはID付き要求を使います。</p>
+      <h2>共通の照合条件</h2>
+      <p>server.health以外は任意のworkspaceIdとinstanceIdを照合条件として受け取ります。指定したworkspaceIdは選択中と一致する必要があり、別ワークスペースへの操作権限ではありません。非同期処理の前に対象を捕捉します。ネイティブ選択ではinstanceIdが必須で、管理対象のインポートと停止でも必要です。</p>
+      <h2>メソッド</h2>
+      <section><h3><code class="operation">server.health</code></h3><p>サーバーの名前、配布版、識別子、通信バージョンを取得します。</p><p>params: <code>{}</code><br>result: <code>{ name, version, instanceId?, protocolVersion? }</code></p></section>
+      <section><h3><code class="operation">server.shutdown</code></h3><p>管理対象ではinstanceIdを照合し、単体またはbatchの応答完了後に停止します。</p><p>params: <code>{ instanceId? }</code><br>result: <code>{ ok: true }</code></p></section>
+      <section><h3><code class="operation">session.get</code></h3><p>選択中の一覧、ワークスペース情報、ネイティブ選択機能を取得します。</p><p>params: <code>{}</code><br>result: <code>{ entries, activeWorkspaceId, workspaces, serverIdentity?, filePicker, directoryPicker }</code></p></section>
+      <section><h3><code class="operation">session.add</code></h3><p>パスを絶対パスへ解決し、既存・追加エントリを指定順で1回ずつ返します。存在しないパスは除外し、読取り・保存失敗時は追加全体を確定しません。HTMLの拡張子は必須ではありません。</p><p>params: <code>{ paths: string[] }</code><br>result: <code>{ added, resolved, workspaceId, activeWorkspaceId, session }</code></p></section>
+      <section><h3><code class="operation">session.setFavorite</code></h3><p>星を明示的な真偽値で保存します。並び順を変更せず、同じ値の再指定では保存も通知もしません。</p><p>params: <code>{ id: string, favorite: boolean }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.reorder</code></h3><p>選択中の全エントリIDを、希望するList順で重複なく1回ずつ指定します。</p><p>params: <code>{ ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.removeMany</code></h3><p>空でない既知のIDを重複なく指定し、一覧から原子的に外します。実ファイルは残します。</p><p>params: <code>{ ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.remove</code></h3><p>指定したエントリを一覧から外し、実ファイルは残します。</p><p>params: <code>{ id: string }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.clear</code></h3><p>選択中の一覧を空にし、実ファイルは残します。</p><p>params: <code>{}</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.export</code></h3><p>表示順の絶対パスをzatto-sessionのversion 1形式で返します。</p><p>params: <code>{}</code><br>result: <code>SessionExchange version 1</code></p></section>
+      <section><h3><code class="operation">session.import</code></h3><p>全パスを検証してから確定します。既定のreplaceは全置換と星のリセット、mergeは既存エントリと星を保持した追加です。管理対象ではinstanceIdが必要です。</p><p>params: <code>{ exchange, mode?: &quot;replace&quot; | &quot;merge&quot;, instanceId? }</code><br>result: <code>{ entries }</code></p></section>
+      <section><h3><code class="operation">session.pickFiles</code></h3><p>ネイティブファイル選択を開きます。instanceIdを照合し、キャンセル時は変更しません。開始時のワークスペースへ追加します。</p><p>params: <code>{ instanceId: string }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
+      <section><h3><code class="operation">session.pickDirectory</code></h3><p>選択したフォルダーの直下、または子孫のHTMLを追加します。ネイティブ選択は同時に1つだけ開き、シンボリックリンクはたどりません。</p><p>params: <code>{ instanceId: string, mode: &quot;direct&quot; | &quot;recursive&quot; }</code><br>result: <code>{ cancelled, added, session? }</code></p></section>
+      <section><h3><code class="operation">workspaces.list</code></h3><p>名前と識別子、全タブで共有する選択状態を取得します。</p><p>params: <code>{}</code><br>result: <code>{ activeWorkspaceId, workspaces: [{ id, name }] }</code></p></section>
+      <section><h3><code class="operation">workspaces.create</code></h3><p>選択を変えず空のワークスペースを作成します。前後の空白を除いた名前は1〜100文字です。</p><p>params: <code>{ name: string }</code><br>result: <code>{ id, name }</code></p></section>
+      <section><h3><code class="operation">workspaces.activate</code></h3><p>選択を保存して通知します。ブラウザーの検索とプレビューはワークスペース切替時の規則に従います。</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">workspaces.rename</code></h3><p>ファイル群と識別子を維持して名前を変更します。</p><p>params: <code>{ id: string, name: string }</code><br>result: <code>{ activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">workspaces.delete</code></h3><p>実ファイルを残して削除します。最低1件を維持し、選択中の削除では残る先頭へ切り替えます。</p><p>params: <code>{ id: string }</code><br>result: <code>{ entries, activeWorkspaceId, workspaces }</code></p></section>
+      <section><h3><code class="operation">agentContext.get</code></h3><p>本文を含めずタイトルと絶対パスを返します。タイトルは信頼できないラベルとして正規化し、Unicodeコードポイントで200文字へ制限します。</p><p>params: <code>{}</code><br>result: <code>{ schemaVersion: 1, activeFile, openFiles, view }</code></p></section>
+      <section><h3><code class="operation">agentContext.set</code></h3><p>ブラウザーの一時的な選択と表示を通知します。選択ファイルは選択中の一覧に必要で、コンテキストは保存・エクスポートしません。</p><p>params: <code>{ activeEntryId: string | null, view: &quot;preview&quot; | &quot;search&quot; | &quot;docs&quot; }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">search.query</code></h3><p>登録済みHTMLソースを、大文字・小文字を区別しない固定文字列で検索します。空文字は結果なし、検索語はUTF-16で256コード単位までです。ファイル数、件数、読取り量、応答量の上限を維持します。</p><p>params: <code>{ query: string }</code><br>result: <code>{ query, totalMatches, truncated, files }</code></p></section>
+      <h2>共通の結果型と交換形式</h2><p>entries、added、resolvedの要素はEntryです。addedAtはミリ秒の時刻、favorite省略時はfalseです。filePickerとdirectoryPickerはPickerCapabilityです。AgentコンテキストはactiveFile（またはnull）とopenFilesにAgentContextFileを使います。検索の位置と一致範囲はUTF-16コード単位、lineNumberは1始まりです。</p><h3>Entry</h3><pre><code>{ id: string, absPath: string, title: string, addedAt: number, favorite?: boolean }</code></pre><h3>WorkspaceState</h3><pre><code>{ activeWorkspaceId: string, workspaces: [{ id: string, name: string }] }</code></pre><h3>PickerCapability</h3><pre><code>{ available: boolean, instanceId?: string }</code></pre><h3>SessionExchange</h3><pre><code>{ format: &quot;zatto-session&quot;, version: 1, entries: [{ path: string }] }</code></pre><h3>AgentContextFile</h3><pre><code>{ title: string, path: string }</code></pre><h3>SearchFileResult</h3><pre><code>{ entryId, title, fileName, absPath, matchCount, truncated, lines: SearchLineMatch[] }</code></pre><h3>SearchLineMatch</h3><pre><code>{ lineNumber, startOffset, lineText, truncated, ranges: [{ start, length }] }</code></pre><p>交換パスは絶対パスで、正規化後に重複せず、読取り可能なHTMLである必要があります。タイトル、識別子、星は保存しません。次の要求は既存の識別子と星を保持して追加します。replaceではエントリを再生成し、星を解除します。</p><pre><code>{
+  &quot;jsonrpc&quot;: &quot;2.0&quot;,
+  &quot;id&quot;: 3,
+  &quot;method&quot;: &quot;session.import&quot;,
+  &quot;params&quot;: {
+    &quot;instanceId&quot;: &quot;server-instance-id&quot;,
+    &quot;workspaceId&quot;: &quot;default&quot;,
+    &quot;mode&quot;: &quot;merge&quot;,
+    &quot;exchange&quot;: {
+      &quot;format&quot;: &quot;zatto-session&quot;,
+      &quot;version&quot;: 1,
+      &quot;entries&quot;: [
+        {
+          &quot;path&quot;: &quot;/path/to/page.html&quot;
+        }
+      ]
+    }
+  }
+}</code></pre>
+      <h2>エラー</h2>
+      <p>操作の失敗はRESTのHTTPステータスではなくJSON-RPCのerrorへ返します。文言の比較ではなくerror.codeとerror.data.kindで判断します。</p>
+      <table><thead><tr><th>code</th><th>意味 / data.kind</th></tr></thead><tbody><tr><td><code>-32700</code></td><td>Parse error</td></tr><tr><td><code>-32600</code></td><td>Invalid Request</td></tr><tr><td><code>-32601</code></td><td>Method not found</td></tr><tr><td><code>-32602</code></td><td>Invalid params</td></tr><tr><td><code>-32603</code></td><td>Internal error</td></tr><tr><td><code>1001</code></td><td>notFound</td></tr><tr><td><code>1002</code></td><td>workspace</td></tr><tr><td><code>1003</code></td><td>instance</td></tr><tr><td><code>1004</code></td><td>pickerUnavailable</td></tr><tr><td><code>1005</code></td><td>busy</td></tr><tr><td><code>1006</code></td><td>searchLimit</td></tr></tbody></table>
+      <p>検索の失敗は、SEARCH_QUERY_TOO_LONG、SEARCH_FILE_TOO_LARGE、SEARCH_FILE_READ_FAILEDなどの分類と、該当するentryId、maxLength、maxBytesをdataへ含めます。</p>
+      <h2>notification / batch</h2><p>idを省略したnotificationは、失敗時も応答せずログへ記録します。notificationのみの場合はHTTP 204です。batchは入力順に逐次実行し、失敗後も残りを処理します。全体のトランザクションにはせず、空配列は不正です。停止は単体またはbatchの応答を完了してから実行します。</p>
+      <h2>ファイル配信とイベント</h2>
+      <table><tbody><tr><th><code>GET /</code></th><td>Web UI</td></tr><tr><th><code>GET /manifest.webmanifest</code></th><td>Web app manifest</td></tr><tr><th><code>GET /assets/*</code></th><td>Frontend assets</td></tr><tr><th><code>GET /docs/*</code></th><td>Built-in documentation / Changelog</td></tr><tr><th><code>GET /f/:id/</code></th><td>Registered HTML preview</td></tr><tr><th><code>GET /f/:id/*</code></th><td>Relative assets within the registered file root</td></tr><tr><th><code>WS /ws</code></th><td>session:update / file:changed</td></tr></tbody></table>
+      <p>サーバーはループバックで待ち受け、相対ファイルは登録基点の外へアクセスできません。RPC移行後もワークスペースの保存形式version 2と交換形式version 1を維持します。</p>
     </main>
   </body>
 </html>

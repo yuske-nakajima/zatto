@@ -11,6 +11,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -34,10 +35,12 @@ describe("built-in documentation view integration", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session/export"
-          ? Response.json(exchange)
-          : Response.json({ entries }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.export"
+            ? Response.json(exchange)
+            : Response.json({ entries }),
+        ),
       ),
     );
   });
@@ -135,7 +138,10 @@ describe("built-in documentation view integration", () => {
 
     await user.click(screen.getByRole("button", { name: "Export session…" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
-    expect(fetch).toHaveBeenCalledWith("/api/session/export");
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.export", {}),
+    );
     expect(createObjectUrl).toHaveBeenCalledOnce();
     const exportedBlob = createObjectUrl.mock.calls[0]?.[0];
     if (!exportedBlob) throw new Error("exported Blob is unavailable");

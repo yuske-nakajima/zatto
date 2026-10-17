@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 class Socket extends EventTarget {
   static current: Socket;
@@ -33,16 +34,18 @@ test.each(["workspace switches", "subsequent session updates"])(
     const pending = new Promise<Response>((resolve) => {
       finish = resolve;
     });
-    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
-      if (input === "/api/session")
-        return Response.json({
-          entries,
-          workspaces,
-          activeWorkspaceId: "default",
-        });
-      if (input === "/api/session?mode=replace") return pending;
-      return Response.json({});
-    });
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      rpcFixture(async (input) => {
+        if (input === "session.get")
+          return Response.json({
+            entries,
+            workspaces,
+            activeWorkspaceId: "default",
+          });
+        if (input === "session.import") return pending;
+        return Response.json({});
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(<App />);
@@ -60,12 +63,8 @@ test.each(["workspace switches", "subsequent session updates"])(
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
-        "/api/session?mode=replace",
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            "x-zatto-workspace-id": "default",
-          }),
-        }),
+        "/rpc",
+        rpcRequest("session.import", { mode: "replace" }),
       ),
     );
     if (scenario === "workspace switches") {

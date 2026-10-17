@@ -3,6 +3,7 @@ import {
   type AgentContext,
   parseAgentContext,
 } from "../shared/agent-context.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import { serverUrl } from "./server-api.js";
 import { connectToRunningServer } from "./server-client.js";
 
@@ -24,14 +25,15 @@ export async function requestAgentContext(
   record: ServerRecord,
   fetchFn: typeof globalThis.fetch,
 ): Promise<AgentContext> {
-  const response = await fetchFn(`${serverUrl(record.port)}api/agent/context`, {
-    headers: { "x-zatto-instance-id": record.instanceId },
-    signal: AbortSignal.timeout(1_000),
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Agentコンテキストの取得に失敗しました (HTTP ${response.status})`,
-    );
-  }
-  return parseAgentContext((await response.json()) as unknown);
+  return parseAgentContext(
+    await rpcCall(
+      "agentContext.get",
+      { instanceId: record.instanceId },
+      {
+        endpoint: `${serverUrl(record.port)}rpc`,
+        fetch: fetchFn,
+        signal: AbortSignal.timeout(1_000),
+      },
+    ),
+  );
 }

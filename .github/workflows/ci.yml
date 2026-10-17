@@ -1,6 +1,12 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact release PR commit to validate
+        required: true
+        type: string
   push:
     branches:
       - main
@@ -15,14 +21,25 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
+      - name: Reject a stale release PR dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$GITHUB_SHA" = "$EXPECTED_SHA"
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha || github.sha }}
 
       - name: Set up development tools
         uses: jdx/mise-action@v2
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate bundled changelog
+        run: node scripts/update-changelog.mjs
 
       - name: Check
         run: pnpm run check

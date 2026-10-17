@@ -5,6 +5,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture, rpcMethod, rpcRequest } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   static instance: FakeWebSocket | null = null;
@@ -54,10 +55,12 @@ describe("directory picker", () => {
   test("直接配下を既定値としてフォルダー選択を要求する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) => {
-        if (input === "/api/session") return sessionResponse();
-        return Response.json({ cancelled: true, added: [] });
-      }),
+      vi.fn(
+        rpcFixture(async (input) => {
+          if (input === "session.get") return sessionResponse();
+          return Response.json({ cancelled: true, added: [] });
+        }),
+      ),
     );
     const user = userEvent.setup();
     render(<App />);
@@ -73,14 +76,13 @@ describe("directory picker", () => {
     ).toBe(true);
     await user.click(screen.getByRole("button", { name: "Choose folder" }));
 
-    expect(fetch).toHaveBeenCalledWith("/api/session/pick-directory", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-zatto-instance-id": "instance",
-      },
-      body: JSON.stringify({ mode: "direct" }),
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.pickDirectory", {
+        mode: "direct",
+        instanceId: "instance",
+      }),
+    );
     expect(screen.getByTitle("Existing preview")).toBeTruthy();
   });
 
@@ -93,10 +95,12 @@ describe("directory picker", () => {
     };
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) => {
-        if (input === "/api/session") return sessionResponse();
-        return Response.json({ cancelled: false, added: [addedEntry] });
-      }),
+      vi.fn(
+        rpcFixture(async (input) => {
+          if (input === "session.get") return sessionResponse();
+          return Response.json({ cancelled: false, added: [addedEntry] });
+        }),
+      ),
     );
     const user = userEvent.setup();
     render(<App />);
@@ -108,8 +112,8 @@ describe("directory picker", () => {
     act(() => FakeWebSocket.instance?.emitEntries([initialEntry, addedEntry]));
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/session/pick-directory",
-      expect.objectContaining({ body: JSON.stringify({ mode: "recursive" }) }),
+      "/rpc",
+      rpcRequest("session.pickDirectory", { mode: "recursive" }),
     );
     expect(await screen.findByTitle("Nested preview")).toBeTruthy();
     expect(window.location.search).toBe("?entry=nested");
@@ -118,10 +122,12 @@ describe("directory picker", () => {
   test("0件なら選択を維持して結果を表示する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? sessionResponse()
-          : Response.json({ cancelled: false, added: [] }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? sessionResponse()
+            : Response.json({ cancelled: false, added: [] }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -139,15 +145,17 @@ describe("directory picker", () => {
 
   test("フォルダーピッカー中はファイルピッカーと重複要求を開始しない", async () => {
     let resolveDirectory: ((response: Response) => void) | undefined;
-    const fetchMock = vi.fn((input) => {
-      if (input === "/api/session") return Promise.resolve(sessionResponse());
-      if (input === "/api/agent/context") {
-        return Promise.resolve(new Response(null, { status: 204 }));
-      }
-      return new Promise<Response>((resolve) => {
-        resolveDirectory = resolve;
-      });
-    });
+    const fetchMock = vi.fn(
+      rpcFixture((input) => {
+        if (input === "session.get") return Promise.resolve(sessionResponse());
+        if (input === "agentContext.set") {
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+        return new Promise<Response>((resolve) => {
+          resolveDirectory = resolve;
+        });
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(<App />);
@@ -177,10 +185,12 @@ describe("directory picker", () => {
   test("フォルダー選択の失敗を表示する", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? sessionResponse()
-          : new Response(null, { status: 500 }),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? sessionResponse()
+            : new Response(null, { status: 500 }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -198,6 +208,6 @@ describe("directory picker", () => {
 
 function nonContextRequests(fetchMock: ReturnType<typeof vi.fn>) {
   return fetchMock.mock.calls.filter(
-    ([input]) => input !== "/api/agent/context",
+    ([, init]) => rpcMethod(init) !== "agentContext.set",
   );
 }

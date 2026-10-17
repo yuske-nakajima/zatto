@@ -1,4 +1,5 @@
 import type { ServerRecord } from "../server/runtime.js";
+import { rpcCall } from "../shared/rpc-client.js";
 import { serverUrl } from "./server-api.js";
 
 interface FileEntry {
@@ -24,34 +25,21 @@ export async function addFiles(
   files: string[],
   fetchFn: typeof globalThis.fetch,
 ): Promise<FileResult> {
-  const response = await fetchFn(`${serverUrl(record.port)}api/session/add`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-zatto-instance-id": record.instanceId,
+  const body = await rpcCall(
+    "session.add",
+    { paths: files, instanceId: record.instanceId },
+    {
+      endpoint: `${serverUrl(record.port)}rpc`,
+      fetch: fetchFn,
     },
-    body: JSON.stringify({ paths: files }),
-  });
-  if (!response.ok) {
-    throw new Error(
-      `ファイルの追加に失敗しました (HTTP ${response.status}): ${files.map(terminalLine).join(", ")}`,
-    );
-  }
-  const body: unknown = await response.json();
-  if (!isObject(body)) throw new Error("ファイル追加の応答が不正です");
-  const session = isObject(body.session) ? body.session : {};
-  const candidates = Array.isArray(body.resolved)
-    ? body.resolved
-    : [
-        ...(Array.isArray(session.entries) ? session.entries : []),
-        ...(Array.isArray(body.added) ? body.added : []),
-      ];
+  );
   return {
-    entries: candidates.filter(isEntry),
-    workspaceId: stringValue(body.workspaceId),
-    activeWorkspaceId: stringValue(body.activeWorkspaceId),
+    entries: body.resolved,
+    workspaceId: body.workspaceId,
+    activeWorkspaceId: body.activeWorkspaceId,
   };
 }
+
 /**
  * Writes copyable title/URL pairs after the caller's top-level URL line.
  * @param baseUrl - Connected server URL
@@ -93,19 +81,4 @@ export function printFileUrls(
 }
 function terminalLine(value: string): string {
   return value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, " ");
-}
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isEntry(value: unknown): value is FileEntry {
-  return (
-    isObject(value) &&
-    typeof value.id === "string" &&
-    value.id.length > 0 &&
-    typeof value.absPath === "string" &&
-    typeof value.title === "string"
-  );
-}
-function stringValue(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
 }

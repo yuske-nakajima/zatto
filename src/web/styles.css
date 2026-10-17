@@ -1104,3 +1104,9 @@ button:focus-visible,
     animation: none;
   }
 }
+
+.app-version {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}

@@ -30,10 +30,12 @@ const bundledDocumentationPaths = [
   "dist/web/docs/en/cli.html",
   "dist/web/docs/en/api.html",
   "dist/web/docs/en/gui-api-mapping.html",
+  "dist/web/docs/en/changelog.html",
   "dist/web/docs/ja/getting-started.html",
   "dist/web/docs/ja/cli.html",
   "dist/web/docs/ja/api.html",
   "dist/web/docs/ja/gui-api-mapping.html",
+  "dist/web/docs/ja/changelog.html",
 ];
 
 describe("npmパッケージ", () => {
@@ -43,7 +45,9 @@ describe("npmパッケージ", () => {
     ) as PackageManifest;
 
     expect(manifest.name).toBe("@yuske-nakajima/zatto");
-    expect(manifest.version).toBe("1.2.0");
+    expect(manifest.version).toMatch(
+      /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/,
+    );
     expect(APP_VERSION).toBe(manifest.version);
     expect(manifest.private).not.toBe(true);
     expect(manifest.files).toEqual(["bin", "dist", "README.ja.md"]);
@@ -130,17 +134,17 @@ describe("npmパッケージ", () => {
     expect(englishReadme).toContain("selected folder only");
     expect(englishReadme).toContain("selected folder and its subfolders");
     expect(englishReadme).toContain("Symbolic links are ignored");
-    expect(englishReadme).toContain("/api/session/pick-directory");
-    expect(englishReadme).toContain('\'{"mode":"direct"}\'');
-    expect(englishReadme).toContain('\'{"mode":"recursive"}\'');
+    expect(englishReadme).toContain("session.pickDirectory");
+    expect(englishReadme).toContain('"mode":"direct"');
+    expect(englishReadme).toContain('"mode":"recursive"');
     expect(japaneseReadme).toContain("ファイルを追加する場合は、**+ Add**");
     expect(japaneseReadme).toContain("独立した**Add folder…**ボタン");
     expect(japaneseReadme).toContain("選択したフォルダー直下のみ");
     expect(japaneseReadme).toContain("子孫フォルダーを含む");
     expect(japaneseReadme).toContain("シンボリックリンクは対象外です");
-    expect(japaneseReadme).toContain("/api/session/pick-directory");
-    expect(japaneseReadme).toContain('\'{"mode":"direct"}\'');
-    expect(japaneseReadme).toContain('\'{"mode":"recursive"}\'');
+    expect(japaneseReadme).toContain("session.pickDirectory");
+    expect(japaneseReadme).toContain('"mode":"direct"');
+    expect(japaneseReadme).toContain('"mode":"recursive"');
     for (const readme of [englishReadme, japaneseReadme]) {
       expect(readme).toContain("npx @yuske-nakajima/zatto file.html");
       expect(readme).toContain("@yuske-nakajima/zatto/server");
@@ -169,7 +173,7 @@ describe("npmパッケージ", () => {
     );
 
     expect(verifierSource).toContain('["en", "ja"]');
-    for (const documentationPath of bundledDocumentationPaths.slice(0, 4)) {
+    for (const documentationPath of bundledDocumentationPaths.slice(0, 5)) {
       const page = path.basename(documentationPath, ".html");
       expect(verifierSource).toContain(`"${page}"`);
     }
@@ -186,8 +190,8 @@ describe("npmパッケージ", () => {
     expect(releaseWorkflow).toContain("workflow_dispatch:");
     expect(releaseWorkflow).toContain("id-token: write");
     expect(releaseWorkflow).toContain("pnpm run verify:package");
-    expect(releaseWorkflow).toContain("npm publish --access public");
-    expect(releaseWorkflow).toContain("gh release create");
+    expect(releaseWorkflow).toContain("node scripts/release/publish.mjs");
+    expect(releaseWorkflow).toContain("googleapis/release-please-action@v4");
     expect(releaseWorkflow).not.toContain("NPM_TOKEN");
   });
 });

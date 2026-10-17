@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { SearchResponse } from "../src/shared/search.js";
 import { App } from "../src/web/App.js";
+import { rpcFixture, rpcRequest } from "./rpc-client-fixture.js";
 
 class FakeWebSocket extends EventTarget {
   close(): void {
@@ -51,10 +52,12 @@ describe("search URL navigation", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input) =>
-        input === "/api/session"
-          ? Response.json({ entries })
-          : Response.json(result),
+      vi.fn(
+        rpcFixture(async (input) =>
+          input === "session.get"
+            ? Response.json({ entries })
+            : Response.json(result),
+        ),
       ),
     );
   });
@@ -81,8 +84,8 @@ describe("search URL navigation", () => {
         .getAttribute("value"),
     ).toBe("alpha");
     expect(fetch).toHaveBeenCalledWith(
-      "/api/search?q=alpha",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      "/rpc",
+      rpcRequest("search.query", { query: "alpha" }),
     );
     expect(screen.getByText("4 matches in 2 files")).toBeTruthy();
     expect(window.location.href).toBe(

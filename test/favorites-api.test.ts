@@ -6,6 +6,7 @@ import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
+import { rpc } from "./rpc-server-helper.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -24,7 +25,6 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
   const hub = new RealtimeHub();
   const broadcast = vi.spyOn(hub, "broadcast");
   const app = await createApp({ sessionStore: store, realtimeHub: hub });
-  const url = `/api/session/${entry.id}/favorite`;
   for (const payload of [
     {},
     { favorite: "true" },
@@ -32,29 +32,33 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
     { favorite: 1 },
   ]) {
     expect(
-      (await app.inject({ method: "PATCH", url, payload })).statusCode,
-    ).toBe(400);
+      (await rpc(app, "session.setFavorite", { id: entry.id, ...payload }))
+        .code,
+    ).toBe(-32602);
   }
   expect(
     (
-      await app.inject({
-        method: "PATCH",
-        url: "/api/session/missing/favorite",
-        payload: { favorite: true },
+      await rpc(app, "session.setFavorite", {
+        id: "missing",
+        ...{ favorite: true },
       })
-    ).statusCode,
-  ).toBe(404);
+    ).code,
+  ).toBe(1001);
   for (let index = 0; index < 2; index++)
     expect(
-      (await app.inject({ method: "PATCH", url, payload: { favorite: true } }))
-        .statusCode,
-    ).toBe(204);
+      (
+        await rpc(app, "session.setFavorite", {
+          id: entry.id,
+          ...{ favorite: true },
+        })
+      ).code,
+    ).toBe(0);
   expect(broadcast).toHaveBeenCalledOnce();
   expect(broadcast.mock.calls[0][0]).toMatchObject({
     type: "session:update",
     entries: [{ id: entry.id, favorite: true }],
   });
-  expect((await app.inject("/api/session/export")).json()).toEqual({
+  expect((await rpc(app, "session.export", {})).json()).toEqual({
     format: "zatto-session",
     version: 1,
     entries: [{ path: file }],
@@ -63,14 +67,13 @@ test("favorite API validates explicit booleans, publishes changes once, and reje
   await store.switchWorkspace(other.id);
   expect(
     (
-      await app.inject({
-        method: "PATCH",
-        url,
-        payload: { favorite: false },
-        headers: { "x-zatto-workspace-id": "default" },
+      await rpc(app, "session.setFavorite", {
+        id: entry.id,
+        ...{ favorite: false },
+        workspaceId: "default",
       })
-    ).statusCode,
-  ).toBe(409);
+    ).code,
+  ).toBe(1002);
   await store.switchWorkspace("default");
   expect(store.getEntry(entry.id)?.favorite).toBe(true);
   await app.close();
@@ -93,13 +96,12 @@ test("persistence errors return failure without publishing or changing favorites
   fail = true;
   expect(
     (
-      await app.inject({
-        method: "PATCH",
-        url: `/api/session/${entry.id}/favorite`,
-        payload: { favorite: true },
+      await rpc(app, "session.setFavorite", {
+        id: entry.id,
+        ...{ favorite: true },
       })
-    ).statusCode,
-  ).toBe(500);
+    ).code,
+  ).toBe(-32603);
   expect(store.getEntry(entry.id)?.favorite).toBeUndefined();
   expect(await readFile(file, "utf8")).toBe(before);
   expect(broadcast).not.toHaveBeenCalled();
