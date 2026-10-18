@@ -13,10 +13,10 @@ the line. It ends with folders, another file, and full-text search.
 - Both videos: 1920 × 1080, 30 fps, H.264, silent.
 - README animations: `zatto-pv.gif` and `zatto-pv-ja.gif`, 800 × 450,
   15 fps, infinite loop, with Bayer dithering at scale 5.
-- Still posters: `zatto-pv-poster.jpg` and `zatto-pv-ja-poster.jpg`.
-- Storyboard: `timeline.html` (the approved pre-production plan).
+- Still posters: `zatto-pv-poster.jpg` and `zatto-pv-ja-poster.jpg`, the frame
+  at 16 seconds where the AI's reply arrives.
 - Contact sheets: `storyboard.jpg` (English) and `storyboard-ja.jpg` (Japanese),
-  with one frame per second from each rendered video.
+  with one frame per second from each rendered video, five by five.
 - Source: `video/single-tab/` from the repository root.
 - Compositions: `ZattoPv` (English) and `ZattoPvJa` (Japanese); tours are
   `ZattoPvTour` and `ZattoPvTourJa`.
@@ -45,4 +45,14 @@ for video_name in zatto-pv zatto-pv-ja; do
     -filter_complex '[0:v]fps=15,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle' \
     -loop 0 "media/${video_name}.gif"
 done
+```
+
+Generate the posters and contact sheets the same way:
+
+```sh
+for video_name in zatto-pv zatto-pv-ja; do
+  ffmpeg -y -ss 16 -i "media/${video_name}.mp4" -frames:v 1 -q:v 3 "media/${video_name}-poster.jpg"
+done
+ffmpeg -y -i media/zatto-pv.mp4 -vf "fps=1,scale=384:-1,tile=5x5" -frames:v 1 -q:v 4 media/storyboard.jpg
+ffmpeg -y -i media/zatto-pv-ja.mp4 -vf "fps=1,scale=384:-1,tile=5x5" -frames:v 1 -q:v 4 media/storyboard-ja.jpg
 ```

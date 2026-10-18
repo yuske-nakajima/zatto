@@ -10,7 +10,7 @@
 [日本語](./README.ja.md)
 
 <p align="center">
-  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
+  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 25-second zatto video: comment on the docs your AI writes, and get replies right where you left them" width="800"></a>
   <br>
   <a href="./media/zatto-pv-tour.mp4">Watch the 40-second feature tour</a>
 </p>
