@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.2.1](https://github.com/yuske-nakajima/zatto/compare/v3.2.0...v3.2.1) (2026-10-18)
+
+
+### Documentation
+
+* **media:** READMEの英日のGIF・ポスター・コマ一覧とaltを25秒のPVに合わせる ([1c0d2fc](https://github.com/yuske-nakajima/zatto/commit/1c0d2fc7848f376d32ec1f4a9cff0fa6882be339))
+* **video:** PVをAIの資料へのコメントと返事を中心にした25秒の構成に作り直す ([3e44bdc](https://github.com/yuske-nakajima/zatto/commit/3e44bdcdca0ea1314647d69cfd28dbc594d5b064))
+* **video:** PVをAIの資料へのコメントと返事を中心に作り直し、40秒の機能紹介を加える ([3114a0d](https://github.com/yuske-nakajima/zatto/commit/3114a0d3aaa8f34787cae4eacb5af087c6e5bbe0))
+* **video:** 機能を一通り見せる40秒の英日の機能紹介動画を加える ([9d413c4](https://github.com/yuske-nakajima/zatto/commit/9d413c41f216f888d91ef1c66f470770194d7843))
+
 ## [3.2.0](https://github.com/yuske-nakajima/zatto/compare/v3.1.0...v3.2.0) (2026-10-18)
 
 
