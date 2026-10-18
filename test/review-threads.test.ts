@@ -234,6 +234,8 @@ describe("review threads", () => {
       commands.execute("review.take", { session: "zatto:a99c" }, []),
     ).resolves.toEqual({
       events: [
+        // レビュー前に書かれ、まだ答えていないスレッドも開始時に届く
+        { kind: "comment", ...base, threadId: before.id },
         { kind: "comment", ...base, threadId: thread.id },
         { kind: "comment", ...base, threadId: before.id },
       ],
@@ -563,5 +565,54 @@ describe("review threads", () => {
       suffix: "",
     });
     expect(moved.comments.at(-1)?.body).toBe("直しました");
+  });
+
+  test("レビューを始めると、まだ答えていないスレッドをまとめて送り、再接続では送り直さない", async () => {
+    const { commands, entry } = await fixture();
+    const create = (body: string) =>
+      commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          anchor: null,
+          author: USER,
+          body,
+        },
+        [],
+      );
+    const pending = await create("未回答");
+    const answered = await create("回答済み");
+    await commands.execute(
+      "review.reply",
+      {
+        threadId: answered.id,
+        author: { kind: "llm", session: "s" },
+        body: "答え",
+      },
+      [],
+    );
+    const resolved = await create("解決済み");
+    await commands.execute(
+      "review.resolve",
+      { threadId: resolved.id, resolved: true },
+      [],
+    );
+    const start = () =>
+      commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId: entry.id, session: "s" },
+        [],
+      );
+    const take = async () =>
+      (await commands.execute("review.take", { session: "s" }, [])).events.map(
+        (event) => (event.kind === "comment" ? event.threadId : event.kind),
+      );
+
+    await start();
+    await start();
+    expect(await take()).toEqual([pending.id]);
+    await start();
+    expect(await take()).toEqual([]);
   });
 });

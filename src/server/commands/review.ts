@@ -58,6 +58,31 @@ export function reviewCommands(context: CommandContext) {
   function reviewOf(entryId: string): ActiveReview | undefined {
     return [...reviews.values()].find((review) => review.entryId === entryId);
   }
+  /**
+   * Sends threads the user left unanswered while no session was reviewing the file.
+   * Threads with a delivery are already queued or taken, so reconnecting does not send them twice.
+   */
+  function sendPending(review: ActiveReview): void {
+    let sent = false;
+    for (const thread of store.list(review.entryId)) {
+      if (
+        thread.resolved ||
+        thread.comments.at(-1)?.author.kind !== "user" ||
+        deliveries.has(thread.id)
+      )
+        continue;
+      deliveries.set(thread.id, { status: "undelivered", since: Date.now() });
+      enqueue(review.session, {
+        kind: "comment",
+        reviewId: review.id,
+        entryId: review.entryId,
+        workspaceId: review.workspaceId,
+        threadId: thread.id,
+      });
+      sent = true;
+    }
+    if (sent) statesChanged();
+  }
   /** Forwards comments the user writes on a file under review to the reviewing session. */
   function notifyComment(thread: ReviewThread, author: ReviewAuthor): void {
     const review = reviewOf(thread.entryId);
@@ -173,7 +198,10 @@ export function reviewCommands(context: CommandContext) {
     "review.start": ({ workspaceId, entryId, session }) => {
       requireEntry(workspaceId, entryId);
       const current = reviewOf(entryId);
-      if (current?.session === session) return current;
+      if (current?.session === session) {
+        sendPending(current);
+        return current;
+      }
       if (current) {
         reviews.delete(current.id);
         forgetDeliveries(entryId);
@@ -186,6 +214,7 @@ export function reviewCommands(context: CommandContext) {
         createdAt: Date.now(),
       };
       reviews.set(review.id, review);
+      sendPending(review);
       statesChanged();
       return review;
     },
