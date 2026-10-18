@@ -74,6 +74,12 @@ export class WorkspaceStore {
   getWorkspace(id: string): Workspace {
     return structuredClone(this.requireWorkspace(id));
   }
+  /** Whether any workspace contains the entry. */
+  hasEntry(id: string): boolean {
+    return this.document.workspaces.some((workspace) =>
+      workspace.entries.some((entry) => entry.id === id),
+    );
+  }
   /** Returns an entry in the active collection. */
   getEntry(id: string): Entry | undefined {
     const entry = this.active().entries.find((entry) => entry.id === id);

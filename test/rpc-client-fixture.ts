@@ -1,11 +1,35 @@
 import { expect } from "vitest";
 
-/** Adapts method-keyed result fixtures to the real JSON-RPC transport envelope. */
-export function rpcFixture(handler: typeof fetch): typeof fetch {
+const REVIEW_DEFAULTS: Record<string, unknown> = {
+  "review.list": { threads: [] },
+  "review.request": { text: "" },
+  "review.states": {
+    reviews: [],
+    openThreadCounts: {},
+    resolvedThreadCounts: {},
+    deliveries: {},
+    latestReplies: {},
+  },
+};
+
+/**
+ * Adapts method-keyed result fixtures to the real JSON-RPC transport envelope.
+ * The viewer loads review threads in the background; those reads answer empty unless `handleReview` is set.
+ */
+export function rpcFixture(
+  handler: typeof fetch,
+  { handleReview = false }: { handleReview?: boolean } = {},
+): typeof fetch {
   return async (input, init) => {
     if (!String(input).endsWith("/rpc"))
       throw new Error(`Unexpected transport: ${String(input)}`);
     const request = JSON.parse(String(init?.body));
+    if (!handleReview && request.method in REVIEW_DEFAULTS)
+      return Response.json({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: REVIEW_DEFAULTS[request.method],
+      });
     const response = await handler(request.method, {
       ...init,
       body: JSON.stringify(request.params),

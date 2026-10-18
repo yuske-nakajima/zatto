@@ -207,7 +207,9 @@ describe("session exchange web UI", () => {
     await waitFor(() =>
       expect(
         fetch.mock.calls.filter(
-          ([, init]) => rpcMethod(init) !== "agentContext.set",
+          ([, init]) =>
+            rpcMethod(init) !== "agentContext.set" &&
+            !rpcMethod(init).startsWith("review."),
         ),
       ).toHaveLength(1),
     );

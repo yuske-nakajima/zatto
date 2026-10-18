@@ -6,6 +6,8 @@ import { createCommands } from "./commands/index.js";
 import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
 import { RealtimeHub } from "./realtime.js";
+import { registerReviewAttachmentRoute } from "./review-attachment-route.js";
+import { ReviewStore } from "./review-store.js";
 import { registerRpcRoute } from "./rpc-route.js";
 import type { Session, SessionStore } from "./session.js";
 import { registerStaticRoutes } from "./static-routes.js";
@@ -20,6 +22,7 @@ type CreateAppOptions = {
   pickDirectory?: PickDirectory;
   onSessionChanged?: (session: Session) => Promise<void> | void;
   agentContextStore?: AgentContextStore;
+  reviewStore?: ReviewStore;
   serverIdentity?: {
     instanceId: string;
     protocolVersion: number;
@@ -43,17 +46,21 @@ export async function createApp(
 
   const agentContextStore =
     options.agentContextStore ?? new AgentContextStore();
+  const reviewStore =
+    options.reviewStore ?? new ReviewStore("", async () => undefined);
   registerRpcRoute(
     app,
     createCommands({
       ...options,
       agentContextStore,
+      reviewStore,
       realtimeHub,
       logError: (error, message) => app.log.error(error, message),
     }),
   );
 
   registerViewRoutes(app, options.sessionStore);
+  registerReviewAttachmentRoute(app, reviewStore);
 
   app.setErrorHandler((error, _request, reply) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

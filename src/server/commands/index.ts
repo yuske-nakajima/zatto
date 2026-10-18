@@ -1,6 +1,7 @@
 import { APP_NAME, APP_VERSION } from "../../meta.js";
 import type { RpcMethod, RpcResult } from "../../shared/rpc-contract.js";
 import { SessionExchangeValidationError } from "../../shared/session-exchange.js";
+import { ReviewAttachmentError, ReviewNotFoundError } from "../review-store.js";
 import { SessionImportValidationError } from "../session-import.js";
 import { WorkspaceError } from "../workspace-state.js";
 import {
@@ -12,6 +13,7 @@ import { CommandError, domainError } from "./errors.js";
 import { markdownCommands } from "./markdown.js";
 import { pickerCommands } from "./pickers.js";
 import { queryCommands } from "./queries.js";
+import { reviewCommands } from "./review.js";
 import { type CommandHandlers, sessionCommands } from "./session.js";
 import { commandParams, isCommandMethod } from "./validation.js";
 import { workspaceCommands } from "./workspaces.js";
@@ -38,6 +40,7 @@ export function createCommands(options: CommandOptions): Commands {
     ...workspaceCommands(context),
     ...queryCommands(context),
     ...markdownCommands(context),
+    ...reviewCommands(context),
   };
   return {
     has: isCommandMethod,
@@ -75,6 +78,10 @@ export function createCommands(options: CommandOptions): Commands {
         return result as RpcResult<M>;
       } catch (error) {
         if (error instanceof CommandError) throw error;
+        if (error instanceof ReviewNotFoundError)
+          throw domainError("notFound", error.message);
+        if (error instanceof ReviewAttachmentError)
+          throw new CommandError(-32602, error.message);
         if (error instanceof WorkspaceError)
           throw domainError("workspace", error.message);
         if (

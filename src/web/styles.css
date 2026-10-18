@@ -1,4 +1,7 @@
 :root {
+  --font-sans: Inter, "BIZ UDPGothic", Arial, sans-serif;
+  --font-mono:
+    "Geist Mono", "BIZ UDPGothic", "SFMono-Regular", Consolas, monospace;
   --color-amber-500: #f59e0b;
   --color-black: #000000;
   --color-emerald-500: #10b981;
@@ -65,7 +68,7 @@
   --radius-full: 9999px;
   color: var(--color-text-primary);
   background: var(--color-bg-app);
-  font-family: "DM Sans", Inter, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -238,7 +241,7 @@ button:focus-visible,
   color: var(--color-text-primary);
   border-radius: var(--radius-full);
   background: var(--color-border-default);
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   text-align: center;
 }
@@ -633,7 +636,7 @@ button:focus-visible,
 
 .entry-copy strong {
   color: var(--color-text-primary);
-  font-family: Inter, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
 }
@@ -646,7 +649,7 @@ button:focus-visible,
 .entry-copy small {
   margin-top: var(--spacing-2);
   color: var(--color-text-secondary);
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 
@@ -744,7 +747,7 @@ button:focus-visible,
 
 .directory-toggle strong {
   overflow: hidden;
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -860,7 +863,7 @@ button:focus-visible,
   margin: 0;
   overflow-x: auto;
   color: var(--color-text-primary);
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   scrollbar-width: thin;
   text-overflow: clip;
@@ -1040,7 +1043,7 @@ button:focus-visible,
 .empty-viewer small {
   margin-top: var(--spacing-8);
   color: var(--color-text-tertiary);
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 

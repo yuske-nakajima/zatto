@@ -133,7 +133,7 @@ describe("Markdown viewing", () => {
     ).rejects.toBeInstanceOf(SessionImportValidationError);
   });
 
-  test("閲覧ルートはMarkdownを変換し、HTMLと相対アセットは従来どおり返す", async () => {
+  test("閲覧ルートはMarkdownを変換し、リンク先のMarkdownもタスクを操作できない形で変換する", async () => {
     const store = new SessionStore(path.join(dir, "session.json"));
     await store.load();
     const note = path.join(dir, "note.md");
@@ -150,8 +150,12 @@ describe("Markdown viewing", () => {
     const raw = await app.inject({ url: `/f/${pageEntry.id}/` });
     expect(raw.body).toBe("<title>Page</title><p>raw</p>");
     const linked = await app.inject({ url: `/f/${noteEntry.id}/other.md` });
-    expect(linked.headers["content-type"]).toBe("text/plain; charset=utf-8");
-    expect(linked.body).toBe("# Other\n");
+    expect(linked.headers["content-type"]).toBe("text/html; charset=utf-8");
+    expect(linked.body).toContain("<h1>Other</h1>");
+    await writeFile(path.join(dir, "other.md"), "- [ ] 未完了\n");
+    const tasks = await app.inject({ url: `/f/${noteEntry.id}/other.md` });
+    expect(tasks.body).toContain("disabled");
+    expect(tasks.body).not.toContain("data-task=");
     await app.close();
   });
 });

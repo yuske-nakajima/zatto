@@ -184,8 +184,14 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 | `remove_files` | 任意のワークスペースからファイルを外す。ディスク上のファイルは削除しない |
 | `create_workspace` | 選択を変えずに空のワークスペースを作成する |
 | `update_files` | 任意のワークスペースで星とList上の位置（1始まり）を変更する |
+| `list_review_threads` / `reply_review_thread` / `create_review_thread` / `resolve_review_thread` | ファイルのコメントのスレッドを読む・返信する・作る・解決する |
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
+
+LLMと資料について話すときは、ビューアーで**Ask an LLM to review**を押してコピーした依頼文（動いているzattoのCLIを絶対パスで示します）をLLMの会話に貼るか、LLMに`zatto review <file> --session <id>`をバックグラウンドで実行してもらいます。
+コマンドは待ち続け、ファイルにコメントや返信を書くたびに1行のJSONを出力します。LLMは`zatto review reply`または`reply_review_thread`で答えます。
+zattoが再起動しても再接続し、**Finish review**で終了します。ファイル一覧には未解決と解決済みのスレッド数を表示します。
+コメントには画像を貼り付けかドロップで添付でき、LLMにはローカルのファイルパスで渡します。
 
 MCPクライアントへ一度登録して使います。
 グローバルにインストールした場合は、`npx -y @yuske-nakajima/zatto`の代わりに`zatto`を使います。
@@ -395,7 +401,7 @@ curl "http://127.0.0.1:${ZATTO_PORT}/rpc" \
 ファイルを変更・エクスポートする操作は、対象のワークスペースを`workspaceId`で必ず指定します。選択中でないワークスペースも指定できます。
 ネイティブ選択、インポート、停止ではサーバーの`instanceId`を引数で照合します。
 成功結果は`result`、失敗は`error.code`と`error.data`へ返します。
-全23メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
+全32メソッドの引数、結果、エラーと呼び出し例は、アプリ内DocsのAPIページで確認できます。
 
 ネイティブフォルダー選択ではserver.healthのinstanceIdを使います。プレースホルダーを置き換えて実行してください。
 

@@ -208,6 +208,8 @@ describe("directory picker", () => {
 
 function nonContextRequests(fetchMock: ReturnType<typeof vi.fn>) {
   return fetchMock.mock.calls.filter(
-    ([, init]) => rpcMethod(init) !== "agentContext.set",
+    ([, init]) =>
+      rpcMethod(init) !== "agentContext.set" &&
+      !rpcMethod(init).startsWith("review."),
   );
 }

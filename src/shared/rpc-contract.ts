@@ -6,6 +6,16 @@ import type {
   WorkspaceSummary,
 } from "../server/workspace-state.js";
 import type { AgentContext, BrowserAgentContext } from "./agent-context.js";
+import type {
+  ActiveReview,
+  ReviewAttachmentUpload,
+  ReviewAuthor,
+  ReviewClient,
+  ReviewEvent,
+  ReviewStates,
+  ReviewThread,
+  TextAnchor,
+} from "./review.js";
 import type { SearchResponse } from "./search.js";
 import type { SessionExchange } from "./session-exchange.js";
 
@@ -133,6 +143,59 @@ export interface RpcMethods {
       revision: string;
     };
     result: { revision: string };
+  };
+  "review.list": {
+    params: WorkspaceParams & { entryId: string };
+    result: { threads: ReviewThread[] };
+  };
+  "review.create": {
+    params: WorkspaceParams & {
+      entryId: string;
+      anchor: TextAnchor | null;
+      author: ReviewAuthor;
+      body: string;
+      attachments?: ReviewAttachmentUpload[];
+    };
+    result: ReviewThread;
+  };
+  "review.reply": {
+    params: RequestContext & {
+      threadId: string;
+      author: ReviewAuthor;
+      body: string;
+      attachments?: ReviewAttachmentUpload[];
+      /** Edited text the thread moves to; must appear once in the file. */
+      quote?: string;
+    };
+    result: ReviewThread;
+  };
+  "review.resolve": {
+    params: RequestContext & { threadId: string; resolved: boolean };
+    result: ReviewThread;
+  };
+  "review.request": {
+    params: WorkspaceParams & { entryId: string };
+    result: { text: string };
+  };
+  "review.start": {
+    params: WorkspaceParams & {
+      entryId: string;
+      session: string;
+      client?: ReviewClient;
+    };
+    result: ActiveReview;
+  };
+  "review.finish": {
+    params: RequestContext & { reviewId: string };
+    result: null;
+  };
+  "review.states": {
+    params: RequestContext;
+    result: ReviewStates;
+  };
+  "review.take": {
+    params: RequestContext & { session: string; entryId?: string };
+    result: { events: ReviewEvent[] };
   };
   "search.query": {
     params: RequestContext & { query: string };

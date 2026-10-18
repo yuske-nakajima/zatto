@@ -74,6 +74,63 @@ function search(value: unknown): boolean {
     )
   );
 }
+function reviewThread(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.id) &&
+    text(value.entryId) &&
+    boolean(value.resolved) &&
+    number(value.createdAt) &&
+    (value.anchor === null ||
+      (object(value.anchor) &&
+        text(value.anchor.exact) &&
+        text(value.anchor.prefix) &&
+        text(value.anchor.suffix))) &&
+    list(
+      value.comments,
+      (comment) =>
+        object(comment) &&
+        text(comment.id) &&
+        text(comment.body) &&
+        number(comment.createdAt) &&
+        (comment.attachments === undefined ||
+          list(
+            comment.attachments,
+            (attachment) =>
+              object(attachment) &&
+              text(attachment.id) &&
+              text(attachment.name) &&
+              text(attachment.type) &&
+              text(attachment.path),
+          )) &&
+        object(comment.author) &&
+        (comment.author.kind === "user" || comment.author.kind === "llm"),
+    )
+  );
+}
+function counts(value: unknown): boolean {
+  return object(value) && Object.values(value).every(number);
+}
+function activeReview(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.id) &&
+    text(value.entryId) &&
+    text(value.workspaceId) &&
+    text(value.session) &&
+    number(value.createdAt)
+  );
+}
+function reviewEvent(value: unknown): boolean {
+  return (
+    object(value) &&
+    text(value.reviewId) &&
+    text(value.entryId) &&
+    text(value.workspaceId) &&
+    ((value.kind === "comment" && text(value.threadId)) ||
+      value.kind === "finished")
+  );
+}
 /** Validates command results before clients consume untrusted wire data. */
 export function isRpcResult<M extends RpcMethod>(
   method: M,
@@ -145,6 +202,41 @@ export function isRpcResult<M extends RpcMethod>(
       }
     case "search.query":
       return search(value);
+    case "review.list":
+      return object(value) && list(value.threads, reviewThread);
+    case "review.create":
+    case "review.reply":
+    case "review.resolve":
+      return reviewThread(value);
+    case "review.start":
+      return activeReview(value);
+    case "review.request":
+      return object(value) && text(value.text);
+    case "review.states":
+      return (
+        object(value) &&
+        list(value.reviews, activeReview) &&
+        counts(value.openThreadCounts) &&
+        counts(value.resolvedThreadCounts) &&
+        object(value.deliveries) &&
+        Object.values(value.deliveries).every(
+          (delivery) =>
+            object(delivery) &&
+            text(delivery.entryId) &&
+            (delivery.status === "undelivered" ||
+              delivery.status === "delivered") &&
+            number(delivery.since),
+        ) &&
+        object(value.latestReplies) &&
+        Object.values(value.latestReplies).every(
+          (reply) =>
+            object(reply) && text(reply.entryId) && number(reply.createdAt),
+        )
+      );
+    case "review.take":
+      return object(value) && list(value.events, reviewEvent);
+    case "review.finish":
+      return value === null;
     case "markdown.setTask":
       return object(value) && text(value.revision);
     case "session.setFavorite":

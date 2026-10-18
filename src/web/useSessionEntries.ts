@@ -10,6 +10,7 @@ import {
   pushSelectedEntryIdInUrl,
   readSelectedEntryIdFromUrl,
 } from "./selected-entry-url.js";
+import { publishServerMessage } from "./server-messages.js";
 import {
   parseServerMessage,
   resolveSelectedEntryIdAndUpdateUrl,
@@ -131,6 +132,7 @@ export function useSessionEntries(
     if (!message) {
       return;
     }
+    publishServerMessage(message);
     if (message.type === "session:update") {
       socketUpdateRef.current += 1;
       const workspaceChanged = applyWorkspace(message);

@@ -11,7 +11,10 @@ export const MARKDOWN_VENDOR_ASSETS = {
 
 const TASK_ATTRIBUTE = /\sdata-task="\d+"/g;
 
-function renderBody(source: string): { body: string; editableTasks: boolean } {
+function renderBody(
+  source: string,
+  allowTasks: boolean,
+): { body: string; editableTasks: boolean } {
   const rendered: boolean[] = [];
   const markdown = new Marked({
     gfm: true,
@@ -29,6 +32,7 @@ function renderBody(source: string): { body: string; editableTasks: boolean } {
   const body = markdown.parse(source, { async: false });
   const tasks = findMarkdownTasks(source);
   const editableTasks =
+    allowTasks &&
     rendered.length > 0 &&
     rendered.length === tasks.length &&
     tasks.every((task, index) => task.checked === rendered[index]);
@@ -45,11 +49,16 @@ function renderBody(source: string): { body: string; editableTasks: boolean } {
  * Task checkboxes stay disabled unless each one maps to a task marker found in the source.
  * @param source - Markdown text
  * @param title - Display title
+ * @param options - `editableTasks: false` keeps every checkbox disabled, for pages that are not the selected entry
  * @returns Complete HTML document
  * @throws Never
  */
-export function renderMarkdownDocument(source: string, title: string): string {
-  const { body, editableTasks } = renderBody(source);
+export function renderMarkdownDocument(
+  source: string,
+  title: string,
+  { editableTasks: allowTasks = true }: { editableTasks?: boolean } = {},
+): string {
+  const { body, editableTasks } = renderBody(source, allowTasks);
   const hasDiagram = body.includes('<pre class="mermaid">');
   return `<!doctype html>
 <html>
