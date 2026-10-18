@@ -19,6 +19,7 @@ import {
   type TextAnchor,
 } from "../shared/review.js";
 import { BubbleIcon, ResolvedBubbleIcon } from "./BubbleIcon.js";
+import type { LinkedPage } from "./linked-page.js";
 import { createTextAnchor, locateTextAnchor } from "./review-anchor.js";
 import { renderReplyMarkdown } from "./review-markdown.js";
 import type { ReviewThreads } from "./useReviewThreads.js";
@@ -40,6 +41,11 @@ interface ReviewLayerProps {
   canvasRef: RefObject<HTMLDivElement | null>;
   frameKey: string;
   review: ReviewThreads;
+  /** Set while the preview shows an unregistered page reached by a link; selecting text then offers registration. */
+  onCommentOnLinkedPage?: (anchor: TextAnchor) => void;
+  /** Text to open a new comment on once the frame loads, carried over from a page registered for commenting. */
+  pendingAnchor?: TextAnchor | null;
+  onPendingAnchorUsed?: () => void;
 }
 
 interface Position {
@@ -76,6 +82,9 @@ export function ReviewLayer({
   canvasRef,
   frameKey,
   review,
+  onCommentOnLinkedPage,
+  pendingAnchor,
+  onPendingAnchorUsed,
 }: ReviewLayerProps) {
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
@@ -133,6 +142,19 @@ export function ReviewLayer({
       registry.delete(ACTIVE_HIGHLIGHT);
     };
   }, [frameDocument, located, review.threads, activeThreadId]);
+
+  const openPendingComment = useEffectEvent((document: Document) => {
+    if (!pendingAnchor) return;
+    setPopover({
+      kind: "compose",
+      anchor: pendingAnchor,
+      range: locateTextAnchor(document, pendingAnchor),
+    });
+    onPendingAnchorUsed?.();
+  });
+  useEffect(() => {
+    if (frameDocument && pendingAnchor) openPendingComment(frameDocument);
+  }, [frameDocument, pendingAnchor]);
 
   const handleSelection = useEffectEvent(() => {
     if (!frameDocument) return;
@@ -346,16 +368,25 @@ export function ReviewLayer({
           type="button"
           className="review-selection-button"
           style={selectionPosition}
-          data-status-description="Comment on the selected text."
-          onClick={() =>
+          data-status-description={
+            onCommentOnLinkedPage
+              ? "Register this page in zatto and comment on the selected text."
+              : "Comment on the selected text."
+          }
+          onClick={() => {
+            if (onCommentOnLinkedPage) {
+              onCommentOnLinkedPage(popover.anchor);
+              setPopover(null);
+              return;
+            }
             setPopover({
               kind: "compose",
               anchor: popover.anchor,
               range: popover.range,
-            })
-          }
+            });
+          }}
         >
-          Comment
+          {onCommentOnLinkedPage ? "Register and comment" : "Comment"}
         </button>
       )}
       {popover?.kind === "compose" && placement && (
@@ -414,89 +445,91 @@ export function ReviewLayer({
           <img src={attachmentUrl(zoomed)} alt={zoomed.name} />
         </div>
       )}
-      <div className="review-panel-anchor">
-        {isPanelOpen && (
-          <section className="review-panel" aria-label="Comments">
-            <header>
-              <strong>Comments</strong>
-              <button
-                type="button"
-                className="review-text-button"
-                data-status-description="Comment on the whole document."
-                onClick={() =>
-                  setPopover({ kind: "compose", anchor: null, range: null })
-                }
-              >
-                Comment on document
-              </button>
-            </header>
-            {review.threads.length === 0 ? (
-              <p className="review-empty">
-                Select text in the preview to comment.
-              </p>
-            ) : (
-              <ol>
-                {review.threads.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={
-                        item.resolved
-                          ? "review-panel-item review-panel-item--resolved"
-                          : "review-panel-item"
-                      }
-                      onClick={() => {
-                        const range = located.get(item.id);
-                        range?.startContainer.parentElement?.scrollIntoView({
-                          block: "center",
-                        });
-                        setPopover({ kind: "thread", threadId: item.id });
-                      }}
-                    >
-                      <span className="review-panel-quote">
-                        {item.anchor ? item.anchor.exact : "Whole document"}
-                      </span>
-                      <span className="review-panel-body">
-                        {item.comments[0]?.body}
-                      </span>
-                      <span className="review-panel-meta">
-                        {item.comments.length}{" "}
-                        {item.comments.length === 1 ? "comment" : "comments"}
-                        {item.resolved ? " · Resolved" : ""}
-                        {item.anchor && !located.has(item.id)
-                          ? " · Text not found"
-                          : ""}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
+      {!onCommentOnLinkedPage && (
+        <div className="review-panel-anchor">
+          {isPanelOpen && (
+            <section className="review-panel" aria-label="Comments">
+              <header>
+                <strong>Comments</strong>
+                <button
+                  type="button"
+                  className="review-text-button"
+                  data-status-description="Comment on the whole document."
+                  onClick={() =>
+                    setPopover({ kind: "compose", anchor: null, range: null })
+                  }
+                >
+                  Comment on document
+                </button>
+              </header>
+              {review.threads.length === 0 ? (
+                <p className="review-empty">
+                  Select text in the preview to comment.
+                </p>
+              ) : (
+                <ol>
+                  {review.threads.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className={
+                          item.resolved
+                            ? "review-panel-item review-panel-item--resolved"
+                            : "review-panel-item"
+                        }
+                        onClick={() => {
+                          const range = located.get(item.id);
+                          range?.startContainer.parentElement?.scrollIntoView({
+                            block: "center",
+                          });
+                          setPopover({ kind: "thread", threadId: item.id });
+                        }}
+                      >
+                        <span className="review-panel-quote">
+                          {item.anchor ? item.anchor.exact : "Whole document"}
+                        </span>
+                        <span className="review-panel-body">
+                          {item.comments[0]?.body}
+                        </span>
+                        <span className="review-panel-meta">
+                          {item.comments.length}{" "}
+                          {item.comments.length === 1 ? "comment" : "comments"}
+                          {item.resolved ? " · Resolved" : ""}
+                          {item.anchor && !located.has(item.id)
+                            ? " · Text not found"
+                            : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
+          <button
+            type="button"
+            className="review-panel-toggle"
+            aria-expanded={isPanelOpen}
+            aria-label={`Comments, ${openCount} open, ${resolvedCount} resolved`}
+            data-status-description="Show the comment threads of this file."
+            onClick={() => setIsPanelOpen((open) => !open)}
+          >
+            Comments
+            {openCount > 0 && (
+              <span className="review-count review-count--open">
+                <BubbleIcon size={11} />
+                {openCount}
+              </span>
             )}
-          </section>
-        )}
-        <button
-          type="button"
-          className="review-panel-toggle"
-          aria-expanded={isPanelOpen}
-          aria-label={`Comments, ${openCount} open, ${resolvedCount} resolved`}
-          data-status-description="Show the comment threads of this file."
-          onClick={() => setIsPanelOpen((open) => !open)}
-        >
-          Comments
-          {openCount > 0 && (
-            <span className="review-count review-count--open">
-              <BubbleIcon size={11} />
-              {openCount}
-            </span>
-          )}
-          {resolvedCount > 0 && (
-            <span className="review-count review-count--resolved">
-              <ResolvedBubbleIcon size={11} />
-              {resolvedCount}
-            </span>
-          )}
-        </button>
-      </div>
+            {resolvedCount > 0 && (
+              <span className="review-count review-count--resolved">
+                <ResolvedBubbleIcon size={11} />
+                {resolvedCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -505,11 +538,47 @@ export function ReviewLayer({
  * Shows whether the file is under review in the viewer header: the reviewing session with Finish review,
  * or a button that copies a request for an LLM conversation.
  */
-export function ReviewStatus({ review }: { review: ReviewThreads }) {
+export function ReviewStatus({
+  review,
+  linkedPage,
+  entryTitle,
+  onRegisterLinkedPage,
+  onBack,
+}: {
+  review: ReviewThreads;
+  /** Set while the preview shows an unregistered page reached by a link. */
+  linkedPage?: LinkedPage | null;
+  entryTitle: string;
+  onRegisterLinkedPage: () => void;
+  onBack: () => void;
+}) {
   const { requestText } = review;
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
+  if (linkedPage)
+    return (
+      <div className="review-banner review-banner--linked" role="status">
+        <span title={linkedPage.absPath}>Not in zatto</span>
+        {linkedPage.isViewable && (
+          <button
+            type="button"
+            data-status-description="Register this page in zatto so you can comment on it."
+            onClick={onRegisterLinkedPage}
+          >
+            Register
+          </button>
+        )}
+        <button
+          type="button"
+          className="review-banner-secondary"
+          data-status-description="Return to the selected file."
+          onClick={onBack}
+        >
+          Back to {entryTitle}
+        </button>
+      </div>
+    );
   return review.activeReview ? (
     <div className="review-banner" role="status">
       <span>In review with {review.activeReview.session}</span>

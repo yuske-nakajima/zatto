@@ -69,6 +69,18 @@ export async function readAsset(
   }
 
   const body = await readFile(resolvedPath);
+  // リンクで開いた Markdown も登録ファイルと同じ見た目で表示する。タスクの切り替えは選択中のファイルにだけ許す
+  if (viewableKind(resolvedPath) === "markdown")
+    return {
+      body: Buffer.from(
+        renderMarkdownDocument(
+          body.toString("utf8"),
+          path.basename(resolvedPath),
+          { editableTasks: false },
+        ),
+      ),
+      contentType: "text/html; charset=utf-8",
+    };
   const contentType = contentTypeForPath(resolvedPath);
 
   return { body, contentType };

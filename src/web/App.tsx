@@ -1,3 +1,4 @@
+import { rpcCall } from "../shared/rpc-client.js";
 import { AppViewer } from "./AppViewer.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
@@ -98,6 +99,19 @@ export function App() {
     docs.hide();
     selectSessionEntry(id);
     search.showPreview();
+  }
+  async function registerLinkedFile(absPath: string): Promise<string | null> {
+    if (!workspaceId) return null;
+    try {
+      const result = await rpcCall("session.add", {
+        workspaceId,
+        paths: [absPath],
+      });
+      return result.resolved[0]?.id ?? null;
+    } catch {
+      setErrorMessage("Could not register the page.");
+      return null;
+    }
   }
   function selectSearchResult(
     id: string,
@@ -200,6 +214,11 @@ export function App() {
               onRemove={removeEntry}
               onPickFiles={pickerControl.openFiles}
               review={review}
+              linkedPages={{
+                entries,
+                open: selectEntry,
+                register: registerLinkedFile,
+              }}
             />
           }
         />

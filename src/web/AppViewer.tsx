@@ -6,7 +6,7 @@ import type { SearchResultLocator } from "./search-navigation-url.js";
 import type { DocsNavigation } from "./useDocsNavigation.js";
 import type { ReviewThreads } from "./useReviewThreads.js";
 import type { SearchNavigation } from "./useSearchNavigation.js";
-import { Viewer } from "./Viewer.js";
+import { type LinkedPages, Viewer } from "./Viewer.js";
 
 interface AppViewerProps {
   search: SearchNavigation;
@@ -24,6 +24,7 @@ interface AppViewerProps {
   onRemove: (id: string) => void;
   onPickFiles: () => void;
   review: ReviewThreads;
+  linkedPages: LinkedPages;
 }
 
 export function AppViewer({
@@ -42,6 +43,7 @@ export function AppViewer({
   onRemove,
   onPickFiles,
   review,
+  linkedPages,
 }: AppViewerProps) {
   return (
     <>
@@ -69,6 +71,7 @@ export function AppViewer({
         onRemove={onRemove}
         onPickFiles={onPickFiles}
         review={review}
+        linkedPages={linkedPages}
       />
     </>
   );

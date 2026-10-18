@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { ReviewStates, ReviewThread } from "../src/shared/review.js";
 import { App } from "../src/web/App.js";
+import { ReviewStatus } from "../src/web/ReviewLayer.js";
 import { rpcFixture } from "./rpc-client-fixture.js";
 
 const entries: Entry[] = [
@@ -381,5 +382,39 @@ describe("レビューのコメント", () => {
       await screen.findByRole("dialog", { name: "Comment thread" }),
     ).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "New comment" })).toBeNull();
+  });
+
+  test("リンクで移った未登録のページでは、登録と戻る操作を出す", () => {
+    const onRegister = vi.fn();
+    const onBack = vi.fn();
+    const review = { activeReview: null, requestText: null } as never;
+    const { rerender } = render(
+      <ReviewStatus
+        review={review}
+        linkedPage={{ absPath: "/work/sub/child.md", isViewable: true }}
+        entryTitle="Plan"
+        onRegisterLinkedPage={onRegister}
+        onBack={onBack}
+      />,
+    );
+
+    expect(screen.getByText("Not in zatto").getAttribute("title")).toBe(
+      "/work/sub/child.md",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to Plan" }));
+    expect(onRegister).toHaveBeenCalledOnce();
+    expect(onBack).toHaveBeenCalledOnce();
+
+    rerender(
+      <ReviewStatus
+        review={review}
+        linkedPage={{ absPath: "/work/sub/image.png", isViewable: false }}
+        entryTitle="Plan"
+        onRegisterLinkedPage={onRegister}
+        onBack={onBack}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Register" })).toBeNull();
   });
 });

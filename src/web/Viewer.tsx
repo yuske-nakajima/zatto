@@ -1,7 +1,9 @@
-import { type RefObject, useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import type { Entry } from "../server/session.js";
+import type { TextAnchor } from "../shared/review.js";
 import type { CopyFeedback } from "./copy-feedback.js";
 import { Icon } from "./icons.js";
+import { type LinkedPage, linkedPageOf } from "./linked-page.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
 import { ReviewLayer, ReviewStatus } from "./ReviewLayer.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
@@ -26,6 +28,16 @@ interface ViewerProps {
   onRemove: (id: string) => void;
   onPickFiles: () => void;
   review?: ReviewThreads;
+  /** Registered entries and actions for pages the preview reaches through links. */
+  linkedPages?: LinkedPages;
+}
+
+/** Lets the viewer open or register a file the preview reached through a link. */
+export interface LinkedPages {
+  entries: readonly Entry[];
+  open: (entryId: string) => void;
+  /** Registers a file in the displayed workspace; resolves to its entry ID, or null when it failed. */
+  register: (absPath: string) => Promise<string | null>;
 }
 
 export function Viewer({
@@ -45,8 +57,46 @@ export function Viewer({
   onRemove,
   onPickFiles,
   review,
+  linkedPages,
 }: ViewerProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [linkedPage, setLinkedPage] = useState<LinkedPage | null>(null);
+  const [pendingComment, setPendingComment] = useState<{
+    entryId: string;
+    anchor: TextAnchor;
+  } | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ファイルの切り替えと再読み込みでリンク先の表示を解く
+  useEffect(() => {
+    setLinkedPage(null);
+  }, [selectedEntry?.id, reloadVersion]);
+
+  /** Opens a registered linked page as the selected entry; otherwise remembers it to offer registration. */
+  function detectLinkedPage(): void {
+    let next: LinkedPage | null = null;
+    try {
+      const pathname = iframeRef.current?.contentWindow?.location.pathname;
+      if (pathname && selectedEntry)
+        next = linkedPageOf(selectedEntry, pathname);
+    } catch {
+      next = null;
+    }
+    const registered =
+      next &&
+      linkedPages?.entries.find((entry) => entry.absPath === next.absPath);
+    if (registered) {
+      linkedPages?.open(registered.id);
+      return;
+    }
+    setLinkedPage(next);
+  }
+
+  async function registerLinkedPage(anchor?: TextAnchor): Promise<void> {
+    if (!linkedPage || !linkedPages) return;
+    const entryId = await linkedPages.register(linkedPage.absPath);
+    if (!entryId) return;
+    if (anchor) setPendingComment({ entryId, anchor });
+    linkedPages.open(entryId);
+  }
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
   const pathTooltipId = useId();
   const { iframeRef, revealTarget, clearRevealedTarget } =
@@ -111,7 +161,19 @@ export function Viewer({
           )}
         </div>
         <div className="viewer-actions">
-          {selectedEntry && review && <ReviewStatus review={review} />}
+          {selectedEntry && review && (
+            <ReviewStatus
+              review={review}
+              linkedPage={linkedPage}
+              entryTitle={selectedEntry.title}
+              onRegisterLinkedPage={() => void registerLinkedPage()}
+              onBack={() =>
+                iframeRef.current?.contentWindow?.location.replace(
+                  `/f/${encodeURIComponent(selectedEntry.id)}/`,
+                )
+              }
+            />
+          )}
           {copyFeedback && (
             <span
               className={`copy-feedback copy-feedback--${copyFeedback.kind}`}
@@ -171,7 +233,22 @@ export function Viewer({
             iframeRef={iframeRef}
             canvasRef={canvasRef}
             frameKey={`${selectedEntry.id}:${reloadVersion}`}
-            review={review}
+            review={
+              linkedPage
+                ? { ...review, threads: [], activeReview: null }
+                : review
+            }
+            onCommentOnLinkedPage={
+              linkedPage?.isViewable
+                ? (anchor) => void registerLinkedPage(anchor)
+                : undefined
+            }
+            pendingAnchor={
+              pendingComment?.entryId === selectedEntry.id
+                ? pendingComment.anchor
+                : null
+            }
+            onPendingAnchorUsed={() => setPendingComment(null)}
           />
         )}
         {selectedEntry ? (
@@ -181,6 +258,7 @@ export function Viewer({
             title={`${selectedEntry.title} preview`}
             src={`/f/${encodeURIComponent(selectedEntry.id)}/`}
             onLoad={() => {
+              detectLinkedPage();
               if (!pageSearch.isOpen) revealTarget();
               pageSearch.handleFrameLoad();
             }}
