@@ -494,4 +494,74 @@ describe("review threads", () => {
       ),
     ).rejects.toMatchObject({ code: 1001 });
   });
+
+  test("LLM の返信は、コメントした文章がファイルから消えていると差し戻し、--quote の文章へ付け直す", async () => {
+    const { commands, entry } = await fixture();
+    const LLM = { kind: "llm", session: "s" } as const;
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: ANCHOR,
+        author: USER,
+        body: "言い換えて",
+      },
+      [],
+    );
+    await writeFile(
+      entry.absPath,
+      "# Plan\n\n**書き換えた**本文の説明です。\n\n説明と説明\n",
+    );
+    // 本文は書き換えた文の中に残っているため、差し戻さない
+    await expect(
+      commands.execute(
+        "review.reply",
+        { threadId: thread.id, author: LLM, body: "まだ残っています" },
+        [],
+      ),
+    ).resolves.toMatchObject({ anchor: ANCHOR });
+    await writeFile(
+      entry.absPath,
+      "# Plan\n\n**書き換えた**説明です。\n\n説明と説明\n",
+    );
+
+    const reply = (body: string, quote?: string) =>
+      commands.execute(
+        "review.reply",
+        {
+          threadId: thread.id,
+          author: LLM,
+          body,
+          ...(quote === undefined ? {} : { quote }),
+        },
+        [],
+      );
+    await expect(reply("直しました")).rejects.toMatchObject({
+      code: 1007,
+      message: expect.stringContaining("--quote"),
+    });
+    await expect(reply("直しました", "存在しない文")).rejects.toMatchObject({
+      code: 1007,
+    });
+    await expect(reply("直しました", "説明")).rejects.toMatchObject({
+      code: 1007,
+      message: expect.stringContaining("more than once"),
+    });
+    await expect(
+      commands.execute(
+        "review.reply",
+        { threadId: thread.id, author: USER, body: "人の返信は通る" },
+        [],
+      ),
+    ).resolves.toBeTruthy();
+
+    const moved = await reply("直しました", "書き換えた説明です");
+    expect(moved.anchor).toEqual({
+      exact: "書き換えた説明です",
+      prefix: "",
+      suffix: "",
+    });
+    expect(moved.comments.at(-1)?.body).toBe("直しました");
+  });
 });

@@ -114,6 +114,10 @@ export interface ReviewStates {
   deliveries: Record<string, ReviewDelivery>;
 }
 
+/** How an LLM keeps a thread on text it edited, shared by the MCP tools, the CLI output, and the copied request. */
+export const REVIEW_REANCHOR_GUIDE =
+  "If you edit the commented text, reply with the edited passage as --quote (quote in reply_review_thread) so the thread follows it; quote a short passage from one paragraph that appears once in the document. A reply without it is refused while the commented text is missing from the file.";
+
 /** What an LLM may use in replies and how it reads images, shared by the MCP tools and the copied request. */
 export const REVIEW_REPLY_GUIDE =
   "Replies render as Markdown limited to paragraphs, bulleted and numbered lists, bold, inline code, fenced code blocks, and links; other syntax shows as plain text. Images the user attached are listed in each comment's attachments with a local path you can read.";
@@ -133,6 +137,7 @@ export function reviewRequestText(cli: string, filePath: string): string {
     "Each JSON line it prints is a comment I wrote. Read the document and any attached images, then answer in that thread with:",
     `${cli} review reply <thread-id> "<reply>" --session <id>`,
     "Keep the command running until it exits when I finish the review. If you cannot read output while a command is running, add --once and run it again after each reply.",
+    REVIEW_REANCHOR_GUIDE,
     REVIEW_REPLY_GUIDE,
   ].join("\n");
 }

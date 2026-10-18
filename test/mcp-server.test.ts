@@ -495,7 +495,10 @@ async function fixture() {
     c: path.join(dir, "c.html"),
   };
   for (const [name, file] of Object.entries(files))
-    await writeFile(file, `<title>${name.toUpperCase()}</title>`);
+    await writeFile(
+      file,
+      `<title>${name.toUpperCase()}</title><p>${name.toUpperCase()}</p>`,
+    );
   const connection: () => Promise<ZattoConnection> = async () => ({
     baseUrl: BASE_URL,
     async call(method, params) {

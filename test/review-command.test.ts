@@ -15,6 +15,7 @@ import {
 import { SessionStore } from "../src/server/session.js";
 import { zattoCliCommand } from "../src/server/zatto-cli.js";
 import type { ActiveReview } from "../src/shared/review.js";
+import { REVIEW_REANCHOR_GUIDE } from "../src/shared/review.js";
 import { rpc } from "./rpc-server-helper.js";
 
 let dir: string;
@@ -129,6 +130,7 @@ describe("zatto review", () => {
       event: "comment",
       file: { path: file, title: "計画" },
       threads: [{ id: first.id, anchor: { exact: "閲覧URL" } }],
+      hint: REVIEW_REANCHOR_GUIDE,
     });
     expect(
       replied.threads[0].comments.map(
@@ -261,6 +263,20 @@ describe("zatto review", () => {
     expect(
       parseReviewArgs(["reply", "t1", "本文", "--session", "s"]),
     ).toMatchObject({ mode: "reply", threadId: "t1", body: "本文" });
+    expect(
+      parseReviewArgs([
+        "reply",
+        "t1",
+        "本文",
+        "--quote",
+        "直した文",
+        "--session",
+        "s",
+      ]),
+    ).toMatchObject({ mode: "reply", quote: "直した文" });
+    expect(() =>
+      parseReviewArgs(["a.md", "--quote", "x", "--session", "s"]),
+    ).toThrow("reply でだけ");
     expect(() => parseReviewArgs(["a.md"])).toThrow("--session");
     expect(() => parseReviewArgs(["--session", "s"])).toThrow(
       "レビューするファイルを指定",

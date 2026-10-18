@@ -163,6 +163,8 @@ export interface RpcMethods {
       author: ReviewAuthor;
       body: string;
       attachments?: ReviewAttachmentUpload[];
+      /** Edited text the thread moves to; must appear once in the file. */
+      quote?: string;
     };
     result: ReviewThread;
   };

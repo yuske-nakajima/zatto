@@ -3,10 +3,11 @@ import { DEFAULT_PORT } from "../server/index.js";
 import type { ServerRecord } from "../server/runtime.js";
 import { zattoCliCommand } from "../server/zatto-cli.js";
 import type { ServerMessage } from "../shared/protocol.js";
-import type {
-  ReviewAuthor,
-  ReviewEvent,
-  ReviewThread,
+import {
+  REVIEW_REANCHOR_GUIDE,
+  type ReviewAuthor,
+  type ReviewEvent,
+  type ReviewThread,
 } from "../shared/review.js";
 import { rpcCall } from "../shared/rpc-client.js";
 import { serverUrl } from "./server-api.js";
@@ -18,13 +19,14 @@ import {
 
 export const REVIEW_USAGE = `Usage:
   zatto review <file> --session <id> [--once] [--no-open] [--port <n>]
-  zatto review reply <thread-id> <body> --session <id> [--port <n>]
+  zatto review reply <thread-id> <body> --session <id> [--quote <text>] [--port <n>]
 
 <file> を選択中のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
 ユーザーがコメント・返信を書くたびに、内容を 1 行の JSON で出力します。Finish review で終了します。
 zatto が停止・再起動しても、起動を待って自動で再接続します。Ctrl+C で終了します。
 --once は、最初に届いた内容を読みやすい形で表示して終了します。
-reply は、スレッドにこのセッションとして返信します。`;
+reply は、スレッドにこのセッションとして返信します。
+コメントされた文章を直したときは、--quote に直した後の文章を指定すると、スレッドがその文章へ移ります。`;
 
 const RECONNECT_INTERVAL_MS = 2_000;
 
@@ -43,6 +45,7 @@ type ReviewOptions =
       mode: "reply";
       threadId: string;
       body: string;
+      quote?: string;
       session: string;
       port: number;
     };
@@ -61,6 +64,8 @@ export interface ReviewReport {
   event: "comment" | "finished";
   file: { id: string; title: string; path: string };
   threads: ReviewThread[];
+  /** How to keep the thread on text the LLM edits, repeated so long conversations do not lose it. */
+  hint: string;
 }
 
 type Call = ReturnType<typeof rpc>;
@@ -92,6 +97,7 @@ export async function runReviewCommand(
         threadId: options.threadId,
         author: { kind: "llm", session: options.session },
         body: options.body,
+        ...(options.quote === undefined ? {} : { quote: options.quote }),
       });
       dependencies.stdout(`返信しました: thread ${options.threadId}`);
       return 0;
@@ -312,6 +318,7 @@ async function collectReports(
         event.kind === "finished"
           ? threads.filter((thread) => !thread.resolved)
           : threads.filter((thread) => thread.id === event.threadId),
+      hint: REVIEW_REANCHOR_GUIDE,
     });
   }
   return reports;
@@ -322,12 +329,19 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
   let port = DEFAULT_PORT;
   let once = false;
   let open = true;
+  let quote: string | undefined;
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--once") once = true;
     else if (arg === "--no-open") open = false;
-    else if (arg === "--session" || arg === "--port") {
+    else if (arg === "--quote") {
+      const value = args[index + 1];
+      if (value === undefined || !value.trim())
+        throw new Error("--quote には直した後の文章を指定してください");
+      quote = value;
+      index += 1;
+    } else if (arg === "--session" || arg === "--port") {
       const value = args[index + 1];
       if (!value || value.startsWith("--"))
         throw new Error(`${arg} の値を指定してください`);
@@ -349,8 +363,16 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       throw new Error(
         "reply にはスレッド ID と本文を 1 つずつ指定してください",
       );
-    return { mode: "reply", threadId, body, session, port };
+    return {
+      mode: "reply",
+      threadId,
+      body,
+      session,
+      port,
+      ...(quote === undefined ? {} : { quote }),
+    };
   }
+  if (quote !== undefined) throw new Error("--quote は reply でだけ使えます");
   if (!positionals[0])
     throw new Error("レビューするファイルを指定してください");
   if (positionals.length > 1)
@@ -403,6 +425,7 @@ export function formatReports(
     "",
     `返信: ${cli} review reply <thread-id> "<本文>" --session ${session}`,
     "返信の本文は、段落・箇条書き・太字・インラインコード・コードブロック・リンクの Markdown で書けます。",
+    "コメントされた文章を直したら、返信に --quote で直した後の文章（資料の中で 1 回だけ出てくる短い一節）を付けてください。付けずに返信すると、元の文章が資料にない間は差し戻されます。",
   );
   return lines.join("\n");
 }

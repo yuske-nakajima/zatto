@@ -158,12 +158,16 @@ export class ReviewStore {
     });
   }
 
-  /** @throws ReviewAttachmentError for an invalid attachment */
+  /**
+   * Adds a comment, moving the thread to a new anchor when one is given.
+   * @throws ReviewAttachmentError for an invalid attachment
+   */
   async reply(
     threadId: string,
     author: ReviewAuthor,
     body: string,
     uploads: ReviewAttachmentUpload[] = [],
+    anchor?: TextAnchor,
   ): Promise<ReviewThread> {
     if (!this.threads.some((thread) => thread.id === threadId))
       throw new ReviewNotFoundError("Thread not found.");
@@ -171,6 +175,7 @@ export class ReviewStore {
     try {
       return await this.update(threadId, (thread) => ({
         ...thread,
+        anchor: anchor ?? thread.anchor,
         comments: [
           ...thread.comments,
           comment(author, body, Date.now(), attachments),

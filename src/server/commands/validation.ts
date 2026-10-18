@@ -113,6 +113,12 @@ const schemas = {
     author,
     body: reviewBody,
     attachments,
+    quote: z
+      .string()
+      .trim()
+      .min(1)
+      .max(REVIEW_LIMITS.anchorTextLength)
+      .optional(),
   }),
   "review.resolve": z.strictObject({
     ...guards,
