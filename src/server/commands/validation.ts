@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { REVIEW_LIMITS } from "../../shared/review.js";
+import { REVIEW_IMAGE_TYPES, REVIEW_LIMITS } from "../../shared/review.js";
 import type { RpcMethod, RpcParams } from "../../shared/rpc-contract.js";
 import { CommandError } from "./errors.js";
 
@@ -23,6 +23,16 @@ const anchor = z
     suffix: context,
   })
   .nullable();
+const attachments = z
+  .array(
+    z.strictObject({
+      name: z.string().trim().min(1).max(200),
+      type: z.enum(REVIEW_IMAGE_TYPES),
+      data: z.base64(),
+    }),
+  )
+  .max(REVIEW_LIMITS.attachmentsPerComment)
+  .optional();
 const guards = { instanceId };
 const schemas = {
   "server.health": empty,
@@ -95,20 +105,15 @@ const schemas = {
     anchor,
     author,
     body: reviewBody,
+    attachments,
   }),
   "review.reply": z.strictObject({
     ...guards,
     threadId: id,
     author,
     body: reviewBody,
+    attachments,
   }),
-  "review.edit": z.strictObject({
-    ...guards,
-    threadId: id,
-    commentId: id,
-    body: reviewBody,
-  }),
-  "review.delete": z.strictObject({ ...guards, threadId: id, commentId: id }),
   "review.resolve": z.strictObject({
     ...guards,
     threadId: id,

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import type { ServerMessage } from "../shared/protocol.js";
 import type {
   ActiveReview,
+  ReviewAttachmentUpload,
+  ReviewDelivery,
+  ReviewStates,
   ReviewThread,
   TextAnchor,
 } from "../shared/review.js";
@@ -15,12 +18,21 @@ export interface ReviewThreads {
   threads: ReviewThread[];
   /** The review of the selected entry, if the user is reviewing it with an LLM session. */
   activeReview: ActiveReview | null;
-  /** Entries under review and unresolved thread counts, for labelling the file list. */
+  /** Entries under review and thread counts, for labelling the file list. */
   fileStates: ReviewFileStates;
-  create: (anchor: TextAnchor | null, body: string) => Promise<boolean>;
-  reply: (threadId: string, body: string) => Promise<boolean>;
-  edit: (threadId: string, commentId: string, body: string) => Promise<boolean>;
-  remove: (threadId: string, commentId: string) => Promise<boolean>;
+  /** Whether the reviewing session took the user's latest comment, by thread ID. */
+  deliveries: Readonly<Record<string, ReviewDelivery>>;
+  /** Resolves to the new thread's ID, or null when the comment was not saved. */
+  create: (
+    anchor: TextAnchor | null,
+    body: string,
+    attachments: ReviewAttachmentUpload[],
+  ) => Promise<string | null>;
+  reply: (
+    threadId: string,
+    body: string,
+    attachments: ReviewAttachmentUpload[],
+  ) => Promise<boolean>;
   resolve: (threadId: string, resolved: boolean) => Promise<boolean>;
   finishReview: (reviewId: string) => Promise<boolean>;
 }
@@ -38,10 +50,12 @@ export function useReviewThreads(
   reportError: (message: string) => void,
 ): ReviewThreads {
   const [threads, setThreads] = useState<ReviewThread[]>([]);
-  const [reviews, setReviews] = useState<ActiveReview[]>([]);
-  const [openThreadCounts, setOpenThreadCounts] = useState<
-    Record<string, number>
-  >({});
+  const [states, setStates] = useState<ReviewStates>({
+    reviews: [],
+    openThreadCounts: {},
+    resolvedThreadCounts: {},
+    deliveries: {},
+  });
 
   const refresh = useCallback(async () => {
     if (!workspaceId || !entryId) {
@@ -67,8 +81,8 @@ export function useReviewThreads(
     )
       void refresh();
     if (message.type === "review:states") {
-      setReviews(message.reviews);
-      setOpenThreadCounts(message.openThreadCounts);
+      const { type: _type, ...next } = message;
+      setStates(next);
     }
   });
 
@@ -81,10 +95,7 @@ export function useReviewThreads(
   useEffect(() => {
     if (!isSessionLoaded) return;
     void rpcCall("review.states", {})
-      .then((result) => {
-        setReviews(result.reviews);
-        setOpenThreadCounts(result.openThreadCounts);
-      })
+      .then(setStates)
       .catch(() => undefined);
   }, [isSessionLoaded]);
 
@@ -102,38 +113,43 @@ export function useReviewThreads(
     }
   }
 
+  const { reviews } = states;
   return {
     threads,
     activeReview: reviews.find((review) => review.entryId === entryId) ?? null,
     fileStates: {
       reviewing: new Set(reviews.map((review) => review.entryId)),
-      openThreadCounts,
+      openThreadCounts: states.openThreadCounts,
+      resolvedThreadCounts: states.resolvedThreadCounts,
     },
-    create: (anchor, body) =>
-      run(async () => {
+    deliveries: states.deliveries,
+    create: async (anchor, body, attachments) => {
+      let threadId: string | null = null;
+      await run(async () => {
         if (!workspaceId || !entryId) throw new Error("No entry");
-        await rpcCall("review.create", {
-          workspaceId,
-          entryId,
-          anchor,
-          author: USER,
-          body,
-        });
-      }, "Could not add the comment."),
-    reply: (threadId, body) =>
+        threadId = (
+          await rpcCall("review.create", {
+            workspaceId,
+            entryId,
+            anchor,
+            author: USER,
+            body,
+            ...(attachments.length ? { attachments } : {}),
+          })
+        ).id;
+      }, "Could not add the comment.");
+      return threadId;
+    },
+    reply: (threadId, body, attachments) =>
       run(
-        () => rpcCall("review.reply", { threadId, author: USER, body }),
+        () =>
+          rpcCall("review.reply", {
+            threadId,
+            author: USER,
+            body,
+            ...(attachments.length ? { attachments } : {}),
+          }),
         "Could not add the reply.",
-      ),
-    edit: (threadId, commentId, body) =>
-      run(
-        () => rpcCall("review.edit", { threadId, commentId, body }),
-        "Could not update the comment.",
-      ),
-    remove: (threadId, commentId) =>
-      run(
-        () => rpcCall("review.delete", { threadId, commentId }),
-        "Could not delete the comment.",
       ),
     resolve: (threadId, resolved) =>
       run(

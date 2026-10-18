@@ -107,7 +107,7 @@
 
 .search-line-number {
   color: var(--color-text-tertiary);
-  font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 

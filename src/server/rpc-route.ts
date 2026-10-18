@@ -21,6 +21,8 @@ export function registerRpcRoute(
   app.post(
     "/rpc",
     {
+      // 画像の添付（base64、1 コメント最大 4 枚×5MB）を受け付けるため既定の 1MiB から広げる
+      bodyLimit: 32 * 1024 * 1024,
       onRequest: async (request, reply) => {
         if (
           !/^application\/json(?:\s*;|$)/i.test(

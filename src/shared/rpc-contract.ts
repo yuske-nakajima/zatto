@@ -8,6 +8,7 @@ import type {
 import type { AgentContext, BrowserAgentContext } from "./agent-context.js";
 import type {
   ActiveReview,
+  ReviewAttachmentUpload,
   ReviewAuthor,
   ReviewEvent,
   ReviewStates,
@@ -152,6 +153,7 @@ export interface RpcMethods {
       anchor: TextAnchor | null;
       author: ReviewAuthor;
       body: string;
+      attachments?: ReviewAttachmentUpload[];
     };
     result: ReviewThread;
   };
@@ -160,20 +162,9 @@ export interface RpcMethods {
       threadId: string;
       author: ReviewAuthor;
       body: string;
+      attachments?: ReviewAttachmentUpload[];
     };
     result: ReviewThread;
-  };
-  "review.edit": {
-    params: RequestContext & {
-      threadId: string;
-      commentId: string;
-      body: string;
-    };
-    result: ReviewThread;
-  };
-  "review.delete": {
-    params: RequestContext & { threadId: string; commentId: string };
-    result: ReviewThread | null;
   };
   "review.resolve": {
     params: RequestContext & { threadId: string; resolved: boolean };

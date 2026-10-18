@@ -208,7 +208,8 @@ the copied request into an LLM conversation, or have the LLM run
 `zatto review <file> --session <id>` in the background. The command keeps waiting and
 prints one JSON line each time you comment or reply on the file; the LLM answers with
 `zatto review reply` or `reply_review_thread`. It reconnects when zatto restarts, and
-**Finish review** ends it. The file list shows unresolved thread counts.
+**Finish review** ends it. The file list shows unresolved and resolved thread counts.
+Comments can carry pasted or dropped images, which reach the LLM as local file paths.
 
 Register the server once in your MCP client. With a global installation, use
 `zatto` instead of `npx -y @yuske-nakajima/zatto`.
@@ -425,7 +426,7 @@ IDs atomically without deleting files. Operations that change or export files re
 `workspaceId`, the target workspace, which need not be the selected one. Native pickers,
 import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 33 methods, parameters, results and errors.
+The built-in API documentation describes all 31 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 

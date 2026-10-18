@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type {
   ActiveReview,
   ReviewAuthor,
+  ReviewDelivery,
   ReviewEvent,
   ReviewStates,
   ReviewThread,
@@ -20,6 +21,8 @@ export function reviewCommands(context: CommandContext) {
   const store = context.reviewStore;
   const reviews = new Map<string, ActiveReview>();
   const queues = new Map<string, ReviewEvent[]>();
+  /** Thread ID → whether the reviewing session took the user's latest comment. */
+  const deliveries = new Map<string, ReviewDelivery>();
 
   function requireEntry(workspaceId: string, entryId: string): void {
     const exists = context.sessionStore
@@ -31,7 +34,12 @@ export function reviewCommands(context: CommandContext) {
     return {
       reviews: [...reviews.values()],
       openThreadCounts: store.openCounts(),
+      resolvedThreadCounts: store.resolvedCounts(),
+      deliveries: Object.fromEntries(deliveries),
     };
+  }
+  function forgetDeliveries(entryId: string): void {
+    for (const thread of store.list(entryId)) deliveries.delete(thread.id);
   }
   function threadUpdated(entryId: string): void {
     context.realtimeHub.broadcast({ type: "review:update", entryId });
@@ -50,7 +58,9 @@ export function reviewCommands(context: CommandContext) {
   /** Forwards comments the user writes on a file under review to the reviewing session. */
   function notifyComment(thread: ReviewThread, author: ReviewAuthor): void {
     const review = reviewOf(thread.entryId);
+    if (author.kind !== "user") deliveries.delete(thread.id);
     if (author.kind !== "user" || !review) return;
+    deliveries.set(thread.id, { status: "undelivered", since: Date.now() });
     enqueue(review.session, {
       kind: "comment",
       reviewId: review.id,
@@ -65,32 +75,35 @@ export function reviewCommands(context: CommandContext) {
       requireEntry(workspaceId, entryId);
       return { threads: store.list(entryId) };
     },
-    "review.create": async ({ workspaceId, entryId, anchor, author, body }) => {
+    "review.create": async ({
+      workspaceId,
+      entryId,
+      anchor,
+      author,
+      body,
+      attachments,
+    }) => {
       requireEntry(workspaceId, entryId);
-      const thread = await store.create(entryId, anchor, author, body);
+      const thread = await store.create(
+        entryId,
+        anchor,
+        author,
+        body,
+        attachments,
+      );
+      notifyComment(thread, author);
       threadUpdated(entryId);
+      return thread;
+    },
+    "review.reply": async ({ threadId, author, body, attachments }) => {
+      const thread = await store.reply(threadId, author, body, attachments);
       notifyComment(thread, author);
-      return thread;
-    },
-    "review.reply": async ({ threadId, author, body }) => {
-      const thread = await store.reply(threadId, author, body);
       threadUpdated(thread.entryId);
-      notifyComment(thread, author);
-      return thread;
-    },
-    "review.edit": async ({ threadId, commentId, body }) => {
-      const thread = await store.editComment(threadId, commentId, body);
-      threadUpdated(thread.entryId);
-      return thread;
-    },
-    "review.delete": async ({ threadId, commentId }) => {
-      const entryId = store.get(threadId)?.entryId;
-      const thread = await store.deleteComment(threadId, commentId);
-      if (entryId) threadUpdated(entryId);
       return thread;
     },
     "review.resolve": async ({ threadId, resolved }) => {
       const thread = await store.setResolved(threadId, resolved);
+      if (resolved) deliveries.delete(threadId);
       threadUpdated(thread.entryId);
       return thread;
     },
@@ -98,7 +111,10 @@ export function reviewCommands(context: CommandContext) {
       requireEntry(workspaceId, entryId);
       const current = reviewOf(entryId);
       if (current?.session === session) return current;
-      if (current) reviews.delete(current.id);
+      if (current) {
+        reviews.delete(current.id);
+        forgetDeliveries(entryId);
+      }
       const review: ActiveReview = {
         id: nanoid(),
         entryId,
@@ -114,6 +130,7 @@ export function reviewCommands(context: CommandContext) {
       const review = reviews.get(reviewId);
       if (!review) throw domainError("notFound", "Review not found.");
       reviews.delete(reviewId);
+      forgetDeliveries(review.entryId);
       enqueue(review.session, {
         kind: "finished",
         reviewId,
@@ -132,6 +149,14 @@ export function reviewCommands(context: CommandContext) {
       const rest = queued.filter((event) => !events.includes(event));
       if (rest.length) queues.set(session, rest);
       else queues.delete(session);
+      const taken = events.flatMap((event) =>
+        event.kind === "comment" && deliveries.has(event.threadId)
+          ? [event.threadId]
+          : [],
+      );
+      for (const threadId of taken)
+        deliveries.set(threadId, { status: "delivered", since: Date.now() });
+      if (taken.length) statesChanged();
       return { events };
     },
   } satisfies Pick<
@@ -139,8 +164,6 @@ export function reviewCommands(context: CommandContext) {
     | "review.list"
     | "review.create"
     | "review.reply"
-    | "review.edit"
-    | "review.delete"
     | "review.resolve"
     | "review.start"
     | "review.finish"

@@ -79,7 +79,7 @@ describe("built-in documentation design", () => {
 
   test("Docsヘッダー、ナビゲーション、キャンバスの寸法と状態を定義する", () => {
     expect(docsStyles).toMatch(
-      /\.docs-view\s*{[^}]*font-family:\s*Inter, Arial, sans-serif/s,
+      /\.docs-view\s*{[^}]*font-family:\s*var\(--font-sans\)/s,
     );
     expect(docsStyles).toMatch(
       /\.docs-header\s*{[^}]*padding:\s*14px 24px 10px[^}]*border-bottom:\s*1px solid var\(--color-border-subtle\)/s,

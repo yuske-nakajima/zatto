@@ -1,12 +1,14 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AgentContextStore } from "../src/server/agent-context.js";
+import { createApp } from "../src/server/app.js";
 import { createCommands } from "../src/server/commands/index.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { ReviewStore } from "../src/server/review-store.js";
 import { SessionStore } from "../src/server/session.js";
+import { reviewAttachmentFileName } from "../src/shared/review.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -18,6 +20,9 @@ afterEach(async () => {
 
 const USER = { kind: "user" } as const;
 const ANCHOR = { exact: "本文", prefix: "前の", suffix: "の後" };
+/** 1x1 の透明な PNG */
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 async function fixture() {
   const store = new SessionStore(path.join(dir, "session.json"));
@@ -41,7 +46,7 @@ async function fixture() {
 }
 
 describe("review threads", () => {
-  test("スレッドの作成・返信・編集・解決を保存し、再読込しても残る", async () => {
+  test("スレッドの作成・返信・解決を保存し、再読込しても残る", async () => {
     const { store, reviewPath, commands, broadcast, entry } = await fixture();
     const thread = await commands.execute(
       "review.create",
@@ -61,12 +66,6 @@ describe("review threads", () => {
         author: { kind: "llm", session: "zatto:a99c" },
         body: "追記しました",
       },
-      [],
-    );
-    const firstId = thread.comments[0]?.id ?? "";
-    await commands.execute(
-      "review.edit",
-      { threadId: thread.id, commentId: firstId, body: "例を 1 つ" },
       [],
     );
     await commands.execute(
@@ -91,44 +90,21 @@ describe("review threads", () => {
         anchor: ANCHOR,
         resolved: true,
         comments: [
-          { author: USER, body: "例を 1 つ", updatedAt: expect.any(Number) },
+          { author: USER, body: "具体例は？" },
           { author: { kind: "llm", session: "zatto:a99c" } },
         ],
       },
     ]);
   });
 
-  test("最後のコメントを消すとスレッドも消え、不明な対象は種類付きで拒否する", async () => {
+  test("コメントの編集・削除の操作はなく、不明な対象は種類付きで拒否する", async () => {
     const { commands, entry } = await fixture();
-    const thread = await commands.execute(
-      "review.create",
-      {
-        workspaceId: "default",
-        entryId: entry.id,
-        anchor: null,
-        author: USER,
-        body: "全体について",
-      },
-      [],
-    );
-    await expect(
-      commands.execute(
-        "review.delete",
-        { threadId: thread.id, commentId: thread.comments[0]?.id ?? "" },
-        [],
-      ),
-    ).resolves.toBeNull();
-    await expect(
-      commands.execute(
-        "review.list",
-        { workspaceId: "default", entryId: entry.id },
-        [],
-      ),
-    ).resolves.toEqual({ threads: [] });
+    expect(commands.has("review.edit")).toBe(false);
+    expect(commands.has("review.delete")).toBe(false);
     await expect(
       commands.execute(
         "review.reply",
-        { threadId: thread.id, author: USER, body: "x" },
+        { threadId: "missing", author: USER, body: "x" },
         [],
       ),
     ).rejects.toMatchObject({ code: 1001, data: { kind: "notFound" } });
@@ -191,6 +167,8 @@ describe("review threads", () => {
     await expect(commands.execute("review.states", {}, [])).resolves.toEqual({
       reviews: [],
       openThreadCounts: {},
+      resolvedThreadCounts: {},
+      deliveries: {},
     });
     const before = await commands.execute(
       "review.create",
@@ -277,6 +255,8 @@ describe("review threads", () => {
     await expect(commands.execute("review.states", {}, [])).resolves.toEqual({
       reviews: [],
       openThreadCounts: { [entry.id]: 2 },
+      resolvedThreadCounts: {},
+      deliveries: {},
     });
     await commands.execute(
       "review.resolve",
@@ -285,12 +265,123 @@ describe("review threads", () => {
     );
     await expect(
       commands.execute("review.states", {}, []),
-    ).resolves.toMatchObject({ openThreadCounts: { [entry.id]: 1 } });
+    ).resolves.toMatchObject({
+      openThreadCounts: { [entry.id]: 1 },
+      resolvedThreadCounts: { [entry.id]: 1 },
+    });
     expect(broadcast).toHaveBeenCalledWith({
       type: "review:states",
       reviews: [],
       openThreadCounts: { [entry.id]: 1 },
+      resolvedThreadCounts: { [entry.id]: 1 },
+      deliveries: {},
     });
+  });
+
+  test("ユーザーのコメントは、受け取られるまで未配信、受け取られたら配信済みになり、LLM の返信で消える", async () => {
+    const { commands, entry } = await fixture();
+    await commands.execute(
+      "review.start",
+      { workspaceId: "default", entryId: entry.id, session: "s" },
+      [],
+    );
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: null,
+        author: USER,
+        body: "質問",
+      },
+      [],
+    );
+    const deliveryOf = async () =>
+      (await commands.execute("review.states", {}, [])).deliveries[thread.id];
+
+    await expect(deliveryOf()).resolves.toEqual({
+      status: "undelivered",
+      since: expect.any(Number),
+    });
+    await commands.execute("review.take", { session: "s" }, []);
+    await expect(deliveryOf()).resolves.toMatchObject({ status: "delivered" });
+    await commands.execute(
+      "review.reply",
+      {
+        threadId: thread.id,
+        author: { kind: "llm", session: "s" },
+        body: "答え",
+      },
+      [],
+    );
+    await expect(deliveryOf()).resolves.toBeUndefined();
+  });
+
+  test("コメントに添付した画像を保存し、検証に通らない画像は拒否し、エントリを外すと消す", async () => {
+    const { store, commands, entry } = await fixture();
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: null,
+        author: USER,
+        body: "この部分",
+        attachments: [{ name: "shot.png", type: "image/png", data: PNG }],
+      },
+      [],
+    );
+    const attachment = thread.comments[0]?.attachments?.[0];
+    expect(attachment).toMatchObject({ name: "shot.png", type: "image/png" });
+    expect(path.dirname(attachment?.path ?? "")).toBe(
+      path.join(dir, "review-attachments"),
+    );
+    expect(await readFile(attachment?.path ?? "")).toEqual(
+      Buffer.from(PNG, "base64"),
+    );
+
+    const create = (attachments: unknown) =>
+      commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          anchor: null,
+          author: USER,
+          body: "x",
+          attachments,
+        } as never,
+        [],
+      );
+    await expect(
+      create([
+        {
+          name: "fake.png",
+          type: "image/png",
+          data: Buffer.from("not an image").toString("base64"),
+        },
+      ]),
+    ).rejects.toMatchObject({ code: -32602 });
+    await expect(
+      create(
+        Array.from({ length: 5 }, () => ({
+          name: "a.png",
+          type: "image/png",
+          data: PNG,
+        })),
+      ),
+    ).rejects.toMatchObject({ code: -32602 });
+    await expect(
+      create([{ name: "a.svg", type: "image/svg+xml", data: PNG }]),
+    ).rejects.toMatchObject({ code: -32602 });
+
+    await commands.execute(
+      "session.remove",
+      { workspaceId: "default", id: entry.id },
+      [],
+    );
+    expect(store.hasEntry(entry.id)).toBe(false);
+    await expect(access(attachment?.path ?? "")).rejects.toThrow();
   });
 
   test("ファイルを指定した受け取りは、そのファイルのイベントだけを取り出す", async () => {
@@ -351,5 +442,30 @@ describe("review threads", () => {
         [],
       ),
     ).rejects.toMatchObject({ code: -32602 });
+  });
+
+  test("添付画像は保存済みのコメントにあるものだけを配信する", async () => {
+    const store = new SessionStore(path.join(dir, "session.json"));
+    await store.load();
+    const reviewStore = new ReviewStore(path.join(dir, "threads.json"));
+    const file = path.join(dir, "plan.md");
+    await writeFile(file, "# Plan\n");
+    const [entry] = await store.addEntries([file]);
+    const thread = await reviewStore.create(entry.id, null, USER, "x", [
+      { name: "a.png", type: "image/png", data: PNG },
+    ]);
+    const attachment = thread.comments[0]?.attachments?.[0];
+    if (!attachment) throw new Error("No attachment");
+    const app = await createApp({ sessionStore: store, reviewStore });
+
+    const found = await app.inject(
+      `/review-attachments/${reviewAttachmentFileName(attachment)}`,
+    );
+    expect(found.statusCode).toBe(200);
+    expect(found.headers["content-type"]).toBe("image/png");
+    expect(found.rawPayload).toEqual(Buffer.from(PNG, "base64"));
+    const missing = await app.inject("/review-attachments/other.png");
+    expect(missing.statusCode).toBe(404);
+    await app.close();
   });
 });

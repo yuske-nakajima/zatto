@@ -93,10 +93,23 @@ function reviewThread(value: unknown): boolean {
         text(comment.id) &&
         text(comment.body) &&
         number(comment.createdAt) &&
+        (comment.attachments === undefined ||
+          list(
+            comment.attachments,
+            (attachment) =>
+              object(attachment) &&
+              text(attachment.id) &&
+              text(attachment.name) &&
+              text(attachment.type) &&
+              text(attachment.path),
+          )) &&
         object(comment.author) &&
         (comment.author.kind === "user" || comment.author.kind === "llm"),
     )
   );
+}
+function counts(value: unknown): boolean {
+  return object(value) && Object.values(value).every(number);
 }
 function activeReview(value: unknown): boolean {
   return (
@@ -193,19 +206,24 @@ export function isRpcResult<M extends RpcMethod>(
       return object(value) && list(value.threads, reviewThread);
     case "review.create":
     case "review.reply":
-    case "review.edit":
     case "review.resolve":
       return reviewThread(value);
-    case "review.delete":
-      return value === null || reviewThread(value);
     case "review.start":
       return activeReview(value);
     case "review.states":
       return (
         object(value) &&
         list(value.reviews, activeReview) &&
-        object(value.openThreadCounts) &&
-        Object.values(value.openThreadCounts).every(number)
+        counts(value.openThreadCounts) &&
+        counts(value.resolvedThreadCounts) &&
+        object(value.deliveries) &&
+        Object.values(value.deliveries).every(
+          (delivery) =>
+            object(delivery) &&
+            (delivery.status === "undelivered" ||
+              delivery.status === "delivered") &&
+            number(delivery.since),
+        )
       );
     case "review.take":
       return object(value) && list(value.events, reviewEvent);

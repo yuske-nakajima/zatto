@@ -8,12 +8,50 @@ export interface TextAnchor {
 /** Who wrote a comment; LLM comments record the session that wrote them when known. */
 export type ReviewAuthor = { kind: "user" } | { kind: "llm"; session?: string };
 
+/** An image attached to a comment; path is where the server stored it, for LLMs that read local files. */
+export interface ReviewAttachment {
+  id: string;
+  name: string;
+  type: ReviewImageType;
+  path: string;
+}
+
+/** An image sent with a new comment, encoded as base64. */
+export interface ReviewAttachmentUpload {
+  name: string;
+  type: ReviewImageType;
+  data: string;
+}
+
+export const REVIEW_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+export type ReviewImageType = (typeof REVIEW_IMAGE_TYPES)[number];
+
+const REVIEW_IMAGE_EXTENSIONS: Record<ReviewImageType, string> = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+/** File name an attachment is stored and served under. */
+export function reviewAttachmentFileName(attachment: {
+  id: string;
+  type: ReviewImageType;
+}): string {
+  return `${attachment.id}${REVIEW_IMAGE_EXTENSIONS[attachment.type]}`;
+}
+
 export interface ReviewComment {
   id: string;
   author: ReviewAuthor;
   body: string;
   createdAt: number;
-  updatedAt?: number;
+  attachments?: ReviewAttachment[];
 }
 
 /** A discussion attached to text in a document, or to the whole document when the anchor is null. */
@@ -55,10 +93,27 @@ export const REVIEW_LIMITS = {
   bodyLength: 10_000,
   anchorTextLength: 2_000,
   contextLength: 64,
+  attachmentsPerComment: 4,
+  attachmentBytes: 5 * 1024 * 1024,
 } as const;
 
-/** Files under review and the number of unresolved threads per entry. */
+/**
+ * Whether the reviewing session has taken the user's latest comment on a thread.
+ * Present only for threads under review whose latest comment is the user's.
+ */
+export interface ReviewDelivery {
+  status: "undelivered" | "delivered";
+  since: number;
+}
+
+/** Files under review, thread counts per entry, and delivery of comments awaiting an LLM reply. */
 export interface ReviewStates {
   reviews: ActiveReview[];
   openThreadCounts: Record<string, number>;
+  resolvedThreadCounts: Record<string, number>;
+  deliveries: Record<string, ReviewDelivery>;
 }
+
+/** What an LLM may use in replies and how it reads images, shared by the MCP tools and the copied request. */
+export const REVIEW_REPLY_GUIDE =
+  "Replies render as Markdown limited to paragraphs, bulleted and numbered lists, bold, inline code, fenced code blocks, and links; other syntax shows as plain text. Images the user attached are listed in each comment's attachments with a local path you can read.";

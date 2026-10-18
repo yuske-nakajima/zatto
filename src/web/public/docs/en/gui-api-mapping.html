@@ -32,7 +32,7 @@
           <tr><td>Open a Docs page</td><td><code>GET /docs/*</code></td><td>Loads the selected locale and slug in a same-origin iframe without creating a session entry.</td></tr>
           <tr><td>Receive session or file changes</td><td><code>WS /ws</code></td><td>Updates the file panel, preview, and search state.</td></tr>
           <tr><td>Load comment threads</td><td><code>review.list</code> / <code>review.states</code></td><td>Loads the threads of the selected file, the files under review, and unresolved thread counts, following <code>review:update</code> and <code>review:states</code> events. The file list shows the count, marked In review while a file is under review.</td></tr>
-          <tr><td>Comment / Reply / Edit / Delete</td><td><code>review.create</code> / <code>review.reply</code> / <code>review.edit</code> / <code>review.delete</code></td><td>Saves the thread and refreshes the highlights.</td></tr>
+          <tr><td>Comment / Reply</td><td><code>review.create</code> / <code>review.reply</code></td><td>Saves the thread with pasted or dropped images and refreshes the highlights. Comments cannot be edited or deleted after sending.</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>Resolved threads are no longer highlighted.</td></tr>
           <tr><td>Ask an LLM to review</td><td>—</td><td>Copies a request to paste into an LLM conversation; it runs <code>zatto review</code> for the file, which calls <code>review.start</code>.</td></tr>
           <tr><td>Finish review</td><td><code>review.finish</code></td><td>Ends the review; the LLM session receives the open threads.</td></tr>

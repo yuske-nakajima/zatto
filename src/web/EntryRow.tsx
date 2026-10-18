@@ -1,6 +1,6 @@
 import { type DragEvent, useId, useState } from "react";
 import type { Entry } from "../server/session.js";
-import { BubbleIcon } from "./BubbleIcon.js";
+import { BubbleIcon, ResolvedBubbleIcon } from "./BubbleIcon.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { fileName } from "./file-panel-model.js";
 import { Icon } from "./icons.js";
@@ -44,7 +44,9 @@ export function EntryRow({
   onDrop,
 }: EntryRowProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const { isReviewing, openThreads } = useReviewFileState(entry.id);
+  const { isReviewing, openThreads, resolvedThreads } = useReviewFileState(
+    entry.id,
+  );
   const tooltipId = useId();
   const pathDescriptionId = `entry-path-${entry.id}`;
   const draggable = Boolean(onDragStart);
@@ -115,7 +117,7 @@ export function EntryRow({
         <span className="entry-copy">
           <strong data-tooltip={entry.title}>{entry.title}</strong>
           <small data-tooltip={entry.absPath}>{fileName(entry.absPath)}</small>
-          {(isReviewing || openThreads > 0) && (
+          {(isReviewing || openThreads > 0 || resolvedThreads > 0) && (
             <span
               className={
                 isReviewing
@@ -123,9 +125,21 @@ export function EntryRow({
                   : "entry-review-label"
               }
             >
-              <BubbleIcon size={11} />
-              {openThreads}
-              {isReviewing && " · In review"}
+              {openThreads > 0 && (
+                <span className="review-count review-count--open">
+                  <BubbleIcon size={11} />
+                  {openThreads}
+                  <span className="visually-hidden"> open</span>
+                </span>
+              )}
+              {resolvedThreads > 0 && (
+                <span className="review-count review-count--resolved">
+                  <ResolvedBubbleIcon size={11} />
+                  {resolvedThreads}
+                  <span className="visually-hidden"> resolved</span>
+                </span>
+              )}
+              {isReviewing && <span>In review</span>}
             </span>
           )}
           <span className="visually-hidden" id={pathDescriptionId}>

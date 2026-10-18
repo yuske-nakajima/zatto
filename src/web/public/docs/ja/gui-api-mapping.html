@@ -32,7 +32,7 @@
           <tr><td>Docsページを開く</td><td><code>GET /docs/*</code></td><td>セッションエントリを作らず、選択した言語とページを同一オリジンのiframeへ読み込みます。</td></tr>
           <tr><td>セッション・ファイル変更を受信</td><td><code>WS /ws</code></td><td>ファイルパネル、プレビュー、検索状態を更新します。</td></tr>
           <tr><td>コメントのスレッドを読み込む</td><td><code>review.list</code> / <code>review.states</code></td><td>選択中ファイルのスレッド、レビュー中のファイル、未解決のスレッド数を読み込み、<code>review:update</code>と<code>review:states</code>の通知に追従します。ファイル一覧にはスレッド数を表示し、レビュー中はIn reviewを付けます。</td></tr>
-          <tr><td>Comment / Reply / Edit / Delete</td><td><code>review.create</code> / <code>review.reply</code> / <code>review.edit</code> / <code>review.delete</code></td><td>スレッドを保存し、強調表示を更新します。</td></tr>
+          <tr><td>Comment / Reply</td><td><code>review.create</code> / <code>review.reply</code></td><td>貼り付けやドロップした画像と一緒にスレッドを保存し、強調表示を更新します。送信したコメントは編集・削除できません。</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>解決したスレッドは強調表示しません。</td></tr>
           <tr><td>Ask an LLM to review</td><td>—</td><td>LLMの会話に貼る依頼文をコピーします。貼られたLLMが<code>zatto review</code>を実行し、<code>review.start</code>を呼びます。</td></tr>
           <tr><td>Finish review</td><td><code>review.finish</code></td><td>レビューを終え、LLMのセッションが未解決のスレッドを受け取ります。</td></tr>

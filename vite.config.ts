@@ -10,7 +10,7 @@ const WEB_APP_ICON_NAMES = new Set([
   "zatto-icon-192.png",
 ]);
 
-// Markdown表示が読み込むテーマとMermaidを、通信なしで配信できるよう配布物へ複写する
+// Markdown表示が読み込むテーマとMermaidを通信なしで配信できるよう、同梱フォントのライセンスとあわせて配布物へ複写する
 const MARKDOWN_VENDOR_FILES = [
   [
     "github-markdown-css/github-markdown-light.css",
@@ -20,6 +20,9 @@ const MARKDOWN_VENDOR_FILES = [
   ["github-markdown-css/license", "github-markdown-css-LICENSE.txt"],
   ["mermaid/dist/mermaid.min.js", "mermaid.min.js"],
   ["mermaid/LICENSE", "mermaid-LICENSE.txt"],
+  ["@fontsource/inter/LICENSE", "inter-LICENSE.txt"],
+  ["@fontsource/geist-mono/LICENSE", "geist-mono-LICENSE.txt"],
+  ["@fontsource/biz-udpgothic/LICENSE", "biz-udpgothic-LICENSE.txt"],
 ] as const;
 
 function markdownVendorAssets(): Plugin {
@@ -40,6 +43,18 @@ function markdownVendorAssets(): Plugin {
   };
 }
 
+/** 同梱フォントは woff2 だけを配布する。woff は woff2 を読めないブラウザー向けの代替で、対象のブラウザーでは使われない */
+function woff2OnlyFonts(): Plugin {
+  return {
+    name: "zatto-woff2-only-fonts",
+    enforce: "pre",
+    transform(code, id) {
+      if (!/[\\/]@fontsource[\\/].+\.css$/.test(id)) return;
+      return code.replace(/,\s*url\([^)]+\.woff\) format\('woff'\)/g, "");
+    },
+  };
+}
+
 export default defineConfig({
   root: "src/web",
   define: {
@@ -49,7 +64,7 @@ export default defineConfig({
       ).version,
     ),
   },
-  plugins: [react(), markdownVendorAssets()],
+  plugins: [react(), woff2OnlyFonts(), markdownVendorAssets()],
   build: {
     outDir: "../../dist/web",
     emptyOutDir: true,

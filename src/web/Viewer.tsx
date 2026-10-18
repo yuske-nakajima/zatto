@@ -3,7 +3,7 @@ import type { Entry } from "../server/session.js";
 import type { CopyFeedback } from "./copy-feedback.js";
 import { Icon } from "./icons.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
-import { ReviewLayer } from "./ReviewLayer.js";
+import { ReviewLayer, ReviewStatus } from "./ReviewLayer.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { usePreviewPageSearch } from "./usePreviewPageSearch.js";
 import { usePreviewSearchTarget } from "./usePreviewSearchTarget.js";
@@ -111,6 +111,9 @@ export function Viewer({
           )}
         </div>
         <div className="viewer-actions">
+          {selectedEntry && review && (
+            <ReviewStatus filePath={selectedEntry.absPath} review={review} />
+          )}
           {copyFeedback && (
             <span
               className={`copy-feedback copy-feedback--${copyFeedback.kind}`}
@@ -167,7 +170,6 @@ export function Viewer({
         />
         {selectedEntry && review && (
           <ReviewLayer
-            filePath={selectedEntry.absPath}
             iframeRef={iframeRef}
             canvasRef={canvasRef}
             frameKey={`${selectedEntry.id}:${reloadVersion}`}

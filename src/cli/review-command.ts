@@ -388,13 +388,17 @@ export function formatReports(
           ? `対象の文章: ${JSON.stringify(thread.anchor.exact)}`
           : "対象: 資料全体",
       );
-      for (const comment of thread.comments)
+      for (const comment of thread.comments) {
         lines.push(`- ${authorLabel(comment.author)}: ${comment.body}`);
+        for (const attachment of comment.attachments ?? [])
+          lines.push(`  画像: ${attachment.path}`);
+      }
     }
   }
   lines.push(
     "",
     `返信: zatto review reply <thread-id> "<本文>" --session ${session}`,
+    "返信の本文は、段落・箇条書き・太字・インラインコード・コードブロック・リンクの Markdown で書けます。",
   );
   return lines.join("\n");
 }
