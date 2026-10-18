@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.2.0](https://github.com/yuske-nakajima/zatto/compare/v3.1.0...v3.2.0) (2026-10-18)
+
+
+### Features
+
+* **review:** LLMへの依頼文に動いているzattoのCLIを絶対パスで入れる ([463a952](https://github.com/yuske-nakajima/zatto/commit/463a95247abe8408596f76feeb73891d51a5d7ef)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** コメント・返信のたびにLLMのセッションへ届け、画面からレビューを始める ([fc5b5e4](https://github.com/yuske-nakajima/zatto/commit/fc5b5e4f3bf4eab5018da232f5ebd2918b216e99)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** コメントの表示を整え、画像の添付と配信状態を加える ([a67fb2c](https://github.com/yuske-nakajima/zatto/commit/a67fb2c5948931aa93a032ba8650571018d77b46)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** スレッドをチャットの吹き出しで表示し、返信した LLM をアバターで示す ([b0de57f](https://github.com/yuske-nakajima/zatto/commit/b0de57f2cbb8ee0d91647749bf9cb199f666f0d5)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** プレビューの文章にコメントのスレッドを立て、LLMと確認をやり取りする ([880302a](https://github.com/yuske-nakajima/zatto/commit/880302a3aefc39439dd0c56cb750351e3f490cee))
+* **review:** プレビューの文章にコメントのスレッドを立て、LLMと確認をやり取りする ([880ce6a](https://github.com/yuske-nakajima/zatto/commit/880ce6a3c03b8f61d1e42fc9230298546ab51186)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** やり取りの場所と LLM の動きを見失わないようにする ([b86494b](https://github.com/yuske-nakajima/zatto/commit/b86494b2e0e165caaa645779c4f20ae2a4cf7222)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** リンクで移った先のページを登録して選び直し、コメントできるようにする ([321a02a](https://github.com/yuske-nakajima/zatto/commit/321a02a9abab64469916076c91ea7cd892db4825)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** レビューを始めたときに、まだ答えていないスレッドをまとめて送る ([519dccc](https://github.com/yuske-nakajima/zatto/commit/519dccc78b9b624562229076c6c4fea105b47b45)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** 不明な LLM のアバターを「？」のない絵柄にする ([8069386](https://github.com/yuske-nakajima/zatto/commit/8069386f2c7a316069eb090faa1cd6c469325c13)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** 待機を常駐させ、LLMへの依頼をコピーで渡す ([65add5a](https://github.com/yuske-nakajima/zatto/commit/65add5a291e4074548a88f2a9b3aa6ff6718f328)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** 未読の返信の件数とファイルの一覧をステータスバーに出し、隠れたスレッドを既読にしない ([1eaadc9](https://github.com/yuske-nakajima/zatto/commit/1eaadc99d1dcfcaabd846954bde151ef4aa2edb0)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** 未読の返信をスレッドの単位で数える ([755d2ee](https://github.com/yuske-nakajima/zatto/commit/755d2eee5d0d797bcdf0bd1a1bbf72c04023ab6d)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+* **review:** 直した文章へスレッドを付け直し、付け直し忘れの返信を差し戻す ([f5f5d91](https://github.com/yuske-nakajima/zatto/commit/f5f5d919e32be7100ce83a68bda23aff9992a368)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+
+
+### Bug Fixes
+
+* **review:** 同じセッションでつなぎ直したときに、レビューのクライアントを補う ([5971993](https://github.com/yuske-nakajima/zatto/commit/5971993a190c63d2fae48de0cc37cc2444c91567)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
+
 ## [3.1.0](https://github.com/yuske-nakajima/zatto/compare/v3.0.0...v3.1.0) (2026-10-17)
 
 
