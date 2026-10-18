@@ -57,6 +57,7 @@
     "video:render": "pnpm run video:render:en && pnpm run video:render:ja",
     "video:render:en": "remotion render video/index.ts ZattoPv media/zatto-pv.mp4 --codec=h264 --crf=18 --muted --overwrite",
     "video:render:ja": "remotion render video/index.ts ZattoPvJa media/zatto-pv-ja.mp4 --codec=h264 --crf=18 --muted --overwrite",
+    "video:render:tour": "remotion render video/index.ts ZattoPvTour media/zatto-pv-tour.mp4 --codec=h264 --crf=18 --muted --overwrite && remotion render video/index.ts ZattoPvTourJa media/zatto-pv-tour-ja.mp4 --codec=h264 --crf=18 --muted --overwrite",
     "video:studio": "remotion studio video/index.ts",
     "verify:package": "pnpm run build && node scripts/verify-package.mjs"
   },

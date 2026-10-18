@@ -10,15 +10,17 @@ const rule = { borderBottom: `1px solid ${INK.line}`, paddingBottom: 10 };
 
 /**
  * Presents the Markdown plan with the commented sentence and its thread marker.
- * @param props - Localized plan copy and review progress.
+ * @param props - Localized plan copy, review progress and whether the last task is checked.
  * @returns The rendered Markdown document.
  */
 export function Plan({
   plan,
   review,
+  taskDone,
 }: {
   plan: FilmCopy["plan"];
   review: FilmReview;
+  taskDone: boolean;
 }) {
   const thread = review.sent;
   const text = review.revised ? plan.revised : plan.sentence;
@@ -59,36 +61,39 @@ export function Plan({
       >
         {plan.tasks}
       </h2>
-      {plan.items.map(([label, done]) => (
-        <div
-          key={label}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            margin: "0 0 14px 6px",
-          }}
-        >
-          <span style={{ color: INK.muted }}>•</span>
-          <span
+      {plan.items.map(([label, initial], index) => {
+        const done = initial || (taskDone && index === plan.items.length - 1);
+        return (
+          <div
+            key={label}
             style={{
-              display: "grid",
-              placeItems: "center",
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              border: done ? "none" : "1.5px solid #94a3b8",
-              background: done ? "#2563eb" : "white",
-              color: "white",
-              fontSize: 14,
-              fontFamily: MONO,
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              margin: "0 0 14px 6px",
             }}
           >
-            {done ? "✓" : ""}
-          </span>
-          {label}
-        </div>
-      ))}
+            <span style={{ color: INK.muted }}>•</span>
+            <span
+              style={{
+                display: "grid",
+                placeItems: "center",
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                border: done ? "none" : "1.5px solid #94a3b8",
+                background: done ? "#2563eb" : "white",
+                color: "white",
+                fontSize: 14,
+                fontFamily: MONO,
+              }}
+            >
+              {done ? "✓" : ""}
+            </span>
+            {label}
+          </div>
+        );
+      })}
       {thread && (
         <span
           style={{

@@ -13,3 +13,9 @@ export const VIDEO_SPECS = {
   en: { ...VIDEO_FORMAT, id: "ZattoPv" },
   ja: { ...VIDEO_FORMAT, id: "ZattoPvJa" },
 };
+
+/** The forty-second feature tours share the promotion's format and opening. */
+export const TOUR_SPECS = {
+  en: { ...VIDEO_FORMAT, durationInFrames: 1200, id: "ZattoPvTour" },
+  ja: { ...VIDEO_FORMAT, durationInFrames: 1200, id: "ZattoPvTourJa" },
+};

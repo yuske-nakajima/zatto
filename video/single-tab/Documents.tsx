@@ -16,11 +16,13 @@ export function DocumentPreview({
   id,
   copy,
   review,
+  taskDone,
   highlight = false,
 }: {
   id: DocumentId;
   copy: FilmCopy;
   review: FilmReview;
+  taskDone: boolean;
   highlight?: boolean;
 }) {
   const style: CSSProperties = {
@@ -39,7 +41,7 @@ export function DocumentPreview({
       ) : id === "notes" ? (
         <Notes />
       ) : id === "plan" ? (
-        <Plan plan={copy.plan} review={review} />
+        <Plan plan={copy.plan} review={review} taskDone={taskDone} />
       ) : (
         <Release highlight={highlight} />
       )}

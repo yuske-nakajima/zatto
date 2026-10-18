@@ -11,17 +11,19 @@ import { DOCUMENTS, type FilmState } from "./timeline";
 
 /**
  * A persistent browser window with one zatto tab.
- * @param props - Global frame, shared film state and localized copy.
+ * @param props - Global frame, shared film state, localized copy and whether the tour is filmed.
  * @returns Browser chrome, the app workspace and the review thread.
  */
 export function FilmBrowser({
   frame,
   state,
   copy,
+  tour,
 }: {
   frame: number;
   state: FilmState;
   copy: FilmCopy;
+  tour: boolean;
 }) {
   return (
     <div
@@ -116,7 +118,7 @@ export function FilmBrowser({
         <span>⋮</span>
       </div>
       <div style={{ height: 684, display: "flex" }}>
-        <Panel state={state} />
+        <Panel state={state} tour={tour} />
         {state.searchVisible ? (
           <FilmSearch query={state.query} />
         ) : (
@@ -197,9 +199,7 @@ export function FilmBrowser({
                   id={state.selected}
                   copy={copy}
                   review={state.review}
-                  highlight={
-                    state.selected === "release" && Boolean(state.query)
-                  }
+                  taskDone={state.taskDone}
                 />
               </div>
             </div>

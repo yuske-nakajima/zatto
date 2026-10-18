@@ -4,6 +4,10 @@ A 25-second product video: an AI agent writes a Markdown plan that arrives in
 one browser tab, the reader comments on a sentence, and the AI replies and edits
 the line. It ends with folders, another file, and full-text search.
 
+- Feature tours: `zatto-pv-tour.mp4` (English) and `zatto-pv-tour-ja.mp4`
+  (Japanese), 40 seconds. They share the first 17 seconds with the product
+  video, then show task lists, the CLI, favorites, folders, search, and
+  workspaces. Render them with `pnpm video:render:tour`.
 - English video: `zatto-pv.mp4`.
 - Japanese video: `zatto-pv-ja.mp4`.
 - Both videos: 1920 × 1080, 30 fps, H.264, silent.
@@ -14,7 +18,8 @@ the line. It ends with folders, another file, and full-text search.
 - Contact sheets: `storyboard.jpg` (English) and `storyboard-ja.jpg` (Japanese),
   with one frame per second from each rendered video.
 - Source: `video/single-tab/` from the repository root.
-- Compositions: `ZattoPv` (English) and `ZattoPvJa` (Japanese).
+- Compositions: `ZattoPv` (English) and `ZattoPvJa` (Japanese); tours are
+  `ZattoPvTour` and `ZattoPvTourJa`.
 
 Render from the repository root:
 

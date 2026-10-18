@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { CUE, getFilmState } from "../video/single-tab/timeline.js";
+import { CUE, getFilmState, TOUR } from "../video/single-tab/timeline.js";
 
 describe("single-tab promotion timeline", () => {
   test("adds the AI-written plan before the GUI click opens it in review", () => {
@@ -40,7 +40,7 @@ describe("single-tab promotion timeline", () => {
   });
 
   test("shows folders, another file and the search workspace after the thread closes", () => {
-    expect(getFilmState(CUE.folders).folders).toBe(true);
+    expect(getFilmState(CUE.folders).view).toBe("folders");
     expect(getFilmState(CUE.notes).selected).toBe("notes");
     expect(getFilmState(CUE.search).searchVisible).toBe(true);
     expect(getFilmState(CUE.queryStart + 40).query).toBe("release");
@@ -53,5 +53,43 @@ describe("single-tab promotion timeline", () => {
       const state = getFilmState(frame);
       expect(state.selected !== "plan" || state.added).toBe(true);
     }
+  });
+});
+
+describe("feature tour timeline", () => {
+  const tour = (frame: number) => getFilmState(frame, 12, "tour");
+
+  test("shares the review with the short cut", () => {
+    for (let frame = 0; frame < CUE.closeThread; frame += 1) {
+      expect(tour(frame).review).toEqual(getFilmState(frame, 12).review);
+      expect(tour(frame).selected).toBe(getFilmState(frame, 12).selected);
+    }
+  });
+
+  test("checks the task, then adds and opens the report from the CLI", () => {
+    expect(tour(TOUR.checkTask - 1).taskDone).toBe(false);
+    expect(tour(TOUR.checkTask).taskDone).toBe(true);
+    expect(tour(TOUR.cliAdded - 1).entries).not.toContain("report");
+    expect(tour(TOUR.cliAdded).entries.at(-1)).toBe("report");
+    expect(tour(TOUR.openReport).selected).toBe("report");
+  });
+
+  test("stars the report, shows favorites, folders and search", () => {
+    expect(tour(TOUR.star)).toMatchObject({ favorite: true, view: "list" });
+    expect(tour(TOUR.favorites).view).toBe("favorites");
+    expect(tour(TOUR.folders).view).toBe("folders");
+    expect(tour(TOUR.notes).selected).toBe("notes");
+    expect(tour(TOUR.search).searchVisible).toBe(true);
+  });
+
+  test("switches workspaces, clears search and selects the first file", () => {
+    expect(tour(TOUR.workspaceMenu).workspaceMenu).toBe(true);
+    expect(tour(TOUR.workspace)).toMatchObject({
+      workspace: "launch",
+      workspaceMenu: false,
+      searchVisible: false,
+      entries: ["release", "notes"],
+      selected: "release",
+    });
   });
 });

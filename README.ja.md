@@ -11,6 +11,8 @@
 
 <p align="center">
   <a href="./media/zatto-pv-ja.mp4"><img src="./media/zatto-pv-ja.gif" alt="zattoの20秒動画を見る：ローカルHTMLを、ひとつのタブで。" width="800"></a>
+  <br>
+  <a href="./media/zatto-pv-tour-ja.mp4">40秒の機能紹介を見る</a>
 </p>
 
 インストールせずに、ローカルのHTMLとMarkdownのファイルをまとめて閲覧できます。
@@ -304,6 +306,7 @@ pnpm video:studio
 
 英語版と日本語版のPVを、1920×1080のMP4として生成します。
 どちらも25秒・30fps・無音で、共通のタイムラインを使います。
+`pnpm video:render:tour` は、英日の40秒の機能紹介を書き出します。
 
 ```bash
 pnpm video:render
