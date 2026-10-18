@@ -616,4 +616,23 @@ describe("review threads", () => {
     await start();
     expect(await take()).toEqual([]);
   });
+
+  test("同じセッションでつなぎ直したとき、クライアントが分かれば補う", async () => {
+    const { commands, entry } = await fixture();
+    const start = (client?: "claude") =>
+      commands.execute(
+        "review.start",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          session: "s",
+          ...(client ? { client } : {}),
+        },
+        [],
+      );
+    const first = await start();
+    expect(first.client).toBeUndefined();
+    const again = await start("claude");
+    expect(again).toMatchObject({ id: first.id, client: "claude" });
+  });
 });

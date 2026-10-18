@@ -199,6 +199,11 @@ export function reviewCommands(context: CommandContext) {
       requireEntry(workspaceId, entryId);
       const current = reviewOf(entryId);
       if (current?.session === session) {
+        // 同じ会話からのつなぎ直しで、先に始めた待機がクライアントを伝えていなかったときに補う
+        if (client && current.client !== client) {
+          current.client = client;
+          statesChanged();
+        }
         sendPending(current);
         return current;
       }
