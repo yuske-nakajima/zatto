@@ -1,17 +1,47 @@
+import type { FilmCopy } from "./copy";
 import { FONT, MONO, move } from "./style";
+import { CUE } from "./timeline";
 
-const COMMAND = "npx @yuske-nakajima/zatto \\\n  report.html";
+const TYPE_START = 104;
+const TYPE_END = 128;
+const WROTE = 136;
+const SHARED = CUE.added - 4;
 
 /**
- * Types a scoped npm command beside the receiving browser.
- * @param props - Global film frame.
- * @returns A terminal window with submission synchronized to session insertion.
+ * An AI coding session beside the browser: a request, the written file and the share to zatto.
+ * @param props - Global film frame and localized copy.
+ * @returns A terminal window whose last line lands with the session insertion.
  */
-export function FilmTerminal({ frame }: { frame: number }) {
+export function FilmTerminal({
+  frame,
+  copy,
+}: {
+  frame: number;
+  copy: FilmCopy;
+}) {
   const opacity = move(frame, 78, 91) * move(frame, 195, 215, 1, 0);
-  const command = COMMAND.slice(
+  const typed = copy.prompt.slice(
     0,
-    Math.max(0, Math.floor(((frame - 94) / 36) * COMMAND.length)),
+    Math.max(
+      0,
+      Math.ceil(
+        ((frame - TYPE_START) / (TYPE_END - TYPE_START)) * copy.prompt.length,
+      ),
+    ),
+  );
+  const line = (at: number, text: string) => (
+    <div
+      style={{
+        opacity: move(frame, at, at + 6),
+        display: "flex",
+        gap: 12,
+        marginTop: 14,
+        fontSize: 19,
+      }}
+    >
+      <span style={{ color: "#34d399" }}>●</span>
+      <span>{text}</span>
+    </div>
   );
   return (
     <div
@@ -61,30 +91,27 @@ export function FilmTerminal({ frame }: { frame: number }) {
             fontSize: 12,
           }}
         >
-          workspace — zsh
+          AI agent — workspace
         </span>
       </div>
       <div
         style={{
           padding: "22px 26px",
-          fontFamily: MONO,
-          fontSize: 23,
+          fontFamily: `${MONO}, ${FONT}`,
+          fontSize: 20,
           lineHeight: 1.5,
         }}
       >
-        <div style={{ color: "#9298a6", fontSize: 14, marginBottom: 10 }}>
-          ~/workspace
-        </div>
         <div style={{ display: "flex", alignItems: "flex-start" }}>
           <span style={{ color: "#a5b4fc", marginRight: 13 }}>❯</span>
-          <span style={{ color: "#f8fafc", whiteSpace: "pre" }}>
-            {command}
-            {frame < 134 && (
+          <span style={{ color: "#f8fafc" }}>
+            {typed}
+            {frame < WROTE && (
               <span
                 style={{
                   display: "inline-block",
-                  width: 11,
-                  height: 24,
+                  width: 10,
+                  height: 22,
                   verticalAlign: "middle",
                   background: "#a5b4fc",
                   opacity: frame % 24 < 16 ? 1 : 0,
@@ -93,23 +120,8 @@ export function FilmTerminal({ frame }: { frame: number }) {
             )}
           </span>
         </div>
-        <div style={{ opacity: move(frame, 134, 139), marginTop: 12 }}>
-          <div style={{ color: "#a5b4fc", fontSize: 15, marginBottom: 8 }}>
-            http://localhost:6280/
-          </div>
-          <span style={{ color: "#a5b4fc" }}>❯</span>
-          <span
-            style={{
-              display: "inline-block",
-              marginLeft: 15,
-              width: 11,
-              height: 24,
-              verticalAlign: "middle",
-              background: "#a5b4fc",
-              opacity: frame % 28 < 19 ? 1 : 0,
-            }}
-          />
-        </div>
+        {line(WROTE, copy.wrote)}
+        {line(SHARED, copy.shared)}
       </div>
     </div>
   );

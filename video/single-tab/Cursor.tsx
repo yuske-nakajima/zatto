@@ -1,25 +1,43 @@
 import { move } from "./style";
+import { SELECTION_BUTTON, THREAD_BOX } from "./Thread";
+import { CUE } from "./timeline";
 
+const SEND = {
+  x: THREAD_BOX.left + THREAD_BOX.width - 70,
+  y: THREAD_BOX.top + 160,
+};
+
+/** [frame, x, y] keys in browser-local coordinates. */
 const points = [
-  [140, 180, 655],
-  [161, 170, 575],
-  [190, 170, 575],
-  [228, 165, 359],
-  [282, 165, 359],
-  [307, 209, 290],
-  [319, 209, 290],
-  [337, 125, 527],
-  [350, 125, 527],
-  [356, 166, 583],
-  [382, 166, 583],
-  [397, 305, 290],
-  [403, 305, 290],
-  [412, 590, 128],
-  [448, 590, 128],
-  [470, 680, 318],
-  [492, 680, 318],
+  [150, 720, 600],
+  [164, 720, 600],
+  [CUE.openPlan - 2, 170, 640],
+  [CUE.openPlan + 6, 170, 640],
+  [CUE.selectStart - 2, 392, 434],
+  [CUE.selectStart, 392, 434],
+  [CUE.selectEnd, 655, 434],
+  [CUE.selectionButton + 2, 655, 434],
+  [CUE.openThread - 2, SELECTION_BUTTON.left + 50, SELECTION_BUTTON.top + 18],
+  [CUE.send - 10, SELECTION_BUTTON.left + 50, SELECTION_BUTTON.top + 18],
+  [CUE.send - 2, SEND.x, SEND.y],
+  [CUE.send + 6, SEND.x, SEND.y],
+  [CUE.reply - 10, 1060, 720],
+  [CUE.closeThread, 1060, 720],
+  [CUE.folders - 3, 210, 290],
+  [CUE.folders + 6, 210, 290],
+  [CUE.notes - 3, 200, 668],
+  [CUE.notes + 6, 200, 668],
+  [CUE.search - 3, 305, 290],
+  [CUE.search + 10, 305, 290],
 ];
-const clicks = [166, 234, 313, 345, 360, 403, 478];
+const clicks = [
+  CUE.openPlan,
+  CUE.openThread,
+  CUE.send,
+  CUE.folders,
+  CUE.notes,
+  CUE.search,
+];
 
 /**
  * Moves the pointer in browser-local coordinates and marks click frames.
@@ -39,7 +57,7 @@ export function FilmCursor({ frame }: { frame: number }) {
   }
   const click = clicks.find((at) => frame >= at && frame < at + 14);
   const ring = click === undefined ? 0 : (frame - click) / 14;
-  const opacity = move(frame, 141, 151) * move(frame, 489, 502, 1, 0);
+  const opacity = move(frame, 150, 160) * move(frame, 615, 626, 1, 0);
   return (
     <div
       style={{

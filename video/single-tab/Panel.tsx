@@ -39,6 +39,20 @@ export function Panel({ state }: { state: FilmState }) {
           {DOCUMENTS[id].file}
         </div>
       </div>
+      {id === "plan" && state.reviewing && (
+        <span
+          style={{
+            padding: "2px 7px",
+            borderRadius: 6,
+            background: "#fef08a",
+            color: INK.text,
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+        >
+          In review
+        </span>
+      )}
       <Icon name="link" size={14} />
       <Icon name="trash" size={14} />
     </div>
@@ -89,7 +103,7 @@ export function Panel({ state }: { state: FilmState }) {
         <strong
           style={{ background: INK.line, borderRadius: 10, padding: "2px 7px" }}
         >
-          {state.added ? 4 : 3}
+          {state.added ? 5 : 4}
         </strong>
         <span style={{ marginLeft: "auto", color: INK.accent }}>+ Add</span>
         <span style={{ color: INK.accent }}>Add folder…</span>
@@ -133,24 +147,17 @@ export function Panel({ state }: { state: FilmState }) {
           <SearchGlyph />
         </div>
       </div>
-      <div style={{ flex: 1, paddingTop: 8 }}>
+      <div style={{ flex: 1, paddingTop: 8, overflow: "hidden" }}>
         {state.folders ? (
           <>
-            <Folder label="workspace" count={4} expanded />
+            <Folder label="workspace" count={5} expanded />
             {row("diagram", true)}
             {row("report", true)}
+            {row("plan", true)}
             <div style={{ paddingLeft: 15 }}>
-              <Folder
-                label="design"
-                count={2}
-                expanded={state.folderExpanded}
-              />
-              {state.folderExpanded && (
-                <>
-                  {row("notes", true)}
-                  {row("release", true)}
-                </>
-              )}
+              <Folder label="design" count={2} expanded />
+              {row("notes", true)}
+              {row("release", true)}
             </div>
           </>
         ) : (
@@ -158,7 +165,8 @@ export function Panel({ state }: { state: FilmState }) {
             {row("diagram")}
             {row("notes")}
             {row("release")}
-            {state.added && row("report")}
+            {row("report")}
+            {state.added && row("plan")}
           </>
         )}
       </div>

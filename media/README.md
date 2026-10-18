@@ -1,7 +1,8 @@
 # zatto single-tab PV
 
-A 20-second product video showing CLI additions and GUI navigation in
-one browser tab: list, folders, and full-text search.
+A 25-second product video: an AI agent writes a Markdown plan that arrives in
+one browser tab, the reader comments on a sentence, and the AI replies and edits
+the line. It ends with folders, another file, and full-text search.
 
 - English video: `zatto-pv.mp4`.
 - Japanese video: `zatto-pv-ja.mp4`.
@@ -22,13 +23,12 @@ pnpm video:render
 ```
 
 The interface is a deterministic Remotion reconstruction, with illustrative
-documents and timed cursor actions. It is not a live screen recording. The CLI
-scene runs `npx @yuske-nakajima/zatto report.html` against an existing viewer
-session. The package is assumed to be cached so the sequence focuses on adding
-the file rather than the initial package download.
+documents, review thread and timed cursor actions. It is not a live screen
+recording. The terminal shows a generic AI agent rather than a specific product.
 
 Use `pnpm video:render:en` or `pnpm video:render:ja` to render one language.
-The shared source controls both versions; only the promotional copy is localized.
+The shared source controls both versions; the promotional copy, the filmed
+plan, and the review thread are localized.
 
 Generate the README animations from the MP4s using FFmpeg from the repository
 root. Each animation links to its full-resolution MP4. This conversion reads

@@ -324,7 +324,7 @@ pnpm video:studio
 ```
 
 Render the English and Japanese product videos as 1920×1080 MP4 files.
-Both versions use the same silent 20-second timeline at 30 fps.
+Both versions use the same silent 25-second timeline at 30 fps.
 
 ```bash
 pnpm video:render

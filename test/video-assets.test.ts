@@ -13,14 +13,14 @@ describe("zatto promotion videos", () => {
     ["en", "ZattoPv"],
     ["ja", "ZattoPvJa"],
   ] as const)(
-    "registers the %s promotion as twenty seconds in full HD",
+    "registers the %s promotion as twenty-five seconds in full HD",
     (locale, id) => {
       expect(VIDEO_SPECS[locale]).toEqual({
         id,
         width: 1920,
         height: 1080,
         fps: 30,
-        durationInFrames: 600,
+        durationInFrames: 750,
       });
     },
   );
