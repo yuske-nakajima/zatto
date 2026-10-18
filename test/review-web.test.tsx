@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { ReviewStates, ReviewThread } from "../src/shared/review.js";
 import { App } from "../src/web/App.js";
-import { ReviewStatus } from "../src/web/ReviewLayer.js";
+import { formatCommentTime, ReviewStatus } from "../src/web/ReviewLayer.js";
 import { rpcFixture } from "./rpc-client-fixture.js";
 
 const entries: Entry[] = [
@@ -29,7 +29,7 @@ const baseThread: ReviewThread = {
     { id: "c1", author: { kind: "user" }, body: "具体例は？", createdAt: 1 },
     {
       id: "c2",
-      author: { kind: "llm", session: "zatto:a99c" },
+      author: { kind: "llm", session: "zatto:a99c", client: "claude" },
       body: "例を**追記**しました\n\n- 1 点目\n\n<script>alert(1)</script>",
       createdAt: 2,
     },
@@ -129,7 +129,19 @@ describe("レビューのコメント", () => {
       name: "Comment thread",
     });
     expect(dialog.textContent).toContain("You");
-    expect(dialog.textContent).toContain("LLM · zatto:a99c");
+    expect(dialog.textContent).toContain("Claude · zatto:a99c");
+    expect(
+      [...dialog.querySelectorAll(".review-message")].map((item) => [
+        item.className,
+        item.querySelector("img")?.getAttribute("src"),
+      ]),
+    ).toEqual([
+      ["review-message review-message--user", expect.stringContaining("user")],
+      ["review-message review-message--llm", expect.stringContaining("claude")],
+    ]);
+    expect(dialog.querySelector("time")?.textContent).toBe(
+      formatCommentTime(1),
+    );
     expect(dialog.textContent).not.toContain("Open");
     expect(dialog.querySelector("strong")?.textContent).toBe("追記");
     expect(
@@ -416,5 +428,49 @@ describe("レビューのコメント", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: "Register" })).toBeNull();
+  });
+
+  test("日時は月/日と時:分で表し、コードブロックはボタンでコピーできる", async () => {
+    expect(formatCommentTime(new Date(2026, 9, 18, 9, 5).getTime())).toBe(
+      "10/18 09:05",
+    );
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    thread = {
+      ...baseThread,
+      comments: [
+        baseThread.comments[0],
+        {
+          id: "c3",
+          author: { kind: "llm", session: "x" },
+          body: "```sh\npnpm test\n```",
+          createdAt: 3,
+        },
+      ] as ReviewThread["comments"],
+    };
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /閲覧URL/ }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Comment thread",
+    });
+
+    expect(dialog.textContent).toContain("LLM · x");
+    expect(
+      dialog.querySelectorAll(".review-message img")[1]?.getAttribute("src"),
+    ).toContain("llm");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Copy" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("pnpm test"));
+    expect(
+      await within(dialog).findByRole("button", { name: "Copied" }),
+    ).toBeTruthy();
   });
 });

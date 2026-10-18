@@ -481,12 +481,13 @@ describe("review threads", () => {
     );
 
     expect(text).toContain(
-      `"/opt/node" "/opt/zatto/bin/zatto.js" review ${JSON.stringify(entry.absPath)} --session <id>`,
+      `"/opt/node" "/opt/zatto/bin/zatto.js" review ${JSON.stringify(entry.absPath)}\n`,
     );
     expect(text).toContain(
       '"/opt/node" "/opt/zatto/bin/zatto.js" review reply <thread-id>',
     );
     expect(text).toContain("tell me you are ready");
+    expect(text).toContain("add --session <id> to both commands");
     expect(text).toContain("add --once");
     await expect(
       commands.execute(

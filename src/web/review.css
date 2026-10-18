@@ -172,30 +172,99 @@
 }
 
 .review-comments {
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
   min-height: 0;
   margin: 0;
-  padding: 0;
+  padding: 0 2px 0 0;
   overflow: auto;
   list-style: none;
 }
 
-.review-comments > li + li {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border-default);
+.review-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.review-message--user {
+  flex-direction: row-reverse;
+}
+
+.review-avatar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.review-message-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 85%;
+}
+
+.review-message--user .review-message-body {
+  align-items: flex-end;
 }
 
 .review-author {
   display: block;
-  margin-bottom: 4px;
+  margin: 0 0 2px 4px;
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
-.review-author--llm {
+.review-bubble {
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  background: var(--color-bg-hover);
+  overflow-wrap: anywhere;
+}
+
+.review-message--user .review-bubble {
+  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 16px;
+  background: color-mix(in srgb, var(--color-bg-accent) 14%, transparent);
+}
+
+.review-time {
+  margin: 2px 6px 0;
+  color: var(--color-text-tertiary);
+  font-size: 0.68rem;
+}
+
+.review-code {
+  position: relative;
+}
+
+.review-code-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.review-code-copy:hover {
   color: var(--color-text-primary);
+}
+
+.review-code pre {
+  padding-right: 64px;
 }
 
 .review-plain {
@@ -230,7 +299,7 @@
 .review-markdown code {
   padding: 1px 4px;
   border-radius: 4px;
-  background: var(--color-bg-hover);
+  background: var(--color-bg-surface);
   font-family: var(--font-mono);
   font-size: 0.85em;
 }
@@ -240,7 +309,7 @@
   padding: 8px 10px;
   overflow: auto;
   border-radius: var(--radius-md);
-  background: var(--color-bg-hover);
+  background: var(--color-bg-surface);
 }
 
 .review-markdown pre code {
@@ -319,13 +388,15 @@ span.review-attachment {
 
 .review-delivery {
   flex: none;
-  margin: 12px 0 0;
+  margin: 0;
+  text-align: center;
   color: var(--color-text-secondary);
   font-size: 0.75rem;
 }
 
 .review-delivery--replying {
   display: flex;
+  width: fit-content;
   gap: 4px;
   height: 1.2em;
   align-items: center;

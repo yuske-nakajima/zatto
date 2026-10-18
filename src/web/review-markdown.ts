@@ -14,6 +14,8 @@ const replyMarkdown = new Marked({
     table: ({ raw }) => `<p>${escapeHtml(raw.trim())}</p>`,
     blockquote: ({ raw }) => `<p>${escapeHtml(raw.trim())}</p>`,
     hr: ({ raw }) => `<p>${escapeHtml(raw.trim())}</p>`,
+    code: ({ text }) =>
+      `<div class="review-code"><button type="button" class="review-code-copy" data-review-copy>Copy</button><pre><code>${escapeHtml(text)}</code></pre></div>`,
     html: ({ raw }) => escapeHtml(raw),
     image: ({ raw }) => escapeHtml(raw),
     em: ({ raw }) => escapeHtml(raw),

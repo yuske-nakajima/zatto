@@ -9,6 +9,7 @@ import {
   parseAgentContext,
 } from "../shared/agent-context.js";
 import { REVIEW_REANCHOR_GUIDE, REVIEW_REPLY_GUIDE } from "../shared/review.js";
+import { detectReviewClient } from "../shared/review-client.js";
 import { RpcClientError } from "../shared/rpc-client.js";
 import type { RpcParams, RpcResult } from "../shared/rpc-contract.js";
 
@@ -516,7 +517,12 @@ const threadIdInput = z
   .describe("Thread id from list_review_threads");
 
 function llmAuthor(session: string | undefined) {
-  return session ? { kind: "llm" as const, session } : { kind: "llm" as const };
+  const client = detectReviewClient(process.env);
+  return {
+    kind: "llm" as const,
+    ...(session ? { session } : {}),
+    ...(client ? { client } : {}),
+  };
 }
 
 function registerReviewTools(server: McpServer, connect: Connect): void {

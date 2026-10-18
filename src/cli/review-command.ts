@@ -6,9 +6,14 @@ import type { ServerMessage } from "../shared/protocol.js";
 import {
   REVIEW_REANCHOR_GUIDE,
   type ReviewAuthor,
+  type ReviewClient,
   type ReviewEvent,
   type ReviewThread,
 } from "../shared/review.js";
+import {
+  defaultReviewSession,
+  detectReviewClient,
+} from "../shared/review-client.js";
 import { rpcCall } from "../shared/rpc-client.js";
 import { serverUrl } from "./server-api.js";
 import type { ServerClientDependencies } from "./server-client.js";
@@ -18,14 +23,15 @@ import {
 } from "./server-client.js";
 
 export const REVIEW_USAGE = `Usage:
-  zatto review <file> --session <id> [--once] [--no-open] [--port <n>]
-  zatto review reply <thread-id> <body> --session <id> [--quote <text>] [--port <n>]
+  zatto review <file> [--session <id>] [--once] [--no-open] [--port <n>]
+  zatto review reply <thread-id> <body> [--session <id>] [--quote <text>] [--port <n>]
 
 <file> を選択中のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
 ユーザーがコメント・返信を書くたびに、内容を 1 行の JSON で出力します。Finish review で終了します。
 zatto が停止・再起動しても、起動を待って自動で再接続します。Ctrl+C で終了します。
 --once は、最初に届いた内容を読みやすい形で表示して終了します。
 reply は、スレッドにこのセッションとして返信します。
+Claude Code と Codex では、--session を省くと会話の ID を使い、返信に Claude・Codex の別を記録します。
 コメントされた文章を直したときは、--quote に直した後の文章を指定すると、スレッドがその文章へ移ります。`;
 
 const RECONNECT_INTERVAL_MS = 2_000;
@@ -34,6 +40,7 @@ type FileOptions = {
   mode: "file";
   file: string;
   session: string;
+  client?: ReviewClient;
   once: boolean;
   open: boolean;
   port: number;
@@ -45,6 +52,7 @@ type ReviewOptions =
       mode: "reply";
       threadId: string;
       body: string;
+      client?: ReviewClient;
       quote?: string;
       session: string;
       port: number;
@@ -57,6 +65,8 @@ export interface ReviewCommandDependencies extends ServerClientDependencies {
   createWebSocket?: (url: string) => WebSocket;
   onInterrupt?: (handler: () => void) => () => void;
   reconnectIntervalMs?: number;
+  /** Environment that tells the LLM client and its conversation ID; defaults to the process environment. */
+  env?: Record<string, string | undefined>;
 }
 
 /** One delivered user action with the thread state an LLM needs to answer it. */
@@ -84,7 +94,7 @@ export async function runReviewCommand(
 ): Promise<number> {
   let options: ReviewOptions;
   try {
-    options = parseReviewArgs(args);
+    options = parseReviewArgs(args, dependencies.env ?? process.env);
   } catch (error) {
     dependencies.stderr(errorMessage(error));
     dependencies.stderr(REVIEW_USAGE);
@@ -95,7 +105,11 @@ export async function runReviewCommand(
       const { record } = await connectOrStartServer(options.port, dependencies);
       await rpc(record, dependencies.fetch)("review.reply", {
         threadId: options.threadId,
-        author: { kind: "llm", session: options.session },
+        author: {
+          kind: "llm",
+          session: options.session,
+          ...(options.client ? { client: options.client } : {}),
+        },
         body: options.body,
         ...(options.quote === undefined ? {} : { quote: options.quote }),
       });
@@ -199,6 +213,7 @@ async function follow(
       workspaceId,
       entryId: entry.id,
       session: options.session,
+      ...(options.client ? { client: options.client } : {}),
     });
     if (announce) {
       const url = new URL(serverUrl(record.port));
@@ -324,7 +339,10 @@ async function collectReports(
   return reports;
 }
 
-export function parseReviewArgs(args: string[]): ReviewOptions {
+export function parseReviewArgs(
+  args: string[],
+  env: Record<string, string | undefined> = {},
+): ReviewOptions {
   let session: string | undefined;
   let port = DEFAULT_PORT;
   let once = false;
@@ -356,7 +374,12 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       throw new Error(`不明なオプション: ${arg}`);
     else if (arg !== undefined) positionals.push(arg);
   }
-  if (!session) throw new Error("--session でセッション ID を指定してください");
+  session ??= defaultReviewSession(env);
+  if (!session)
+    throw new Error(
+      "--session でセッション ID を指定してください（Claude Code と Codex では省略できます）",
+    );
+  const client = detectReviewClient(env);
   if (positionals[0] === "reply") {
     const [, threadId, body, ...rest] = positionals;
     if (!threadId || !body?.trim() || rest.length)
@@ -369,6 +392,7 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
       body,
       session,
       port,
+      ...(client ? { client } : {}),
       ...(quote === undefined ? {} : { quote }),
     };
   }
@@ -381,6 +405,7 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
     mode: "file",
     file: path.resolve(positionals[0]),
     session,
+    ...(client ? { client } : {}),
     once,
     open,
     port,

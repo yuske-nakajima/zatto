@@ -10,6 +10,7 @@ import type {
   ActiveReview,
   ReviewAttachmentUpload,
   ReviewAuthor,
+  ReviewClient,
   ReviewEvent,
   ReviewStates,
   ReviewThread,
@@ -177,7 +178,11 @@ export interface RpcMethods {
     result: { text: string };
   };
   "review.start": {
-    params: WorkspaceParams & { entryId: string; session: string };
+    params: WorkspaceParams & {
+      entryId: string;
+      session: string;
+      client?: ReviewClient;
+    };
     result: ActiveReview;
   };
   "review.finish": {

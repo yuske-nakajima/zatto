@@ -195,7 +195,7 @@ export function reviewCommands(context: CommandContext) {
       if (!entry) throw domainError("notFound", "Entry not found.");
       return { text: reviewRequestText(context.cliCommand, entry.absPath) };
     },
-    "review.start": ({ workspaceId, entryId, session }) => {
+    "review.start": ({ workspaceId, entryId, session, client }) => {
       requireEntry(workspaceId, entryId);
       const current = reviewOf(entryId);
       if (current?.session === session) {
@@ -211,6 +211,7 @@ export function reviewCommands(context: CommandContext) {
         entryId,
         workspaceId,
         session,
+        ...(client ? { client } : {}),
         createdAt: Date.now(),
       };
       reviews.set(review.id, review);

@@ -6,7 +6,13 @@ export interface TextAnchor {
 }
 
 /** Who wrote a comment; LLM comments record the session that wrote them when known. */
-export type ReviewAuthor = { kind: "user" } | { kind: "llm"; session?: string };
+/** LLM clients zatto can tell apart; others are recorded without a client. */
+export const REVIEW_CLIENTS = ["claude", "codex"] as const;
+export type ReviewClient = (typeof REVIEW_CLIENTS)[number];
+
+export type ReviewAuthor =
+  | { kind: "user" }
+  | { kind: "llm"; session?: string; client?: ReviewClient };
 
 /** An image attached to a comment; path is where the server stored it, for LLMs that read local files. */
 export interface ReviewAttachment {
@@ -70,6 +76,7 @@ export interface ActiveReview {
   entryId: string;
   workspaceId: string;
   session: string;
+  client?: ReviewClient;
   createdAt: number;
 }
 
@@ -131,11 +138,12 @@ export const REVIEW_REPLY_GUIDE =
 export function reviewRequestText(cli: string, filePath: string): string {
   return [
     "Please review this document with me in zatto.",
-    "Run this command in the background and keep it running, using an ID for this conversation as <id>:",
-    `${cli} review ${JSON.stringify(filePath)} --session <id>`,
+    "Run this command in the background and keep it running:",
+    `${cli} review ${JSON.stringify(filePath)}`,
+    "Claude Code and Codex are detected automatically; in other tools, add --session <id> to both commands, using an ID for this conversation.",
     "When it reports that the file is under review, tell me you are ready.",
     "Each JSON line it prints is a comment I wrote. Read the document and any attached images, then answer in that thread with:",
-    `${cli} review reply <thread-id> "<reply>" --session <id>`,
+    `${cli} review reply <thread-id> "<reply>"`,
     "Keep the command running until it exits when I finish the review. If you cannot read output while a command is running, add --once and run it again after each reply.",
     REVIEW_REANCHOR_GUIDE,
     REVIEW_REPLY_GUIDE,

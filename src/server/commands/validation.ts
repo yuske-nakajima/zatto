@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { REVIEW_IMAGE_TYPES, REVIEW_LIMITS } from "../../shared/review.js";
+import {
+  REVIEW_CLIENTS,
+  REVIEW_IMAGE_TYPES,
+  REVIEW_LIMITS,
+} from "../../shared/review.js";
 import type { RpcMethod, RpcParams } from "../../shared/rpc-contract.js";
 import { CommandError } from "./errors.js";
 
@@ -13,7 +17,11 @@ const reviewBody = z.string().trim().min(1).max(REVIEW_LIMITS.bodyLength);
 const session = z.string().trim().min(1).max(100);
 const author = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("user") }),
-  z.strictObject({ kind: z.literal("llm"), session: session.optional() }),
+  z.strictObject({
+    kind: z.literal("llm"),
+    session: session.optional(),
+    client: z.enum(REVIEW_CLIENTS).optional(),
+  }),
 ]);
 const context = z.string().max(REVIEW_LIMITS.contextLength);
 const anchor = z
@@ -131,6 +139,7 @@ const schemas = {
     workspaceId,
     entryId: id,
     session,
+    client: z.enum(REVIEW_CLIENTS).optional(),
   }),
   "review.finish": z.strictObject({ ...guards, reviewId: id }),
   "review.states": z.strictObject(guards),

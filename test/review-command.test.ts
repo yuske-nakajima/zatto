@@ -277,6 +277,15 @@ describe("zatto review", () => {
     expect(() =>
       parseReviewArgs(["a.md", "--quote", "x", "--session", "s"]),
     ).toThrow("reply でだけ");
+    expect(
+      parseReviewArgs(["reply", "t1", "本文"], {
+        CODEX_THREAD_ID: "019a2b3c-4d5e",
+      }),
+    ).toMatchObject({ session: "codex:019a2b3c", client: "codex" });
+    expect(
+      parseReviewArgs(["a.md", "--session", "s"], { CLAUDECODE: "1" }),
+    ).toMatchObject({ session: "s", client: "claude" });
+    expect(() => parseReviewArgs(["a.md"], {})).toThrow("省略できます");
     expect(() => parseReviewArgs(["a.md"])).toThrow("--session");
     expect(() => parseReviewArgs(["--session", "s"])).toThrow(
       "レビューするファイルを指定",

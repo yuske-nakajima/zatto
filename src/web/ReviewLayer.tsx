@@ -18,6 +18,10 @@ import {
   reviewAttachmentFileName,
   type TextAnchor,
 } from "../shared/review.js";
+import claudeAvatar from "./assets/review-avatars/claude.webp";
+import codexAvatar from "./assets/review-avatars/codex.webp";
+import llmAvatar from "./assets/review-avatars/llm.webp";
+import userAvatar from "./assets/review-avatars/user.webp";
 import { BubbleIcon, ResolvedBubbleIcon } from "./BubbleIcon.js";
 import type { LinkedPage } from "./linked-page.js";
 import { createTextAnchor, locateTextAnchor } from "./review-anchor.js";
@@ -716,45 +720,57 @@ function ThreadView({
       )}
       <ol className="review-comments">
         {thread.comments.map((comment) => (
-          <li key={comment.id}>
-            <span
-              className={`review-author review-author--${comment.author.kind}`}
-            >
-              {authorLabel(comment.author)}
-            </span>
-            {comment.author.kind === "llm" ? (
-              <div
-                className="review-markdown"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: renderReplyMarkdown は許可した書き方以外をすべて文字として出す
-                dangerouslySetInnerHTML={{
-                  __html: renderReplyMarkdown(comment.body),
-                }}
-              />
-            ) : (
-              <p className="review-plain">{comment.body}</p>
-            )}
-            {comment.attachments && (
-              <span className="review-attachments">
-                {comment.attachments.map((attachment) => (
-                  <button
-                    key={attachment.id}
-                    type="button"
-                    className="review-attachment"
-                    aria-label={`Enlarge ${attachment.name}`}
-                    onClick={() => onZoom(attachment)}
-                  >
-                    <img
-                      src={attachmentUrl(attachment)}
-                      alt={attachment.name}
-                    />
-                  </button>
-                ))}
+          <li
+            key={comment.id}
+            className={`review-message review-message--${comment.author.kind}`}
+          >
+            <Avatar author={comment.author} />
+            <div className="review-message-body">
+              <span
+                className={
+                  comment.author.kind === "user"
+                    ? "review-author visually-hidden"
+                    : "review-author"
+                }
+              >
+                {authorLabel(comment.author)}
               </span>
-            )}
+              <div className="review-bubble">
+                {comment.author.kind === "llm" ? (
+                  <ReplyMarkdown body={comment.body} />
+                ) : (
+                  <p className="review-plain">{comment.body}</p>
+                )}
+                {comment.attachments && (
+                  <span className="review-attachments">
+                    {comment.attachments.map((attachment) => (
+                      <button
+                        key={attachment.id}
+                        type="button"
+                        className="review-attachment"
+                        aria-label={`Enlarge ${attachment.name}`}
+                        onClick={() => onZoom(attachment)}
+                      >
+                        <img
+                          src={attachmentUrl(attachment)}
+                          alt={attachment.name}
+                        />
+                      </button>
+                    ))}
+                  </span>
+                )}
+              </div>
+              <time
+                className="review-time"
+                dateTime={new Date(comment.createdAt).toISOString()}
+              >
+                {formatCommentTime(comment.createdAt)}
+              </time>
+            </div>
           </li>
         ))}
+        <DeliveryStatus thread={thread} review={review} />
       </ol>
-      <DeliveryStatus thread={thread} review={review} />
       <CommentForm
         label="Reply"
         submitLabel="Reply"
@@ -794,22 +810,84 @@ function DeliveryStatus({
     return null;
   if (delivery.status === "undelivered")
     return (
-      <p className="review-delivery" role="status">
+      <li className="review-delivery" role="status">
         Not delivered yet
-      </p>
+      </li>
     );
   if (now >= expiresAt) return null;
+  const client = review.activeReview?.client;
   return (
-    <p
-      className="review-delivery review-delivery--replying"
-      role="status"
-      aria-label="The LLM is replying"
-    >
-      <span />
-      <span />
-      <span />
-    </p>
+    <li className="review-message review-message--llm">
+      <Avatar author={{ kind: "llm", ...(client ? { client } : {}) }} />
+      <div className="review-message-body">
+        <p
+          className="review-bubble review-delivery--replying"
+          role="status"
+          aria-label="The LLM is replying"
+        >
+          <span />
+          <span />
+          <span />
+        </p>
+      </div>
+    </li>
   );
+}
+
+const AVATARS = {
+  claude: claudeAvatar,
+  codex: codexAvatar,
+  llm: llmAvatar,
+  user: userAvatar,
+} as const;
+
+function Avatar({ author }: { author: ReviewAuthor }) {
+  const key =
+    author.kind === "user" ? "user" : (author.client ?? ("llm" as const));
+  return (
+    <img
+      className="review-avatar"
+      src={AVATARS[key]}
+      alt=""
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Renders an LLM reply; copy buttons on code blocks are handled here by delegation. */
+function ReplyMarkdown({ body }: { body: string }) {
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: 中のコピーボタン（button 要素）のクリックをまとめて受ける
+    // biome-ignore lint/a11y/useKeyWithClickEvents: キー操作は中の button 要素が受ける
+    <div
+      className="review-markdown"
+      onClick={(event) => {
+        const button = (event.target as HTMLElement).closest<HTMLElement>(
+          "[data-review-copy]",
+        );
+        const code = button?.parentElement?.querySelector("code")?.textContent;
+        if (!button || code === undefined || code === null) return;
+        void navigator.clipboard.writeText(code).then(
+          () => {
+            button.textContent = "Copied";
+            setTimeout(() => {
+              button.textContent = "Copy";
+            }, 1500);
+          },
+          () => undefined,
+        );
+      }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: renderReplyMarkdown は許可した書き方以外をすべて文字として出す
+      dangerouslySetInnerHTML={{ __html: renderReplyMarkdown(body) }}
+    />
+  );
+}
+
+/** Shows when a comment was written as month/day and time, without relative wording. */
+export function formatCommentTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function CommentForm({
@@ -1007,9 +1085,12 @@ function Quote({ text }: { text: string | null }) {
   );
 }
 
+const CLIENT_NAMES = { claude: "Claude", codex: "Codex" } as const;
+
 function authorLabel(author: ReviewAuthor): string {
   if (author.kind === "user") return "You";
-  return author.session ? `LLM · ${author.session}` : "LLM";
+  const name = author.client ? CLIENT_NAMES[author.client] : "LLM";
+  return author.session ? `${name} · ${author.session}` : name;
 }
 
 function caretAt(
