@@ -10,7 +10,9 @@
 [日本語](./README.ja.md)
 
 <p align="center">
-  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 20-second zatto video: local HTML in one browser tab" width="800"></a>
+  <a href="./media/zatto-pv.mp4"><img src="./media/zatto-pv.gif" alt="Watch the 25-second zatto video: comment on the docs your AI writes, and get replies right where you left them" width="800"></a>
+  <br>
+  <a href="./media/zatto-pv-tour.mp4">Watch the 40-second feature tour</a>
 </p>
 
 Browse local HTML and Markdown files together without installing anything.
@@ -324,7 +326,8 @@ pnpm video:studio
 ```
 
 Render the English and Japanese product videos as 1920×1080 MP4 files.
-Both versions use the same silent 20-second timeline at 30 fps.
+Both versions use the same silent 25-second timeline at 30 fps.
+`pnpm video:render:tour` renders the 40-second feature tours in both languages.
 
 ```bash
 pnpm video:render

@@ -1,21 +1,34 @@
 import { Img } from "remotion";
 import icon from "../../src/web/assets/zatto-icon-192.png";
 import { Icon } from "../../src/web/icons";
+import type { FilmCopy } from "./copy";
 import { DocumentPreview } from "./Documents";
 import { Panel } from "./Panel";
 import { FilmSearch } from "./Search";
 import { FONT, INK, MONO } from "./style";
+import { FilmThread } from "./Thread";
 import { DOCUMENTS, type FilmState } from "./timeline";
 
 /**
  * A persistent browser window with one zatto tab.
- * @param props - Shared film state.
- * @returns Browser chrome and the app workspace.
+ * @param props - Global frame, shared film state, localized copy and whether the tour is filmed.
+ * @returns Browser chrome, the app workspace and the review thread.
  */
-export function FilmBrowser({ state }: { state: FilmState }) {
+export function FilmBrowser({
+  frame,
+  state,
+  copy,
+  tour,
+}: {
+  frame: number;
+  state: FilmState;
+  copy: FilmCopy;
+  tour: boolean;
+}) {
   return (
     <div
       style={{
+        position: "relative",
         width: 1420,
         height: 810,
         background: "white",
@@ -105,7 +118,7 @@ export function FilmBrowser({ state }: { state: FilmState }) {
         <span>⋮</span>
       </div>
       <div style={{ height: 684, display: "flex" }}>
-        <Panel state={state} />
+        <Panel state={state} tour={tour} />
         {state.searchVisible ? (
           <FilmSearch query={state.query} />
         ) : (
@@ -125,6 +138,31 @@ export function FilmBrowser({ state }: { state: FilmState }) {
               <span style={{ fontFamily: MONO, fontSize: 14, flex: 1 }}>
                 {DOCUMENTS[state.selected].path}
               </span>
+              {state.reviewing && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "4px 4px 4px 13px",
+                    borderRadius: 20,
+                    background: "#fef9c3",
+                    fontSize: 13,
+                  }}
+                >
+                  In review
+                  <span
+                    style={{
+                      padding: "4px 11px",
+                      borderRadius: 20,
+                      background: INK.accent,
+                      color: "white",
+                    }}
+                  >
+                    Finish review
+                  </span>
+                </span>
+              )}
               <span
                 style={{
                   display: "flex",
@@ -159,9 +197,9 @@ export function FilmBrowser({ state }: { state: FilmState }) {
               >
                 <DocumentPreview
                   id={state.selected}
-                  highlight={
-                    state.selected === "release" && Boolean(state.query)
-                  }
+                  copy={copy}
+                  review={state.review}
+                  taskDone={state.taskDone}
                 />
               </div>
             </div>
@@ -181,6 +219,7 @@ export function FilmBrowser({ state }: { state: FilmState }) {
         }}
       >
         <span>Docs</span>
+        {state.reviewing && <span>Reviewing 1 file</span>}
         <span style={{ marginLeft: "auto" }}>Connected</span>
         <span
           style={{
@@ -191,6 +230,9 @@ export function FilmBrowser({ state }: { state: FilmState }) {
           }}
         />
       </div>
+      {state.selected === "plan" && !state.searchVisible && (
+        <FilmThread frame={frame} copy={copy} review={state.review} />
+      )}
     </div>
   );
 }

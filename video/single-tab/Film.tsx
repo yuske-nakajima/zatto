@@ -5,34 +5,59 @@ import { FilmBrowser } from "./Browser";
 import { FilmCursor } from "./Cursor";
 import { FILM_COPY } from "./copy";
 import { FONT, INK, MONO, move } from "./style";
-import { FilmTerminal } from "./Terminal";
-import { getFilmState } from "./timeline";
+import { CliTerminal, FilmTerminal } from "./Terminal";
+import { CUE, type FilmVariant, getFilmState, TOUR } from "./timeline";
 
 /**
- * Plays the CLI-to-GUI workflow through one persistent browser tab.
- * @param props - Promotion copy language.
- * @returns The deterministic twenty-second promotion.
+ * Plays an AI-written document arriving in one browser tab, a comment on it and the AI's reply.
+ * The tour continues with task lists, the CLI, favorites, folders, search and workspaces.
+ * @param props - Promotion copy language and the cut being filmed.
+ * @returns The deterministic twenty-five-second promotion or forty-second tour.
  */
-export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
+export function SingleTabFilm({
+  locale,
+  variant = "short",
+}: {
+  locale: FilmLocale;
+  variant?: FilmVariant;
+}) {
   const frame = useCurrentFrame();
   const copy = FILM_COPY[locale];
-  const state = getFilmState(frame);
-  const focus = move(frame, 195, 218);
-  const pullback = move(frame, 495, 522);
-  const browserX = 578 - focus * 369 + pullback * 50;
-  const browserY = 205 - focus * 45 + pullback * 35;
-  const scale = 0.86 + focus * 0.2 - pullback * 0.08;
-  const sceneOpacity = move(frame, 66, 86) * move(frame, 520, 542, 1, 0);
+  const tour = variant === "tour";
+  const state = getFilmState(frame, copy.commentText.length, variant);
+  const ending = tour ? 1068 : 628;
+  // 寄り (focus) と引き (wide) の重みで、ブラウザーの位置と倍率を決める
+  const focus = tour
+    ? move(frame, 195, 218) * move(frame, 600, 625, 1, 0)
+    : move(frame, 195, 218);
+  const wide = tour
+    ? move(frame, TOUR.openReport + 12, TOUR.openReport + 37)
+    : move(frame, CUE.closeThread - 7, CUE.closeThread + 18);
+  const browserX = 578 - focus * 369 - wide * (tour ? 319 : -50);
+  const browserY = 205 - focus * 45 + wide * (tour ? -10 : 35);
+  const scale = 0.86 + focus * 0.2 + wide * (tour ? 0.12 : -0.08);
+  const sceneOpacity =
+    move(frame, 66, 86) * move(frame, ending, ending + 22, 1, 0);
   const title =
     frame < 210
-      ? copy.open
-      : frame < 300
-        ? copy.list
-        : frame < 390
-          ? copy.folders
-          : frame < 495
-            ? copy.find
-            : copy.glance;
+      ? copy.arrive
+      : frame < CUE.send + 20
+        ? copy.comment
+        : frame < CUE.closeThread
+          ? copy.reply
+          : !tour
+            ? copy.oneTab
+            : frame < 600
+              ? copy.check
+              : frame < TOUR.openReport + 20
+                ? copy.cli
+                : frame < TOUR.folders - 20
+                  ? copy.star
+                  : frame < TOUR.search - 10
+                    ? copy.folders
+                    : frame < TOUR.workspaceMenu - 15
+                      ? copy.find
+                      : copy.switch;
   return (
     <AbsoluteFill
       style={{
@@ -65,7 +90,7 @@ export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
             letterSpacing: 2,
           }}
         >
-          zatto / LOCAL HTML VIEWER
+          zatto / LOCAL HTML & MARKDOWN VIEWER
         </div>
       </div>
       <div
@@ -78,10 +103,11 @@ export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
           transformOrigin: "top left",
         }}
       >
-        <FilmBrowser state={state} />
-        <FilmCursor frame={frame} />
+        <FilmBrowser frame={frame} state={state} copy={copy} tour={tour} />
+        <FilmCursor frame={frame} variant={variant} />
       </div>
-      <FilmTerminal frame={frame} />
+      <FilmTerminal frame={frame} copy={copy} />
+      {tour && <CliTerminal frame={frame} />}
       <div
         style={{
           position: "absolute",
@@ -103,7 +129,7 @@ export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
             marginBottom: 37,
           }}
         >
-          LOCAL HTML VIEWER
+          LOCAL HTML & MARKDOWN VIEWER
         </div>
         <div
           style={{
@@ -131,23 +157,36 @@ export function SingleTabFilm({ locale }: { locale: FilmLocale }) {
           position: "absolute",
           inset: 0,
           background: INK.stage,
-          opacity: move(frame, 527, 548),
+          opacity: move(frame, ending + 8, ending + 30),
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          transform: `translateY(${move(frame, 527, 550, 13, 0)})`,
+          transform: `translateY(${move(frame, ending + 8, ending + 32, 13, 0)})`,
         }}
       >
-        <div style={{ fontSize: 40, letterSpacing: -1.5, marginBottom: 40 }}>
-          {copy.glance}
+        <div style={{ fontSize: 40, letterSpacing: -1.5, marginBottom: 14 }}>
+          {copy.headline}
+        </div>
+        <div style={{ color: "#717987", fontSize: 23, marginBottom: 46 }}>
+          {copy.tagline}
         </div>
         <Img
           src={logo}
-          style={{ width: 402, height: 100.5, marginBottom: 43 }}
+          style={{ width: 402, height: 100.5, marginBottom: 46 }}
         />
-        <div style={{ color: "#717987", fontSize: 23, letterSpacing: 0.5 }}>
-          {copy.tagline}
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 24,
+            padding: "14px 26px",
+            borderRadius: 10,
+            background: "#17191f",
+            color: "#f8fafc",
+          }}
+        >
+          <span style={{ color: "#a5b4fc", marginRight: 14 }}>❯</span>
+          npx @yuske-nakajima/zatto
         </div>
       </div>
     </AbsoluteFill>
