@@ -222,9 +222,15 @@ export function isRpcResult<M extends RpcMethod>(
         Object.values(value.deliveries).every(
           (delivery) =>
             object(delivery) &&
+            text(delivery.entryId) &&
             (delivery.status === "undelivered" ||
               delivery.status === "delivered") &&
             number(delivery.since),
+        ) &&
+        object(value.latestReplies) &&
+        Object.values(value.latestReplies).every(
+          (reply) =>
+            object(reply) && text(reply.threadId) && number(reply.createdAt),
         )
       );
     case "review.take":

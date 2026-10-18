@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { rpcCall } from "../shared/rpc-client.js";
 import { AppViewer } from "./AppViewer.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
+import { ReviewStatusBar } from "./ReviewStatusBar.js";
 import { ReviewFileStatesProvider } from "./review-status-context.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
@@ -58,6 +60,9 @@ export function App() {
     setErrorMessage,
   });
   const review = useReviewThreads(workspaceId, selectedId, setErrorMessage);
+  const [requestedThreadId, setRequestedThreadId] = useState<string | null>(
+    null,
+  );
   useMarkdownTaskBridge({
     workspaceId,
     selectedEntryId: selectedId,
@@ -150,6 +155,16 @@ export function App() {
         isDocsVisible={docs.isVisible}
         docsButtonRef={docs.triggerRef}
         onToggleDocs={toggleDocs}
+        activity={
+          <ReviewStatusBar
+            review={review}
+            entries={entries}
+            onOpen={(entryId, threadId) => {
+              selectEntry(entryId);
+              setRequestedThreadId(threadId);
+            }}
+          />
+        }
       >
         <ResizableLayout
           isFilePanelVisible={filePanel.isVisible}
@@ -214,6 +229,8 @@ export function App() {
               onRemove={removeEntry}
               onPickFiles={pickerControl.openFiles}
               review={review}
+              requestedThreadId={requestedThreadId}
+              onRequestedThreadOpened={() => setRequestedThreadId(null)}
               linkedPages={{
                 entries,
                 open: selectEntry,

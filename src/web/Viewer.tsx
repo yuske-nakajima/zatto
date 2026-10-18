@@ -30,6 +30,8 @@ interface ViewerProps {
   review?: ReviewThreads;
   /** Registered entries and actions for pages the preview reaches through links. */
   linkedPages?: LinkedPages;
+  requestedThreadId?: string | null;
+  onRequestedThreadOpened?: () => void;
 }
 
 /** Lets the viewer open or register a file the preview reached through a link. */
@@ -58,6 +60,8 @@ export function Viewer({
   onPickFiles,
   review,
   linkedPages,
+  requestedThreadId = null,
+  onRequestedThreadOpened,
 }: ViewerProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [linkedPage, setLinkedPage] = useState<LinkedPage | null>(null);
@@ -249,6 +253,8 @@ export function Viewer({
                 : null
             }
             onPendingAnchorUsed={() => setPendingComment(null)}
+            requestedThreadId={requestedThreadId}
+            onRequestedThreadOpened={onRequestedThreadOpened}
           />
         )}
         {selectedEntry ? (

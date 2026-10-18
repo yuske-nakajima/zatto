@@ -11,6 +11,8 @@ interface StatusBarFrameProps {
   isDocsVisible: boolean;
   docsButtonRef: RefObject<HTMLButtonElement | null>;
   onToggleDocs: () => void;
+  /** Shown next to the Docs button, such as what reviewing LLMs are doing. */
+  activity?: ReactNode;
 }
 
 const DEFAULT_DESCRIPTION = "";
@@ -26,6 +28,7 @@ export function StatusBarFrame({
   isDocsVisible,
   docsButtonRef,
   onToggleDocs,
+  activity,
 }: StatusBarFrameProps) {
   const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
   const docsDescription = isDocsVisible
@@ -72,6 +75,7 @@ export function StatusBarFrame({
             </span>
             <span className="status-docs-label">Docs</span>
           </button>
+          {activity}
         </div>
         <span className="status-bar-description">
           <span key={description}>{description}</span>

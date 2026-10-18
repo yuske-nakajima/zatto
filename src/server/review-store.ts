@@ -9,6 +9,7 @@ import {
   type ReviewAttachmentUpload,
   type ReviewAuthor,
   type ReviewImageType,
+  type ReviewLatestReply,
   type ReviewThread,
   reviewAttachmentFileName,
   type TextAnchor,
@@ -93,6 +94,23 @@ export class ReviewStore {
       if (!thread.resolved)
         counts[thread.entryId] = (counts[thread.entryId] ?? 0) + 1;
     return counts;
+  }
+
+  /** Finds the newest LLM reply in each entry. */
+  latestReplies(): Record<string, ReviewLatestReply> {
+    const latest: Record<string, ReviewLatestReply> = {};
+    for (const thread of this.threads)
+      for (const item of thread.comments) {
+        if (item.author.kind !== "llm") continue;
+        const current = latest[thread.entryId];
+        if (current && current.createdAt >= item.createdAt) continue;
+        latest[thread.entryId] = {
+          threadId: thread.id,
+          createdAt: item.createdAt,
+          ...(item.author.client ? { client: item.author.client } : {}),
+        };
+      }
+    return latest;
   }
 
   /** Counts resolved threads per entry. */

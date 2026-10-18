@@ -109,8 +109,16 @@ export const REVIEW_LIMITS = {
  * Present only for threads under review whose latest comment is the user's.
  */
 export interface ReviewDelivery {
+  entryId: string;
   status: "undelivered" | "delivered";
   since: number;
+}
+
+/** The newest LLM reply in an entry, so viewers can point at replies in files that are not open. */
+export interface ReviewLatestReply {
+  threadId: string;
+  createdAt: number;
+  client?: ReviewClient;
 }
 
 /** Files under review, thread counts per entry, and delivery of comments awaiting an LLM reply. */
@@ -119,6 +127,7 @@ export interface ReviewStates {
   openThreadCounts: Record<string, number>;
   resolvedThreadCounts: Record<string, number>;
   deliveries: Record<string, ReviewDelivery>;
+  latestReplies: Record<string, ReviewLatestReply>;
 }
 
 /** How an LLM keeps a thread on text it edited, shared by the MCP tools, the CLI output, and the copied request. */

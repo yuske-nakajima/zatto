@@ -144,3 +144,29 @@ function commonPrefix(text: string, expected: string): number {
     count += 1;
   return count;
 }
+
+/** Elements that can be commented on as a whole by hovering them. */
+export const COMMENTABLE_BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, tr, pre";
+
+/**
+ * Covers the visible text of a block, cut to the longest text an anchor may hold.
+ * @param document - Previewed document
+ * @param element - Paragraph, list item, heading, table row, or code block
+ * @returns Range over the block's text, or null when it has none
+ * @throws Never
+ */
+export function blockRange(document: Document, element: Element): Range | null {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  let remaining = REVIEW_LIMITS.anchorTextLength;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.textContent?.length ?? 0;
+    if (length >= remaining) {
+      range.setEnd(node, remaining);
+      break;
+    }
+    remaining -= length;
+  }
+  return range.toString().trim() ? range : null;
+}

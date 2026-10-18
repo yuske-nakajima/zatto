@@ -39,6 +39,7 @@ export function reviewCommands(context: CommandContext) {
       openThreadCounts: store.openCounts(),
       resolvedThreadCounts: store.resolvedCounts(),
       deliveries: Object.fromEntries(deliveries),
+      latestReplies: store.latestReplies(),
     };
   }
   function forgetDeliveries(entryId: string): void {
@@ -71,7 +72,11 @@ export function reviewCommands(context: CommandContext) {
         deliveries.has(thread.id)
       )
         continue;
-      deliveries.set(thread.id, { status: "undelivered", since: Date.now() });
+      deliveries.set(thread.id, {
+        entryId: thread.entryId,
+        status: "undelivered",
+        since: Date.now(),
+      });
       enqueue(review.session, {
         kind: "comment",
         reviewId: review.id,
@@ -88,7 +93,11 @@ export function reviewCommands(context: CommandContext) {
     const review = reviewOf(thread.entryId);
     if (author.kind !== "user") deliveries.delete(thread.id);
     if (author.kind !== "user" || !review) return;
-    deliveries.set(thread.id, { status: "undelivered", since: Date.now() });
+    deliveries.set(thread.id, {
+      entryId: thread.entryId,
+      status: "undelivered",
+      since: Date.now(),
+    });
     enqueue(review.session, {
       kind: "comment",
       reviewId: review.id,
@@ -253,7 +262,11 @@ export function reviewCommands(context: CommandContext) {
           : [],
       );
       for (const threadId of taken)
-        deliveries.set(threadId, { status: "delivered", since: Date.now() });
+        deliveries.set(threadId, {
+          ...(deliveries.get(threadId) as ReviewDelivery),
+          status: "delivered",
+          since: Date.now(),
+        });
       if (taken.length) statesChanged();
       return { events };
     },

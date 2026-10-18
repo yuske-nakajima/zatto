@@ -26,6 +26,11 @@
   min-width: 0;
 }
 
+.status-bar-left {
+  display: flex;
+  align-items: center;
+}
+
 .status-docs-button {
   display: flex;
   align-items: center;

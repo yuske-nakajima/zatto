@@ -69,6 +69,7 @@ describe("レビューのコメント", () => {
       openThreadCounts: { plan: 1 },
       resolvedThreadCounts: {},
       deliveries: {},
+      latestReplies: {},
     };
     window.history.replaceState(null, "", "/?entry=plan");
     vi.stubGlobal("WebSocket", FakeWebSocket);
@@ -199,6 +200,7 @@ describe("レビューのコメント", () => {
       openThreadCounts: { plan: 2 },
       resolvedThreadCounts: { plan: 3 },
       deliveries: {},
+      latestReplies: {},
     };
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, "clipboard", {
@@ -229,6 +231,7 @@ describe("レビューのコメント", () => {
       openThreadCounts: {},
       resolvedThreadCounts: {},
       deliveries: {},
+      latestReplies: {},
     };
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -258,7 +261,9 @@ describe("レビューのコメント", () => {
     thread = { ...baseThread, comments: baseThread.comments.slice(0, 1) };
     states = {
       ...states,
-      deliveries: { t1: { status: "undelivered", since: Date.now() } },
+      deliveries: {
+        t1: { entryId: "plan", status: "undelivered", since: Date.now() },
+      },
     };
     render(<App />);
     await screen.findByTitle("Plan preview");
@@ -273,7 +278,9 @@ describe("レビューのコメント", () => {
     cleanup();
     states = {
       ...states,
-      deliveries: { t1: { status: "delivered", since: Date.now() } },
+      deliveries: {
+        t1: { entryId: "plan", status: "delivered", since: Date.now() },
+      },
     };
     render(<App />);
     await screen.findByTitle("Plan preview");
@@ -290,7 +297,11 @@ describe("レビューのコメント", () => {
     states = {
       ...states,
       deliveries: {
-        t1: { status: "delivered", since: Date.now() - 6 * 60 * 1000 },
+        t1: {
+          entryId: "plan",
+          status: "delivered",
+          since: Date.now() - 6 * 60 * 1000,
+        },
       },
     };
     render(<App />);
@@ -472,5 +483,68 @@ describe("レビューのコメント", () => {
     expect(
       await within(dialog).findByRole("button", { name: "Copied" }),
     ).toBeTruthy();
+  });
+
+  test("Comments の一覧は最近動いた順に並び、開いていない返信に点を付け、開くと消す", async () => {
+    localStorage.clear();
+    const later = Date.now() + 60_000;
+    const quiet: ReviewThread = {
+      ...baseThread,
+      id: "t0",
+      anchor: { exact: "古いスレッド", prefix: "", suffix: "" },
+      comments: [
+        { id: "q1", author: { kind: "user" }, body: "古い", createdAt: 1 },
+      ],
+    };
+    thread = {
+      ...baseThread,
+      comments: [
+        baseThread.comments[0],
+        {
+          id: "c9",
+          author: { kind: "llm", session: "s", client: "claude" },
+          body: "新しい返信",
+          createdAt: later,
+        },
+      ] as ReviewThread["comments"],
+    };
+    const threads = [quiet, thread];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        rpcFixture(
+          async (method, init) => {
+            const params = JSON.parse(String(init?.body));
+            calls.push({ method: String(method), params });
+            if (method === "session.get") return Response.json({ entries });
+            if (method === "review.list") return Response.json({ threads });
+            if (method === "review.states") return Response.json(states);
+            if (method === "review.request")
+              return Response.json({ text: REQUEST_TEXT });
+            return new Response(null, { status: 204 });
+          },
+          { handleReview: true },
+        ),
+      ),
+    );
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /^Comments, 2 open/ }),
+    );
+
+    const items = await screen.findAllByRole("button", { name: /comment/ });
+    const quotes = items
+      .map((item) => item.querySelector(".review-panel-quote")?.textContent)
+      .filter(Boolean);
+    expect(quotes[0]).toContain("閲覧URL");
+    expect(quotes[1]).toContain("古いスレッド");
+    expect(screen.getAllByRole("img", { name: "New reply" })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /閲覧URL/ }));
+    await screen.findByRole("dialog", { name: "Comment thread" });
+    await waitFor(() =>
+      expect(screen.queryByRole("img", { name: "New reply" })).toBeNull(),
+    );
   });
 });

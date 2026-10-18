@@ -8,6 +8,7 @@ const REVIEW_DEFAULTS: Record<string, unknown> = {
     openThreadCounts: {},
     resolvedThreadCounts: {},
     deliveries: {},
+    latestReplies: {},
   },
 };
 

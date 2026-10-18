@@ -25,6 +25,8 @@ interface AppViewerProps {
   onPickFiles: () => void;
   review: ReviewThreads;
   linkedPages: LinkedPages;
+  requestedThreadId: string | null;
+  onRequestedThreadOpened: () => void;
 }
 
 export function AppViewer({
@@ -44,6 +46,8 @@ export function AppViewer({
   onPickFiles,
   review,
   linkedPages,
+  requestedThreadId,
+  onRequestedThreadOpened,
 }: AppViewerProps) {
   return (
     <>
@@ -72,6 +76,8 @@ export function AppViewer({
         onPickFiles={onPickFiles}
         review={review}
         linkedPages={linkedPages}
+        requestedThreadId={requestedThreadId}
+        onRequestedThreadOpened={onRequestedThreadOpened}
       />
     </>
   );

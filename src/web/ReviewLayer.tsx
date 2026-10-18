@@ -13,6 +13,7 @@ import {
   type ReviewAttachment,
   type ReviewAttachmentUpload,
   type ReviewAuthor,
+  type ReviewClient,
   type ReviewImageType,
   type ReviewThread,
   reviewAttachmentFileName,
@@ -24,8 +25,14 @@ import llmAvatar from "./assets/review-avatars/llm.webp";
 import userAvatar from "./assets/review-avatars/user.webp";
 import { BubbleIcon, ResolvedBubbleIcon } from "./BubbleIcon.js";
 import type { LinkedPage } from "./linked-page.js";
-import { createTextAnchor, locateTextAnchor } from "./review-anchor.js";
+import {
+  blockRange,
+  COMMENTABLE_BLOCKS,
+  createTextAnchor,
+  locateTextAnchor,
+} from "./review-anchor.js";
 import { renderReplyMarkdown } from "./review-markdown.js";
+import { useSeenReplies } from "./review-seen.js";
 import type { ReviewThreads } from "./useReviewThreads.js";
 import "./review.css";
 
@@ -38,7 +45,7 @@ const POPOVER_LINE_CHARACTERS = 36;
 const POPOVER_FONT_SCALE = 0.875;
 const POPOVER_MARGIN = 16;
 /** 返信を待つ表示をやめるまでの時間 */
-const REPLY_WAIT_MS = 5 * 60 * 1000;
+export const REPLY_WAIT_MS = 5 * 60 * 1000;
 
 interface ReviewLayerProps {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -50,6 +57,9 @@ interface ReviewLayerProps {
   /** Text to open a new comment on once the frame loads, carried over from a page registered for commenting. */
   pendingAnchor?: TextAnchor | null;
   onPendingAnchorUsed?: () => void;
+  /** Thread to open once it is loaded, requested from outside the preview such as the status bar. */
+  requestedThreadId?: string | null;
+  onRequestedThreadOpened?: () => void;
 }
 
 interface Position {
@@ -89,7 +99,10 @@ export function ReviewLayer({
   onCommentOnLinkedPage,
   pendingAnchor,
   onPendingAnchorUsed,
+  requestedThreadId,
+  onRequestedThreadOpened,
 }: ReviewLayerProps) {
+  const seen = useSeenReplies();
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -160,6 +173,43 @@ export function ReviewLayer({
     if (frameDocument && pendingAnchor) openPendingComment(frameDocument);
   }, [frameDocument, pendingAnchor]);
 
+  const openRequestedThread = useEffectEvent(() => {
+    const thread = review.threads.find((item) => item.id === requestedThreadId);
+    if (!thread || !frameDocument) return;
+    located
+      .get(thread.id)
+      ?.startContainer.parentElement?.scrollIntoView({ block: "center" });
+    setPopover({ kind: "thread", threadId: thread.id });
+    onRequestedThreadOpened?.();
+  });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: スレッドと本文が読み込まれた時点で開く
+  useEffect(() => {
+    if (requestedThreadId) openRequestedThread();
+  }, [requestedThreadId, review.threads, frameDocument]);
+
+  const [hoveredBlock, setHoveredBlock] = useState<Element | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 別の文書に切り替わったら、前の文書のブロックを指さない
+  useEffect(() => setHoveredBlock(null), [frameDocument]);
+  const handleHover = useEffectEvent((event: MouseEvent) => {
+    const target = event.target as Element | null;
+    const block = target?.closest?.(COMMENTABLE_BLOCKS) ?? null;
+    // Mermaid の図は SVG に描き直されて文字を選べないため、図の見出しへのコメントで代える
+    const next = block?.closest("pre.mermaid") ? null : block;
+    if (next && next !== hoveredBlock) setHoveredBlock(next);
+  });
+
+  function commentOnBlock(block: Element): void {
+    if (!frameDocument) return;
+    const range = blockRange(frameDocument, block);
+    const anchor = range && createTextAnchor(frameDocument, range);
+    if (!range || !anchor) return;
+    if (onCommentOnLinkedPage) {
+      onCommentOnLinkedPage(anchor);
+      return;
+    }
+    setPopover({ kind: "compose", anchor, range });
+  }
+
   const handleSelection = useEffectEvent(() => {
     if (!frameDocument) return;
     const selection = frameDocument.getSelection();
@@ -195,10 +245,12 @@ export function ReviewLayer({
     const view = frameDocument.defaultView;
     const onMouseUp = () => setTimeout(handleSelection, 0);
     const onClick = (event: MouseEvent) => handleClick(event);
+    const onMouseMove = (event: MouseEvent) => handleHover(event);
     const relayout = () => setLayoutVersion((version) => version + 1);
     frameDocument.addEventListener("mouseup", onMouseUp);
     frameDocument.addEventListener("keyup", onMouseUp);
     frameDocument.addEventListener("click", onClick);
+    frameDocument.addEventListener("mousemove", onMouseMove);
     view?.addEventListener("scroll", relayout);
     view?.addEventListener("resize", relayout);
     window.addEventListener("resize", relayout);
@@ -206,6 +258,7 @@ export function ReviewLayer({
       frameDocument.removeEventListener("mouseup", onMouseUp);
       frameDocument.removeEventListener("keyup", onMouseUp);
       frameDocument.removeEventListener("click", onClick);
+      frameDocument.removeEventListener("mousemove", onMouseMove);
       view?.removeEventListener("scroll", relayout);
       view?.removeEventListener("resize", relayout);
       window.removeEventListener("resize", relayout);
@@ -272,6 +325,23 @@ export function ReviewLayer({
     return { left, bottom: geometry.canvasHeight - textTop + 6, width };
   }
 
+  /** Places the hover comment button in the left margin, level with the first line of the block. */
+  function blockButtonPosition(block: Element | null): Position | null {
+    const geometry = frameGeometry();
+    if (!geometry || !block?.isConnected) return null;
+    const rect = block.getBoundingClientRect();
+    const line = Math.min(rect.height, 24);
+    const top = geometry.offsetTop + rect.top + line / 2;
+    if (top < geometry.visibleTop || top > geometry.visibleBottom) return null;
+    return {
+      left: Math.max(
+        geometry.offsetLeft + 4,
+        geometry.offsetLeft + rect.left - 30,
+      ),
+      top,
+    };
+  }
+
   /** Places a marker in the right margin of the preview, level with the first line of the commented text. */
   function markerPosition(range: Range | undefined): Position | null {
     const geometry = frameGeometry();
@@ -298,6 +368,7 @@ export function ReviewLayer({
       : thread
         ? popoverPlacement(located.get(thread.id))
         : null;
+  const blockPosition = blockButtonPosition(hoveredBlock);
   const openCount = review.threads.filter((item) => !item.resolved).length;
   const resolvedCount = review.threads.length - openCount;
   // 同じ行の印が重ならないよう、高さが近いスレッドを 1 つの印にまとめる
@@ -367,6 +438,22 @@ export function ReviewLayer({
           </button>
         );
       })}
+      {hoveredBlock && blockPosition && popover?.kind !== "selection" && (
+        <button
+          type="button"
+          className="review-block-button"
+          style={blockPosition}
+          aria-label={
+            onCommentOnLinkedPage
+              ? "Register and comment on this block"
+              : "Comment on this block"
+          }
+          data-status-description="Comment on this paragraph, item, or heading without selecting text."
+          onClick={() => commentOnBlock(hoveredBlock)}
+        >
+          <BubbleIcon size={12} />
+        </button>
+      )}
       {popover?.kind === "selection" && selectionPosition && (
         <button
           type="button"
@@ -428,6 +515,7 @@ export function ReviewLayer({
           onClose={closePopover}
         >
           <ThreadView
+            seen={seen}
             thread={thread}
             isLocated={!thread.anchor || located.has(thread.id)}
             review={review}
@@ -472,40 +560,53 @@ export function ReviewLayer({
                 </p>
               ) : (
                 <ol>
-                  {review.threads.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className={
-                          item.resolved
-                            ? "review-panel-item review-panel-item--resolved"
-                            : "review-panel-item"
-                        }
-                        onClick={() => {
-                          const range = located.get(item.id);
-                          range?.startContainer.parentElement?.scrollIntoView({
-                            block: "center",
-                          });
-                          setPopover({ kind: "thread", threadId: item.id });
-                        }}
-                      >
-                        <span className="review-panel-quote">
-                          {item.anchor ? item.anchor.exact : "Whole document"}
-                        </span>
-                        <span className="review-panel-body">
-                          {item.comments[0]?.body}
-                        </span>
-                        <span className="review-panel-meta">
-                          {item.comments.length}{" "}
-                          {item.comments.length === 1 ? "comment" : "comments"}
-                          {item.resolved ? " · Resolved" : ""}
-                          {item.anchor && !located.has(item.id)
-                            ? " · Text not found"
-                            : ""}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                  {[...review.threads]
+                    .sort((a, b) => lastActivity(b) - lastActivity(a))
+                    .map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className={
+                            item.resolved
+                              ? "review-panel-item review-panel-item--resolved"
+                              : "review-panel-item"
+                          }
+                          onClick={() => {
+                            const range = located.get(item.id);
+                            range?.startContainer.parentElement?.scrollIntoView(
+                              {
+                                block: "center",
+                              },
+                            );
+                            setPopover({ kind: "thread", threadId: item.id });
+                          }}
+                        >
+                          <span className="review-panel-quote">
+                            {hasUnseenReply(item, seen) && (
+                              <span
+                                className="review-unseen-dot"
+                                role="img"
+                                aria-label="New reply"
+                              />
+                            )}
+                            {item.anchor ? item.anchor.exact : "Whole document"}
+                          </span>
+                          <span className="review-panel-body">
+                            {item.comments[0]?.body}
+                          </span>
+                          <span className="review-panel-meta">
+                            {item.comments.length}{" "}
+                            {item.comments.length === 1
+                              ? "comment"
+                              : "comments"}
+                            {item.resolved ? " · Resolved" : ""}
+                            {item.anchor && !located.has(item.id)
+                              ? " · Text not found"
+                              : ""}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
                 </ol>
               )}
             </section>
@@ -689,18 +790,26 @@ function CloseButton({ onClose }: { onClose: () => void }) {
 }
 
 function ThreadView({
+  seen,
   thread,
   isLocated,
   review,
   onClose,
   onZoom,
 }: {
+  seen: ReturnType<typeof useSeenReplies>;
   thread: ReviewThread;
   isLocated: boolean;
   review: ReviewThreads;
   onClose: () => void;
   onZoom: (attachment: ReviewAttachment) => void;
 }) {
+  const latest = thread.comments.at(-1)?.createdAt ?? 0;
+  const markSeen = useEffectEvent(() => seen.markSeen(thread.id, latest));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 開いている間に届いた返信も既読にする
+  useEffect(() => {
+    markSeen();
+  }, [thread.id, latest]);
   return (
     <>
       <header className="review-popover-header">
@@ -841,7 +950,7 @@ const AVATARS = {
   user: userAvatar,
 } as const;
 
-function Avatar({ author }: { author: ReviewAuthor }) {
+export function Avatar({ author }: { author: ReviewAuthor }) {
   const key =
     author.kind === "user" ? "user" : (author.client ?? ("llm" as const));
   return (
@@ -880,6 +989,20 @@ function ReplyMarkdown({ body }: { body: string }) {
       // biome-ignore lint/security/noDangerouslySetInnerHtml: renderReplyMarkdown は許可した書き方以外をすべて文字として出す
       dangerouslySetInnerHTML={{ __html: renderReplyMarkdown(body) }}
     />
+  );
+}
+
+function lastActivity(thread: ReviewThread): number {
+  return thread.comments.at(-1)?.createdAt ?? thread.createdAt;
+}
+
+function hasUnseenReply(
+  thread: ReviewThread,
+  seen: ReturnType<typeof useSeenReplies>,
+): boolean {
+  const last = thread.comments.at(-1);
+  return (
+    last?.author.kind === "llm" && seen.isUnseen(thread.id, last.createdAt)
   );
 }
 
@@ -1087,9 +1210,14 @@ function Quote({ text }: { text: string | null }) {
 
 const CLIENT_NAMES = { claude: "Claude", codex: "Codex" } as const;
 
+/** Display name of an LLM client, or "LLM" when it is not known. */
+export function clientName(client: ReviewClient | undefined): string {
+  return client ? CLIENT_NAMES[client] : "LLM";
+}
+
 function authorLabel(author: ReviewAuthor): string {
   if (author.kind === "user") return "You";
-  const name = author.client ? CLIENT_NAMES[author.client] : "LLM";
+  const name = clientName(author.client);
   return author.session ? `${name} · ${author.session}` : name;
 }
 

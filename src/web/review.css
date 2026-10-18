@@ -678,3 +678,107 @@ span.review-attachment {
   font: 0.75rem / 1.5 var(--font-mono);
   resize: none;
 }
+
+.review-unseen-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-accent);
+  vertical-align: middle;
+}
+
+.review-status {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.review-status .review-avatar {
+  width: 15px;
+  height: 15px;
+}
+
+.review-status--reply {
+  padding: 0 6px 0 2px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-bg-accent) 14%, transparent);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.review-status--reply .review-avatar {
+  animation: review-status-hop 0.6s ease-out 1;
+}
+
+.review-status-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.review-status-dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  animation: review-replying 1.2s ease-in-out infinite;
+}
+
+.review-status-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.review-status-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes review-status-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-status--reply .review-avatar,
+  .review-status-dots span {
+    animation: none;
+  }
+}
+
+.review-block-button {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 12%);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.review-block-button:hover {
+  color: var(--color-text-primary);
+  opacity: 1;
+}

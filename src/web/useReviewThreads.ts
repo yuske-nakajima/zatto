@@ -4,6 +4,7 @@ import type {
   ActiveReview,
   ReviewAttachmentUpload,
   ReviewDelivery,
+  ReviewLatestReply,
   ReviewStates,
   ReviewThread,
   TextAnchor,
@@ -22,6 +23,10 @@ export interface ReviewThreads {
   fileStates: ReviewFileStates;
   /** Request to paste into an LLM conversation for the selected entry; null until loaded. */
   requestText: string | null;
+  /** Every review in progress, across files. */
+  reviews: readonly ActiveReview[];
+  /** The newest LLM reply per entry, across files. */
+  latestReplies: Readonly<Record<string, ReviewLatestReply>>;
   /** Whether the reviewing session took the user's latest comment, by thread ID. */
   deliveries: Readonly<Record<string, ReviewDelivery>>;
   /** Resolves to the new thread's ID, or null when the comment was not saved. */
@@ -57,6 +62,7 @@ export function useReviewThreads(
     openThreadCounts: {},
     resolvedThreadCounts: {},
     deliveries: {},
+    latestReplies: {},
   });
 
   const refresh = useCallback(async () => {
@@ -141,6 +147,8 @@ export function useReviewThreads(
       resolvedThreadCounts: states.resolvedThreadCounts,
     },
     deliveries: states.deliveries,
+    reviews,
+    latestReplies: states.latestReplies,
     requestText,
     create: async (anchor, body, attachments) => {
       let threadId: string | null = null;

@@ -170,6 +170,7 @@ describe("review threads", () => {
       openThreadCounts: {},
       resolvedThreadCounts: {},
       deliveries: {},
+      latestReplies: {},
     });
     const before = await commands.execute(
       "review.create",
@@ -260,6 +261,10 @@ describe("review threads", () => {
       openThreadCounts: { [entry.id]: 2 },
       resolvedThreadCounts: {},
       deliveries: {},
+      // LLM の返信は 1 件だけなので、それがこのエントリの最新の返信になる
+      latestReplies: {
+        [entry.id]: { threadId: thread.id, createdAt: expect.any(Number) },
+      },
     });
     await commands.execute(
       "review.resolve",
@@ -278,6 +283,9 @@ describe("review threads", () => {
       openThreadCounts: { [entry.id]: 1 },
       resolvedThreadCounts: { [entry.id]: 1 },
       deliveries: {},
+      latestReplies: {
+        [entry.id]: expect.objectContaining({ threadId: thread.id }),
+      },
     });
   });
 
@@ -303,6 +311,7 @@ describe("review threads", () => {
       (await commands.execute("review.states", {}, [])).deliveries[thread.id];
 
     await expect(deliveryOf()).resolves.toEqual({
+      entryId: entry.id,
       status: "undelivered",
       since: expect.any(Number),
     });
