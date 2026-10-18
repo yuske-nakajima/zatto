@@ -261,9 +261,9 @@ describe("review threads", () => {
       openThreadCounts: { [entry.id]: 2 },
       resolvedThreadCounts: {},
       deliveries: {},
-      // LLM の返信は 1 件だけなので、それがこのエントリの最新の返信になる
+      // 最新のコメントが LLM の返信で、解決していないスレッドだけを挙げる
       latestReplies: {
-        [entry.id]: { threadId: thread.id, createdAt: expect.any(Number) },
+        [thread.id]: { entryId: entry.id, createdAt: expect.any(Number) },
       },
     });
     await commands.execute(
@@ -284,7 +284,7 @@ describe("review threads", () => {
       resolvedThreadCounts: { [entry.id]: 1 },
       deliveries: {},
       latestReplies: {
-        [entry.id]: expect.objectContaining({ threadId: thread.id }),
+        [thread.id]: expect.objectContaining({ entryId: entry.id }),
       },
     });
   });

@@ -96,21 +96,19 @@ export class ReviewStore {
     return counts;
   }
 
-  /** Finds the newest LLM reply in each entry. */
+  /** Lists unresolved threads whose latest comment is an LLM reply, by thread ID. */
   latestReplies(): Record<string, ReviewLatestReply> {
-    const latest: Record<string, ReviewLatestReply> = {};
-    for (const thread of this.threads)
-      for (const item of thread.comments) {
-        if (item.author.kind !== "llm") continue;
-        const current = latest[thread.entryId];
-        if (current && current.createdAt >= item.createdAt) continue;
-        latest[thread.entryId] = {
-          threadId: thread.id,
-          createdAt: item.createdAt,
-          ...(item.author.client ? { client: item.author.client } : {}),
-        };
-      }
-    return latest;
+    const replies: Record<string, ReviewLatestReply> = {};
+    for (const thread of this.threads) {
+      const last = thread.comments.at(-1);
+      if (thread.resolved || last?.author.kind !== "llm") continue;
+      replies[thread.id] = {
+        entryId: thread.entryId,
+        createdAt: last.createdAt,
+        ...(last.author.client ? { client: last.author.client } : {}),
+      };
+    }
+    return replies;
   }
 
   /** Counts resolved threads per entry. */

@@ -114,9 +114,9 @@ export interface ReviewDelivery {
   since: number;
 }
 
-/** The newest LLM reply in an entry, so viewers can point at replies in files that are not open. */
+/** An unresolved thread whose latest comment is an LLM reply, so viewers can point at replies in files that are not open. */
 export interface ReviewLatestReply {
-  threadId: string;
+  entryId: string;
   createdAt: number;
   client?: ReviewClient;
 }

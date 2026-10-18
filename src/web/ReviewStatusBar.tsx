@@ -63,13 +63,26 @@ export function ReviewStatusBar({
   }
 
   const unseen = Object.entries(review.latestReplies)
-    .flatMap(([entryId, latest]) => {
-      const entry = entries.find((item) => item.id === entryId);
-      return entry && seen.isUnseen(latest.threadId, latest.createdAt)
-        ? [{ ...latest, entry }]
+    .flatMap(([threadId, latest]) => {
+      const entry = entries.find((item) => item.id === latest.entryId);
+      return entry && seen.isUnseen(threadId, latest.createdAt)
+        ? [{ ...latest, threadId, entry }]
         : [];
     })
     .sort((a, b) => b.createdAt - a.createdAt);
+  // 一覧はファイルごとにまとめ、未読のスレッド数と最新の返信を示す
+  const files = [
+    ...new Map(
+      unseen.map((item) => [
+        item.entry.id,
+        {
+          ...item,
+          count: unseen.filter((other) => other.entry.id === item.entry.id)
+            .length,
+        },
+      ]),
+    ).values(),
+  ].sort((a, b) => b.createdAt - a.createdAt);
   const reply = unseen[0];
   if (reply) {
     const { entry } = reply;
@@ -107,7 +120,7 @@ export function ReviewStatusBar({
             className="review-status-list"
             aria-label="Files with new replies"
           >
-            {unseen.map((item) => (
+            {files.map((item) => (
               <li key={item.entry.id}>
                 <button
                   type="button"
@@ -126,6 +139,9 @@ export function ReviewStatusBar({
                   <span className="review-status-list-title">
                     {item.entry.title}
                   </span>
+                  {item.count > 1 && (
+                    <span className="review-status-count">{item.count}</span>
+                  )}
                   <time dateTime={new Date(item.createdAt).toISOString()}>
                     {formatCommentTime(item.createdAt)}
                   </time>

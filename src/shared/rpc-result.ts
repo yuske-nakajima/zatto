@@ -230,7 +230,7 @@ export function isRpcResult<M extends RpcMethod>(
         object(value.latestReplies) &&
         Object.values(value.latestReplies).every(
           (reply) =>
-            object(reply) && text(reply.threadId) && number(reply.createdAt),
+            object(reply) && text(reply.entryId) && number(reply.createdAt),
         )
       );
     case "review.take":

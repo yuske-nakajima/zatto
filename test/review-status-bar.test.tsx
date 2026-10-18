@@ -56,8 +56,8 @@ test("返答中・新しい返信・レビュー中のファイル数の順に�
       review={review({
         reviews,
         latestReplies: {
-          plan: {
-            threadId: "t1",
+          t1: {
+            entryId: "plan",
             createdAt: Date.now() + 1000,
             client: "codex",
           },
@@ -103,8 +103,9 @@ test("未読の返信が複数あるときは件数を添え、重ねると一�
     <ReviewStatusBar
       review={review({
         latestReplies: {
-          plan: { threadId: "t1", createdAt: now + 2000, client: "claude" },
-          notes: { threadId: "t2", createdAt: now + 1000 },
+          t1: { entryId: "plan", createdAt: now + 3000, client: "claude" },
+          t2: { entryId: "notes", createdAt: now + 1000 },
+          t3: { entryId: "plan", createdAt: now + 2000, client: "claude" },
         },
       })}
       entries={[
@@ -116,12 +117,17 @@ test("未読の返信が複数あるときは件数を添え、重ねると一�
     />,
   );
   const status = screen.getByRole("button", { name: /Claude replied · Plan/ });
-  expect(status.textContent).toContain("+1");
+  // 未読はスレッドの単位で数える（Plan に 2 件、Notes に 1 件）
+  expect(status.textContent).toContain("+2");
 
   fireEvent.mouseEnter(status.parentElement as HTMLElement);
   const list = screen.getByRole("list", { name: "Files with new replies" });
-  expect(list.textContent).toContain("Plan");
-  expect(list.textContent).toContain("Notes");
+  expect(
+    [...list.querySelectorAll("li")].map((item) => item.textContent),
+  ).toEqual([
+    expect.stringMatching(/^Plan2/),
+    expect.stringMatching(/^Notes\d/),
+  ]);
   fireEvent.click(screen.getByRole("button", { name: /^Notes/ }));
   expect(onOpenComments).toHaveBeenCalledWith("notes");
 });
