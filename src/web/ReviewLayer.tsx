@@ -60,6 +60,8 @@ interface ReviewLayerProps {
   /** Thread to open once it is loaded, requested from outside the preview such as the status bar. */
   requestedThreadId?: string | null;
   onRequestedThreadOpened?: () => void;
+  /** Increments to open the Comments list, such as from the status bar. */
+  panelRequest?: number;
 }
 
 interface Position {
@@ -101,11 +103,15 @@ export function ReviewLayer({
   onPendingAnchorUsed,
   requestedThreadId,
   onRequestedThreadOpened,
+  panelRequest = 0,
 }: ReviewLayerProps) {
   const seen = useSeenReplies();
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  useEffect(() => {
+    if (panelRequest) setIsPanelOpen(true);
+  }, [panelRequest]);
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [zoomed, setZoomed] = useState<ReviewAttachment | null>(null);
 
@@ -515,6 +521,7 @@ export function ReviewLayer({
           onClose={closePopover}
         >
           <ThreadView
+            isVisible={placement !== "hidden"}
             seen={seen}
             thread={thread}
             isLocated={!thread.anchor || located.has(thread.id)}
@@ -790,6 +797,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
 }
 
 function ThreadView({
+  isVisible,
   seen,
   thread,
   isLocated,
@@ -797,6 +805,8 @@ function ThreadView({
   onClose,
   onZoom,
 }: {
+  /** False while the popover is hidden because its text is scrolled out of view. */
+  isVisible: boolean;
   seen: ReturnType<typeof useSeenReplies>;
   thread: ReviewThread;
   isLocated: boolean;
@@ -806,10 +816,11 @@ function ThreadView({
 }) {
   const latest = thread.comments.at(-1)?.createdAt ?? 0;
   const markSeen = useEffectEvent(() => seen.markSeen(thread.id, latest));
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 開いている間に届いた返信も既読にする
+  // 開いている間に届いた返信も既読にする。スクロールで隠れている間は読んでいないので既読にしない
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 表示が切り替わるたびに見直す
   useEffect(() => {
-    markSeen();
-  }, [thread.id, latest]);
+    if (isVisible) markSeen();
+  }, [thread.id, latest, isVisible]);
   return (
     <>
       <header className="review-popover-header">

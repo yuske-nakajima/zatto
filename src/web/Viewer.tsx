@@ -32,6 +32,7 @@ interface ViewerProps {
   linkedPages?: LinkedPages;
   requestedThreadId?: string | null;
   onRequestedThreadOpened?: () => void;
+  panelRequest?: number;
 }
 
 /** Lets the viewer open or register a file the preview reached through a link. */
@@ -62,6 +63,7 @@ export function Viewer({
   linkedPages,
   requestedThreadId = null,
   onRequestedThreadOpened,
+  panelRequest,
 }: ViewerProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [linkedPage, setLinkedPage] = useState<LinkedPage | null>(null);
@@ -255,6 +257,7 @@ export function Viewer({
             onPendingAnchorUsed={() => setPendingComment(null)}
             requestedThreadId={requestedThreadId}
             onRequestedThreadOpened={onRequestedThreadOpened}
+            panelRequest={panelRequest}
           />
         )}
         {selectedEntry ? (

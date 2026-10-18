@@ -27,6 +27,7 @@ interface AppViewerProps {
   linkedPages: LinkedPages;
   requestedThreadId: string | null;
   onRequestedThreadOpened: () => void;
+  panelRequest: number;
 }
 
 export function AppViewer({
@@ -48,6 +49,7 @@ export function AppViewer({
   linkedPages,
   requestedThreadId,
   onRequestedThreadOpened,
+  panelRequest,
 }: AppViewerProps) {
   return (
     <>
@@ -78,6 +80,7 @@ export function AppViewer({
         linkedPages={linkedPages}
         requestedThreadId={requestedThreadId}
         onRequestedThreadOpened={onRequestedThreadOpened}
+        panelRequest={panelRequest}
       />
     </>
   );

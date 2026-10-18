@@ -63,6 +63,7 @@ export function App() {
   const [requestedThreadId, setRequestedThreadId] = useState<string | null>(
     null,
   );
+  const [panelRequest, setPanelRequest] = useState(0);
   useMarkdownTaskBridge({
     workspaceId,
     selectedEntryId: selectedId,
@@ -163,6 +164,10 @@ export function App() {
               selectEntry(entryId);
               setRequestedThreadId(threadId);
             }}
+            onOpenComments={(entryId) => {
+              selectEntry(entryId);
+              setPanelRequest((count) => count + 1);
+            }}
           />
         }
       >
@@ -231,6 +236,7 @@ export function App() {
               review={review}
               requestedThreadId={requestedThreadId}
               onRequestedThreadOpened={() => setRequestedThreadId(null)}
+              panelRequest={panelRequest}
               linkedPages={{
                 entries,
                 open: selectEntry,
