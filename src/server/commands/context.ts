@@ -3,6 +3,7 @@ import type { PickDirectory, PickFiles } from "../file-picker.js";
 import type { RealtimeHub } from "../realtime.js";
 import { ReviewStore } from "../review-store.js";
 import type { Session, SessionStore } from "../session.js";
+import { zattoCliCommand } from "../zatto-cli.js";
 import { domainError } from "./errors.js";
 /** Dependencies owned by the shared command layer. */
 export interface CommandOptions {
@@ -11,6 +12,8 @@ export interface CommandOptions {
   realtimeHub: RealtimeHub;
   /** Defaults to a store that keeps threads only in memory. */
   reviewStore?: ReviewStore;
+  /** Command that runs this installation's CLI; defaults to the node binary and bin/zatto.js of this package. */
+  cliCommand?: string;
   serverIdentity?: { instanceId: string; protocolVersion: number };
   pickFiles?: PickFiles;
   pickDirectory?: PickDirectory;
@@ -21,6 +24,7 @@ export interface CommandOptions {
 /** Validated command dependencies and mutation guards. */
 export interface CommandContext extends CommandOptions {
   reviewStore: ReviewStore;
+  cliCommand: string;
   publish: () => Promise<void>;
   /** Rejects a workspace other than the shared active selection. */
   activeWorkspace: (expected: string) => string;
@@ -45,6 +49,7 @@ export function createCommandContext(options: CommandOptions): CommandContext {
   return {
     ...options,
     reviewStore,
+    cliCommand: options.cliCommand ?? zattoCliCommand(),
     activeWorkspace(expected) {
       const id = options.sessionStore.getWorkspaceState().activeWorkspaceId;
       if (expected !== id)

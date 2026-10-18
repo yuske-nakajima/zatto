@@ -37,6 +37,7 @@ async function fixture() {
     agentContextStore: new AgentContextStore(),
     realtimeHub: hub,
     reviewStore,
+    cliCommand: '"/opt/node" "/opt/zatto/bin/zatto.js"',
     logError: vi.fn(),
   });
   const file = path.join(dir, "plan.md");
@@ -467,5 +468,30 @@ describe("review threads", () => {
     const missing = await app.inject("/review-attachments/other.png");
     expect(missing.statusCode).toBe(404);
     await app.close();
+  });
+
+  test("LLM への依頼文に、動いている zatto の CLI の絶対パスとファイルのパスを入れる", async () => {
+    const { commands, entry } = await fixture();
+    const { text } = await commands.execute(
+      "review.request",
+      { workspaceId: "default", entryId: entry.id },
+      [],
+    );
+
+    expect(text).toContain(
+      `"/opt/node" "/opt/zatto/bin/zatto.js" review ${JSON.stringify(entry.absPath)} --session <id>`,
+    );
+    expect(text).toContain(
+      '"/opt/node" "/opt/zatto/bin/zatto.js" review reply <thread-id>',
+    );
+    expect(text).toContain("tell me you are ready");
+    expect(text).toContain("add --once");
+    await expect(
+      commands.execute(
+        "review.request",
+        { workspaceId: "default", entryId: "missing" },
+        [],
+      ),
+    ).rejects.toMatchObject({ code: 1001 });
   });
 });

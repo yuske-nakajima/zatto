@@ -34,7 +34,7 @@
           <tr><td>Load comment threads</td><td><code>review.list</code> / <code>review.states</code></td><td>Loads the threads of the selected file, the files under review, and unresolved thread counts, following <code>review:update</code> and <code>review:states</code> events. The file list shows the count, marked In review while a file is under review.</td></tr>
           <tr><td>Comment / Reply</td><td><code>review.create</code> / <code>review.reply</code></td><td>Saves the thread with pasted or dropped images and refreshes the highlights. Comments cannot be edited or deleted after sending.</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>Resolved threads are no longer highlighted.</td></tr>
-          <tr><td>Ask an LLM to review</td><td>—</td><td>Copies a request to paste into an LLM conversation; it runs <code>zatto review</code> for the file, which calls <code>review.start</code>.</td></tr>
+          <tr><td>Ask an LLM to review</td><td><code>review.request</code></td><td>Copies a request to paste into an LLM conversation. The request runs the CLI of the running zatto by absolute path; that command calls <code>review.start</code>.</td></tr>
           <tr><td>Finish review</td><td><code>review.finish</code></td><td>Ends the review; the LLM session receives the open threads.</td></tr>
           <tr><td>Toggle a Markdown task checkbox</td><td><code>markdown.setTask</code></td><td>Writes the checkbox state to the file; when the file changed, reloads the preview with its latest content.</td></tr>
           <tr><td>Search files</td><td><code>search.query</code></td><td>Shows fixed-string source matches and truncation status.</td></tr>

@@ -170,6 +170,10 @@ export interface RpcMethods {
     params: RequestContext & { threadId: string; resolved: boolean };
     result: ReviewThread;
   };
+  "review.request": {
+    params: WorkspaceParams & { entryId: string };
+    result: { text: string };
+  };
   "review.start": {
     params: WorkspaceParams & { entryId: string; session: string };
     result: ActiveReview;

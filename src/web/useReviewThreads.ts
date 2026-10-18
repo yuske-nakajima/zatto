@@ -20,6 +20,8 @@ export interface ReviewThreads {
   activeReview: ActiveReview | null;
   /** Entries under review and thread counts, for labelling the file list. */
   fileStates: ReviewFileStates;
+  /** Request to paste into an LLM conversation for the selected entry; null until loaded. */
+  requestText: string | null;
   /** Whether the reviewing session took the user's latest comment, by thread ID. */
   deliveries: Readonly<Record<string, ReviewDelivery>>;
   /** Resolves to the new thread's ID, or null when the comment was not saved. */
@@ -74,6 +76,22 @@ export function useReviewThreads(
     void refresh();
   }, [refresh]);
 
+  const [requestText, setRequestText] = useState<string | null>(null);
+  useEffect(() => {
+    setRequestText(null);
+    if (!workspaceId || !entryId) return;
+    let current = true;
+    // クリップボードへの書込みはクリック直後でないと拒まれることがあるため、先に取得しておく
+    void rpcCall("review.request", { workspaceId, entryId })
+      .then((result) => {
+        if (current) setRequestText(result.text);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [workspaceId, entryId]);
+
   const handleMessage = useEffectEvent((message: ServerMessage) => {
     if (
       message.type === "review:update" &&
@@ -123,6 +141,7 @@ export function useReviewThreads(
       resolvedThreadCounts: states.resolvedThreadCounts,
     },
     deliveries: states.deliveries,
+    requestText,
     create: async (anchor, body, attachments) => {
       let threadId: string | null = null;
       await run(async () => {

@@ -117,3 +117,22 @@ export interface ReviewStates {
 /** What an LLM may use in replies and how it reads images, shared by the MCP tools and the copied request. */
 export const REVIEW_REPLY_GUIDE =
   "Replies render as Markdown limited to paragraphs, bulleted and numbered lists, bold, inline code, fenced code blocks, and links; other syntax shows as plain text. Images the user attached are listed in each comment's attachments with a local path you can read.";
+
+/**
+ * A request any LLM conversation can act on: it keeps the review command running for one file.
+ * @param cli - Command that runs the zatto CLI of the running server, quoted for a POSIX shell
+ * @param filePath - File under review
+ * @returns Text to paste into an LLM conversation
+ */
+export function reviewRequestText(cli: string, filePath: string): string {
+  return [
+    "Please review this document with me in zatto.",
+    "Run this command in the background and keep it running, using an ID for this conversation as <id>:",
+    `${cli} review ${JSON.stringify(filePath)} --session <id>`,
+    "When it reports that the file is under review, tell me you are ready.",
+    "Each JSON line it prints is a comment I wrote. Read the document and any attached images, then answer in that thread with:",
+    `${cli} review reply <thread-id> "<reply>" --session <id>`,
+    "Keep the command running until it exits when I finish the review. If you cannot read output while a command is running, add --once and run it again after each reply.",
+    REVIEW_REPLY_GUIDE,
+  ].join("\n");
+}

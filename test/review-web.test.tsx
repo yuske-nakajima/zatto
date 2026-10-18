@@ -12,7 +12,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Entry } from "../src/server/session.js";
 import type { ReviewStates, ReviewThread } from "../src/shared/review.js";
 import { App } from "../src/web/App.js";
-import { reviewRequestText } from "../src/web/ReviewLayer.js";
 import { rpcFixture } from "./rpc-client-fixture.js";
 
 const entries: Entry[] = [
@@ -37,6 +36,7 @@ const baseThread: ReviewThread = {
 };
 
 let thread: ReviewThread = baseThread;
+const REQUEST_TEXT = '"/bin/node" "/zatto/bin/zatto.js" review "/work/plan.md"';
 
 class FakeWebSocket extends EventTarget {
   close(): void {}
@@ -83,6 +83,8 @@ describe("レビューのコメント", () => {
             if (method === "review.list")
               return Response.json({ threads: [thread] });
             if (method === "review.states") return Response.json(states);
+            if (method === "review.request")
+              return Response.json({ text: REQUEST_TEXT });
             if (method === "review.start")
               return Response.json({
                 id: "r2",
@@ -205,10 +207,7 @@ describe("レビューのコメント", () => {
     await screen.findByRole("button", {
       name: "Copied — paste it into an LLM",
     });
-    expect(writeText).toHaveBeenCalledWith(reviewRequestText("/work/plan.md"));
-    expect(reviewRequestText("/work/plan.md")).toContain(
-      'zatto review "/work/plan.md" --session <id>',
-    );
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(REQUEST_TEXT));
   });
 
   test("クリップボードが使えないときは、依頼文を表示する", async () => {
@@ -239,7 +238,7 @@ describe("レビューのコメント", () => {
           "Request for an LLM",
         )) as HTMLTextAreaElement
       ).value,
-    ).toBe(reviewRequestText("/work/plan.md"));
+    ).toBe(REQUEST_TEXT);
   });
 
   test("LLM が受け取るまでは未配信、受け取ったあとは返答中の表示を出す", async () => {

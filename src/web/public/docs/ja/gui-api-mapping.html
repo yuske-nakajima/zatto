@@ -34,7 +34,7 @@
           <tr><td>コメントのスレッドを読み込む</td><td><code>review.list</code> / <code>review.states</code></td><td>選択中ファイルのスレッド、レビュー中のファイル、未解決のスレッド数を読み込み、<code>review:update</code>と<code>review:states</code>の通知に追従します。ファイル一覧にはスレッド数を表示し、レビュー中はIn reviewを付けます。</td></tr>
           <tr><td>Comment / Reply</td><td><code>review.create</code> / <code>review.reply</code></td><td>貼り付けやドロップした画像と一緒にスレッドを保存し、強調表示を更新します。送信したコメントは編集・削除できません。</td></tr>
           <tr><td>Resolve / Reopen</td><td><code>review.resolve</code></td><td>解決したスレッドは強調表示しません。</td></tr>
-          <tr><td>Ask an LLM to review</td><td>—</td><td>LLMの会話に貼る依頼文をコピーします。貼られたLLMが<code>zatto review</code>を実行し、<code>review.start</code>を呼びます。</td></tr>
+          <tr><td>Ask an LLM to review</td><td><code>review.request</code></td><td>LLMの会話に貼る依頼文をコピーします。依頼文は動いているzattoのCLIを絶対パスで実行し、そのコマンドが<code>review.start</code>を呼びます。</td></tr>
           <tr><td>Finish review</td><td><code>review.finish</code></td><td>レビューを終え、LLMのセッションが未解決のスレッドを受け取ります。</td></tr>
           <tr><td>Markdownのタスクのチェックを切り替え</td><td><code>markdown.setTask</code></td><td>チェックの状態をファイルへ書き込みます。ファイルが変更されていた場合は、最新の内容でプレビューを読み直します。</td></tr>
           <tr><td>ファイルを検索</td><td><code>search.query</code></td><td>ソース内の固定文字列一致と打ち切り状態を表示します。</td></tr>

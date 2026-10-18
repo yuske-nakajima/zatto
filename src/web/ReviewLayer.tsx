@@ -10,7 +10,6 @@ import {
 import {
   REVIEW_IMAGE_TYPES,
   REVIEW_LIMITS,
-  REVIEW_REPLY_GUIDE,
   type ReviewAttachment,
   type ReviewAttachmentUpload,
   type ReviewAuthor,
@@ -506,13 +505,8 @@ export function ReviewLayer({
  * Shows whether the file is under review in the viewer header: the reviewing session with Finish review,
  * or a button that copies a request for an LLM conversation.
  */
-export function ReviewStatus({
-  filePath,
-  review,
-}: {
-  filePath: string;
-  review: ReviewThreads;
-}) {
+export function ReviewStatus({ review }: { review: ReviewThreads }) {
+  const { requestText } = review;
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
@@ -538,7 +532,8 @@ export function ReviewStatus({
         data-status-description="Copy a request to paste into an LLM conversation; that conversation then answers your comments on this file."
         onClick={async () => {
           try {
-            await navigator.clipboard.writeText(reviewRequestText(filePath));
+            if (!requestText) throw new Error("Request not loaded");
+            await navigator.clipboard.writeText(requestText);
             setCopyState("copied");
             setTimeout(() => setCopyState("idle"), 2000);
           } catch {
@@ -560,7 +555,7 @@ export function ReviewStatus({
             aria-label="Request for an LLM"
             readOnly
             rows={6}
-            value={reviewRequestText(filePath)}
+            value={requestText ?? ""}
             onFocus={(event) => event.currentTarget.select()}
           />
           <button
@@ -941,18 +936,6 @@ function Quote({ text }: { text: string | null }) {
       {text ?? "Whole document"}
     </blockquote>
   );
-}
-
-/** A request any LLM conversation can act on; it keeps the review command running for this file. */
-export function reviewRequestText(filePath: string): string {
-  const quoted = JSON.stringify(filePath);
-  return [
-    "Please review this document with me in zatto.",
-    `Run \`zatto review ${quoted} --session <id>\` in the background and keep it running, using an ID for this conversation as <id>.`,
-    "Each JSON line it prints is a comment I wrote. Read the document, answer in that thread with",
-    `\`zatto review reply <thread-id> "<reply>" --session <id>\`, and keep the command running until it exits when I finish the review.`,
-    REVIEW_REPLY_GUIDE,
-  ].join("\n");
 }
 
 function authorLabel(author: ReviewAuthor): string {

@@ -25,7 +25,7 @@
   <body>
     <main>
       <h1>JSON-RPC API</h1>
-      <p class="lead">All 31 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
+      <p class="lead">All 32 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
       <h2>Requests and responses</h2>
       <pre><code>{
   &quot;jsonrpc&quot;: &quot;2.0&quot;,
@@ -79,6 +79,7 @@
       <section><h3><code class="operation">review.create</code></h3><p>Start a thread on text (anchor) or the whole document (null) with its first comment. attachments are images of up to 5 MB each, at most 4 per comment.</p><p>params: <code>{ workspaceId: string, entryId: string, anchor: TextAnchor | null, author: ReviewAuthor, body: string, attachments?: ReviewAttachmentUpload[] }</code><br>result: <code>ReviewThread</code></p></section>
       <section><h3><code class="operation">review.reply</code></h3><p>Add a comment to a thread, optionally with images as in review.create.</p><p>params: <code>{ threadId: string, author: ReviewAuthor, body: string, attachments?: ReviewAttachmentUpload[] }</code><br>result: <code>ReviewThread</code></p></section>
       <section><h3><code class="operation">review.resolve</code></h3><p>Resolve or reopen a thread.</p><p>params: <code>{ threadId: string, resolved: boolean }</code><br>result: <code>ReviewThread</code></p></section>
+      <section><h3><code class="operation">review.request</code></h3><p>Build the request to paste into an LLM conversation for an entry. It contains the absolute command of the running zatto CLI (node and bin/zatto.js), so it runs without zatto on PATH.</p><p>params: <code>{ workspaceId: string, entryId: string }</code><br>result: <code>{ text: string }</code></p></section>
       <section><h3><code class="operation">review.start</code></h3><p>Put an entry under review with an LLM session. Comments and replies the user writes on it are queued for that session. Choosing another session for the same entry replaces the review.</p><p>params: <code>{ workspaceId: string, entryId: string, session: string }</code><br>result: <code>ActiveReview</code></p></section>
       <section><h3><code class="operation">review.finish</code></h3><p>End a review and queue a finished event for its session.</p><p>params: <code>{ reviewId: string }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">review.states</code></h3><p>Read the entries under review, unresolved and resolved thread counts per entry, and whether the reviewing session took the user's latest comment on each thread.</p><p>params: <code>{}</code><br>result: <code>{ reviews: ActiveReview[], openThreadCounts: Record&lt;entryId, number&gt;, resolvedThreadCounts: Record&lt;entryId, number&gt;, deliveries: Record&lt;threadId, ReviewDelivery&gt; }</code></p></section>

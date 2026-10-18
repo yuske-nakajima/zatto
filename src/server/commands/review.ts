@@ -7,6 +7,7 @@ import type {
   ReviewStates,
   ReviewThread,
 } from "../../shared/review.js";
+import { reviewRequestText } from "../../shared/review.js";
 import type { CommandContext } from "./context.js";
 import { domainError } from "./errors.js";
 import type { CommandHandlers } from "./session.js";
@@ -107,6 +108,13 @@ export function reviewCommands(context: CommandContext) {
       threadUpdated(thread.entryId);
       return thread;
     },
+    "review.request": ({ workspaceId, entryId }) => {
+      const entry = context.sessionStore
+        .getWorkspace(workspaceId)
+        .entries.find((item) => item.id === entryId);
+      if (!entry) throw domainError("notFound", "Entry not found.");
+      return { text: reviewRequestText(context.cliCommand, entry.absPath) };
+    },
     "review.start": ({ workspaceId, entryId, session }) => {
       requireEntry(workspaceId, entryId);
       const current = reviewOf(entryId);
@@ -165,6 +173,7 @@ export function reviewCommands(context: CommandContext) {
     | "review.create"
     | "review.reply"
     | "review.resolve"
+    | "review.request"
     | "review.start"
     | "review.finish"
     | "review.states"

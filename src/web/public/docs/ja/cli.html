@@ -83,7 +83,7 @@ codex mcp add zatto -- npx -y @yuske-nakajima/zatto mcp serve</code></pre>
 zatto review reply &lt;thread-id&gt; &lt;body&gt; --session &lt;id&gt;</code></pre>
       <p>ファイルを選択中のワークスペースへ登録して、そのセッションとのレビュー中にし、待ち続けます。ユーザーがそのファイルにコメントや返信を書くたびに、答えるべきスレッドを1行のJSON（<code>{ event, file, threads }</code>）で出力します。<strong>Finish review</strong>を押すと、未解決のスレッドを出力して終了します。zattoが停止・再起動した場合は、起動を待って再接続し、ファイルを再びレビュー中にします。返信には<code>zatto review reply</code>または<code>reply_review_thread</code>を使います。出力をLLMへ逐次届けるため、コマンドはバックグラウンドで実行します。逐次の出力を読めないクライアントでは、<code>--once</code>で最初の内容を文章で表示して終了します。Ctrl+Cで待機をやめます。</p>
       <p>ユーザーが添付した画像は、各コメントの<code>attachments</code>にLLMが読めるローカルの<code>path</code>付きで含まれます。返信は、段落・箇条書き・太字・インラインコード・コードブロック・リンクに限ったMarkdownとして表示し、それ以外の書き方は文字のまま表示します。</p>
-      <p>ビューアーでは、レビュー中でないファイルで<strong>Ask an LLM to review</strong>を押すと依頼文をコピーします。任意のLLMの会話に貼ると、その会話がこのコマンドを実行します。</p>
+      <p>ビューアーでは、レビュー中でないファイルで<strong>Ask an LLM to review</strong>を押すと依頼文をコピーします。任意のLLMの会話に貼ると、その会話がこのコマンドを実行します。依頼文は動いているzattoのCLIを絶対パスで示すため、zattoにパスが通っていなくても動きます。</p>
       <p>コメント用のMCPツール: <code>list_review_threads</code>はファイルのスレッドを返します（<code>includeResolved</code>を指定しない場合は未解決のみ）。<code>reply_review_thread</code>はコメントへの対応後に返信します。<code>create_review_thread</code>は文章（<code>quote</code>）またはファイル全体にユーザー向けのコメントを付けます。<code>resolve_review_thread</code>はスレッドを解決または再開します。<code>session</code>を渡すと、どのセッションが書いたかをユーザーに表示します。</p>
       <h2>実行時の規則</h2>
       <ul>

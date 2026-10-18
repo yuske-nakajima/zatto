@@ -119,6 +119,7 @@ const schemas = {
     threadId: id,
     resolved: z.boolean(),
   }),
+  "review.request": z.strictObject({ ...guards, workspaceId, entryId: id }),
   "review.start": z.strictObject({
     ...guards,
     workspaceId,

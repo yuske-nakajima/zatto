@@ -111,9 +111,7 @@ export function Viewer({
           )}
         </div>
         <div className="viewer-actions">
-          {selectedEntry && review && (
-            <ReviewStatus filePath={selectedEntry.absPath} review={review} />
-          )}
+          {selectedEntry && review && <ReviewStatus review={review} />}
           {copyFeedback && (
             <span
               className={`copy-feedback copy-feedback--${copyFeedback.kind}`}

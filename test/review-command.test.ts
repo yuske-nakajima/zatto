@@ -13,6 +13,7 @@ import {
   writeServerRecord,
 } from "../src/server/runtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { zattoCliCommand } from "../src/server/zatto-cli.js";
 import type { ActiveReview } from "../src/shared/review.js";
 import { rpc } from "./rpc-server-helper.js";
 
@@ -167,7 +168,7 @@ describe("zatto review", () => {
     expect(output).toContain(`[thread ${created.id}]`);
     expect(output).toContain("- ユーザー: これなに？");
     expect(output).toContain(
-      'zatto review reply <thread-id> "<本文>" --session s',
+      `返信: ${zattoCliCommand()} review reply <thread-id> "<本文>" --session s`,
     );
   });
 

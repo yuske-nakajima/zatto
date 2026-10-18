@@ -1,6 +1,7 @@
 import path from "node:path";
 import { DEFAULT_PORT } from "../server/index.js";
 import type { ServerRecord } from "../server/runtime.js";
+import { zattoCliCommand } from "../server/zatto-cli.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import type {
   ReviewAuthor,
@@ -219,7 +220,9 @@ async function follow(
         const reports = await collectReports(call, events);
         if (!reports.length) return;
         if (options.once) {
-          dependencies.stdout(formatReports(reports, options.session));
+          dependencies.stdout(
+            formatReports(reports, options.session, zattoCliCommand()),
+          );
           settle("done");
           return;
         }
@@ -366,6 +369,7 @@ export function parseReviewArgs(args: string[]): ReviewOptions {
 export function formatReports(
   reports: ReviewReport[],
   session: string,
+  cli = "zatto",
 ): string {
   const lines: string[] = [];
   for (const report of reports) {
@@ -397,7 +401,7 @@ export function formatReports(
   }
   lines.push(
     "",
-    `返信: zatto review reply <thread-id> "<本文>" --session ${session}`,
+    `返信: ${cli} review reply <thread-id> "<本文>" --session ${session}`,
     "返信の本文は、段落・箇条書き・太字・インラインコード・コードブロック・リンクの Markdown で書けます。",
   );
   return lines.join("\n");

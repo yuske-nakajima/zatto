@@ -210,6 +210,8 @@ export function isRpcResult<M extends RpcMethod>(
       return reviewThread(value);
     case "review.start":
       return activeReview(value);
+    case "review.request":
+      return object(value) && text(value.text);
     case "review.states":
       return (
         object(value) &&
