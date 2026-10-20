@@ -103,7 +103,7 @@ describe("session import search history", () => {
       value: async () => JSON.stringify(exchange),
     });
 
-    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.upload(screen.getByLabelText("Import workspace file"), file);
     await user.click(screen.getByRole("button", { name: "Import" }));
     await screen.findByTitle("Imported preview");
     const importedUrl = relativeUrl();

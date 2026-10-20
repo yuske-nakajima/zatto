@@ -146,7 +146,7 @@ Replace the open files from a saved session.
 npx @yuske-nakajima/zatto --import saved-session.json
 ```
 
-The file panel also provides **Import session…** and **Export session…**.
+The file panel also provides **Import workspace…** and **Export workspace…** for the selected workspace.
 For imports, choose whether to replace the file list or merge unregistered
 paths at the end. A replacement selects the first imported file and clears the
 search state. A merge preserves existing entries, selection, and search state.
@@ -289,6 +289,21 @@ Other devices can only view files.
 Lists sent to other devices carry only file names in place of absolute paths.
 The server rejects unauthenticated connections and every operation other than viewing.
 The token is the only authentication, so use this only on networks you trust. Do not expose it to the internet.
+
+## Workspace storage and backups
+
+Workspaces are saved in `~/.config/zatto/workspaces.json`.
+Older versions without workspaces only rewrite `session.json`, so starting one does not erase your workspaces.
+When `workspaces.json` does not exist yet, zatto moves the contents of an existing `session.json` into it on start.
+
+Each save keeps the previous contents in `~/.config/zatto/backups/`, up to 20 copies.
+To restore a backup, stop the server, copy the backup over `workspaces.json`, and start zatto again.
+
+```bash
+npx @yuske-nakajima/zatto --stop
+cp ~/.config/zatto/backups/workspaces-<timestamp>.json ~/.config/zatto/workspaces.json
+npx @yuske-nakajima/zatto
+```
 
 ## Stop the background server
 

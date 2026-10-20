@@ -73,16 +73,16 @@ describe("session exchange web UI", () => {
     expect(
       screen.getByText(/absolute paths and local information/i),
     ).toBeTruthy();
-    const importInput = screen.getByLabelText("Import session file");
+    const importInput = screen.getByLabelText("Import workspace file");
     const importLabel = importInput.closest("label");
     expect(importLabel?.dataset.statusDescription).toBe(
-      "Replace this session from a JSON file.",
+      "Replace the files of this workspace from a JSON file.",
     );
     const exportButton = screen.getByRole("button", {
-      name: "Export session…",
+      name: "Export workspace…",
     });
     expect(exportButton.dataset.statusDescription).toBe(
-      "Download this session as a JSON file.",
+      "Download the file list of this workspace as a JSON file.",
     );
     await user.click(exportButton);
 
@@ -146,7 +146,7 @@ describe("session exchange web UI", () => {
       value: async () => JSON.stringify(exchange),
     });
 
-    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.upload(screen.getByLabelText("Import workspace file"), file);
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
@@ -197,7 +197,7 @@ describe("session exchange web UI", () => {
     });
     Object.defineProperty(file, "text", { value: async () => "{broken" });
 
-    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.upload(screen.getByLabelText("Import workspace file"), file);
     await user.click(screen.getByRole("button", { name: "Import" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
@@ -255,7 +255,7 @@ describe("session exchange web UI", () => {
       value: async () => JSON.stringify(exchange),
     });
 
-    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.upload(screen.getByLabelText("Import workspace file"), file);
     await user.click(
       screen.getByRole("radio", { name: "Merge with current list" }),
     );

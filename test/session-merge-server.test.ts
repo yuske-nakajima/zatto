@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { rpc } from "./rpc-server-helper.js";
 
 describe("session merge API", () => {
@@ -42,7 +43,9 @@ describe("session merge API", () => {
     const entries = response.json().entries;
     expect(entries[0]).toEqual(existing);
     expect(entries[1]).toMatchObject({ absPath: addedPath, title: "Added" });
-    expect(JSON.parse(await readFile(sessionFilePath, "utf8"))).toEqual({
+    expect(
+      JSON.parse(await readFile(workspaceFilePath(sessionFilePath), "utf8")),
+    ).toEqual({
       version: 2,
       activeWorkspaceId: "default",
       workspaces: [{ id: "default", name: "Default", entries }],
@@ -54,7 +57,10 @@ describe("session merge API", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [existing] = await store.addEntries([existingPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const alias = `${tempDir}${path.sep}sub${path.sep}..${path.sep}added.html`;
     const app = await createApp({ sessionStore: store });
 
@@ -66,7 +72,9 @@ describe("session merge API", () => {
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [existing] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     await app.close();
   });
 
@@ -74,7 +82,10 @@ describe("session merge API", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [existing] = await store.addEntries([existingPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.import", {
@@ -85,7 +96,9 @@ describe("session merge API", () => {
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [existing] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     await app.close();
   });
 

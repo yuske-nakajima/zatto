@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 import { rpc } from "./rpc-server-helper.js";
 
@@ -91,7 +92,10 @@ describe("session.removeMany", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [entry] = await store.addEntries([htmlPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const app = await createApp({ sessionStore: store });
     const normalizedPayload =
       payload && "ids" in payload
@@ -107,7 +111,9 @@ describe("session.removeMany", () => {
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [entry] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     await app.close();
   });
 
@@ -117,7 +123,10 @@ describe("session.removeMany", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [entry] = await store.addEntries([htmlPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const app = await createApp({ sessionStore: store });
 
     const response = await rpc(app, "session.removeMany", {
@@ -127,7 +136,9 @@ describe("session.removeMany", () => {
 
     expect(response.code).toBe(1001);
     expect(store.getSession()).toEqual({ entries: [entry] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     await app.close();
   });
 
@@ -141,7 +152,10 @@ describe("session.removeMany", () => {
     });
     await store.load();
     const [entry] = await store.addEntries([htmlPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     rejectWrites = true;
     const realtimeHub = new RealtimeHub();
     const broadcast = vi.spyOn(realtimeHub, "broadcast");
@@ -159,7 +173,9 @@ describe("session.removeMany", () => {
 
     expect(response.code).toBe(-32603);
     expect(store.getSession()).toEqual({ entries: [entry] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect(onSessionChanged).not.toHaveBeenCalled();
     expect(broadcast).not.toHaveBeenCalled();
     await app.close();

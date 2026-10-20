@@ -137,7 +137,7 @@ npx @yuske-nakajima/zatto --export saved-session.json
 npx @yuske-nakajima/zatto --import saved-session.json
 ```
 
-ファイルパネルの**Import session…**と**Export session…**も利用できます。
+ファイルパネルの**Import workspace…**と**Export workspace…**で、選択中のワークスペースを読み込み・書き出しできます。
 インポートでは、ファイル一覧の全置換または未登録パスの末尾への追加を選べます。
 全置換では先頭のファイルを選択し、検索状態を解除します。
 追加では既存エントリ、選択、検索状態を維持します。
@@ -266,6 +266,21 @@ npx @yuske-nakajima/zatto --host 100.64.0.1
 外の端末に返す一覧では、絶対パスの代わりにファイル名だけを渡します。
 サーバーは認証のない接続と、閲覧以外の操作を拒否します。
 認証はトークンだけなので、信頼できるネットワークでだけ使います。インターネットへ公開しないでください。
+
+## ワークスペースの保存とバックアップ
+
+ワークスペースは`~/.config/zatto/workspaces.json`に保存します。
+ワークスペースのない古い版を起動しても、古い版が書き換えるのは`session.json`だけなので、ワークスペースは消えません。
+`workspaces.json`がない状態で起動すると、既存の`session.json`の内容を移します。
+
+保存のたびに、直前の内容を`~/.config/zatto/backups/`へ20世代まで残します。
+バックアップから戻すときは、サーバーを止めてから、戻したいファイルを`workspaces.json`へコピーして起動し直します。
+
+```bash
+npx @yuske-nakajima/zatto --stop
+cp ~/.config/zatto/backups/workspaces-<日時>.json ~/.config/zatto/workspaces.json
+npx @yuske-nakajima/zatto
+```
 
 ## 常駐サーバーの停止
 

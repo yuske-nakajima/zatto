@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 
 let dir: string;
@@ -72,10 +73,10 @@ test("workspace failures preserve memory and disk; deleting the last workspace i
   await store.load();
   const original = store.getWorkspaceState().activeWorkspaceId;
   await store.addEntries(paths);
-  const before = await readFile(file, "utf8");
+  const before = await readFile(workspaceFilePath(file), "utf8");
   fail = true;
   await expect(store.createWorkspace("Other")).rejects.toThrow("write failed");
-  expect(await readFile(file, "utf8")).toBe(before);
+  expect(await readFile(workspaceFilePath(file), "utf8")).toBe(before);
   expect(store.getWorkspaceState().workspaces).toHaveLength(1);
   fail = false;
   await expect(store.deleteWorkspace(original)).rejects.toThrow();

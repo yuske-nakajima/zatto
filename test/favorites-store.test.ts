@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 
 let dir: string;
@@ -57,7 +58,7 @@ test("explicit updates are idempotent and failed persistence keeps memory and di
   expect(await store.setFavorite("missing", true)).toBe("missing");
   expect(write).not.toHaveBeenCalled();
   expect(await store.setFavorite(entry.id, true)).toBe("updated");
-  const before = await readFile(file, "utf8");
+  const before = await readFile(workspaceFilePath(file), "utf8");
   write.mockClear();
   expect(await store.setFavorite(entry.id, true)).toBe("unchanged");
   expect(write).not.toHaveBeenCalled();
@@ -66,7 +67,7 @@ test("explicit updates are idempotent and failed persistence keeps memory and di
     "write failed",
   );
   expect(store.getEntry(entry.id)?.favorite).toBe(true);
-  expect(await readFile(file, "utf8")).toBe(before);
+  expect(await readFile(workspaceFilePath(file), "utf8")).toBe(before);
 });
 test("concurrent favorite and entry updates retain all changes and use the original workspace", async () => {
   const store = new SessionStore(file);

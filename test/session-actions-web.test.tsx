@@ -19,11 +19,11 @@ describe("session actions", () => {
     );
 
     expect(
-      screen.getByLabelText<HTMLInputElement>("Import session file").disabled,
+      screen.getByLabelText<HTMLInputElement>("Import workspace file").disabled,
     ).toBe(false);
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "Export session…",
+        name: "Export workspace…",
       }).disabled,
     ).toBe(false);
     const separator = container.querySelector(".session-action-separator");
@@ -43,8 +43,10 @@ describe("session actions", () => {
 
     expect(screen.getByRole("status").textContent).toContain("loading…");
     expect(container.querySelector(".session-action-spinner")).toBeTruthy();
-    expect(screen.queryByLabelText("Import session file")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Export session/ })).toBeNull();
+    expect(screen.queryByLabelText("Import workspace file")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Export workspace/ }),
+    ).toBeNull();
   });
 
   test("import中はspinner付き状態と区切りとdisabled exportを表示する", () => {
@@ -70,7 +72,7 @@ describe("session actions", () => {
     ).toBe("true");
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "Export session…",
+        name: "Export workspace…",
       }).disabled,
     ).toBe(true);
   });
@@ -87,7 +89,7 @@ describe("session actions", () => {
 
     expect(screen.getByText("Exporting…")).toBeTruthy();
     expect(
-      screen.getByLabelText<HTMLInputElement>("Import session file").disabled,
+      screen.getByLabelText<HTMLInputElement>("Import workspace file").disabled,
     ).toBe(true);
   });
 
@@ -103,7 +105,7 @@ describe("session actions", () => {
       />,
     );
     const input = screen.getByLabelText<HTMLInputElement>(
-      "Import session file",
+      "Import workspace file",
     );
     const file = new File(["{}"], "session.json", {
       type: "application/json",
@@ -114,7 +116,9 @@ describe("session actions", () => {
     expect(onImport).not.toHaveBeenCalled();
     expect(input).toBe(document.activeElement);
     await user.upload(input, file);
-    expect(screen.getByRole("dialog", { name: "Import session" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Import workspace" }),
+    ).toBeTruthy();
   });
 
   test("exportをcancelするとrequestせずtriggerへfocusを戻す", async () => {
@@ -128,7 +132,7 @@ describe("session actions", () => {
         onExport={onExport}
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Export session…" });
+    const trigger = screen.getByRole("button", { name: "Export workspace…" });
 
     await user.click(trigger);
     await user.keyboard("{Escape}");
@@ -148,7 +152,7 @@ describe("session actions", () => {
         onExport={onExport}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Export session…" }));
+    await user.click(screen.getByRole("button", { name: "Export workspace…" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
 
     rerender(
@@ -168,7 +172,7 @@ describe("session actions", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Export session…" })).toBe(
+    expect(screen.getByRole("button", { name: "Export workspace…" })).toBe(
       document.activeElement,
     );
   });

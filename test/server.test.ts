@@ -6,6 +6,7 @@ import { APP_VERSION } from "../src/meta.js";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { rpc } from "./rpc-server-helper.js";
 
 describe("zatto server", () => {
@@ -48,7 +49,9 @@ describe("zatto server", () => {
       addedAt: new Date("2026-07-29T00:00:00.000Z").getTime(),
     });
 
-    const persisted = JSON.parse(await readFile(sessionFilePath, "utf8")) as {
+    const persisted = JSON.parse(
+      await readFile(workspaceFilePath(sessionFilePath), "utf8"),
+    ) as {
       workspaces: Array<{ entries: Array<{ absPath: string; title: string }> }>;
     };
     expect(persisted.workspaces[0].entries).toHaveLength(1);

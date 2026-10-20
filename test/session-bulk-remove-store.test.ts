@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 
 describe("SessionStore bulk removal", () => {
@@ -41,7 +42,9 @@ describe("SessionStore bulk removal", () => {
 
     expect(writeSessionFile).toHaveBeenCalledOnce();
     expect(store.getSession()).toEqual({ entries: [entries[1]] });
-    const persisted = JSON.parse(await readFile(sessionFilePath, "utf8"));
+    const persisted = JSON.parse(
+      await readFile(workspaceFilePath(sessionFilePath), "utf8"),
+    );
     expect(persisted).toEqual({
       version: 2,
       activeWorkspaceId: "default",
@@ -63,14 +66,19 @@ describe("SessionStore bulk removal", () => {
       id === "known" ? entries[0].id : id,
     );
     const sessionBefore = store.getSession();
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     writeSessionFile.mockClear();
 
     await expect(store.removeEntries(normalizedIds)).resolves.toBe(false);
 
     expect(writeSessionFile).not.toHaveBeenCalled();
     expect(store.getSession()).toEqual(sessionBefore);
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
   });
 
   test("永続化に失敗した場合はmemoryと永続ファイルを変更しない", async () => {
@@ -83,7 +91,10 @@ describe("SessionStore bulk removal", () => {
     await store.load();
     const entries = await store.addEntries(htmlPaths);
     const sessionBefore = store.getSession();
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     rejectWrites = true;
 
     await expect(
@@ -91,6 +102,8 @@ describe("SessionStore bulk removal", () => {
     ).rejects.toThrow("bulk persistence failed");
 
     expect(store.getSession()).toEqual(sessionBefore);
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
   });
 });
