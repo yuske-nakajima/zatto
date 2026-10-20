@@ -47,7 +47,9 @@ describe("session.removeMany", () => {
       onSessionChanged,
     });
     await app.ready();
-    const socket = await app.injectWS("/ws");
+    const socket = await app.injectWS("/ws", {
+      headers: { host: "127.0.0.1" },
+    });
     const updatePromise = new Promise<string>((resolve) => {
       socket.once("message", (data) => resolve(data.toString()));
     });

@@ -340,7 +340,9 @@ describe("zatto server", () => {
     const [first, second] = await store.addEntries([firstPath, secondPath]);
     const app = await createApp({ sessionStore: store });
     await app.ready();
-    const socket = await app.injectWS("/ws");
+    const socket = await app.injectWS("/ws", {
+      headers: { host: "127.0.0.1" },
+    });
     const updatePromise = new Promise<string>((resolve) => {
       socket.once("message", (data) => resolve(data.toString()));
     });
@@ -450,7 +452,9 @@ describe("zatto server", () => {
     });
     await app.ready();
 
-    const socket = await app.injectWS("/ws");
+    const socket = await app.injectWS("/ws", {
+      headers: { host: "127.0.0.1" },
+    });
     const updatePromise = new Promise<string>((resolve) => {
       socket.once("message", (data) => resolve(data.toString()));
     });
