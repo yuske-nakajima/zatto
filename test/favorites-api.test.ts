@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 import { rpc } from "./rpc-server-helper.js";
 
@@ -98,7 +99,7 @@ test("persistence errors return failure without publishing or changing favorites
   const html = path.join(dir, "page.html");
   await writeFile(html, "<title>Page</title>");
   const [entry] = await store.addEntries([html]);
-  const before = await readFile(file, "utf8");
+  const before = await readFile(workspaceFilePath(file), "utf8");
   const hub = new RealtimeHub();
   const broadcast = vi.spyOn(hub, "broadcast");
   const app = await createApp({ sessionStore: store, realtimeHub: hub });
@@ -113,7 +114,7 @@ test("persistence errors return failure without publishing or changing favorites
     ).code,
   ).toBe(-32603);
   expect(store.getEntry(entry.id)?.favorite).toBeUndefined();
-  expect(await readFile(file, "utf8")).toBe(before);
+  expect(await readFile(workspaceFilePath(file), "utf8")).toBe(before);
   expect(broadcast).not.toHaveBeenCalled();
   await app.close();
 });

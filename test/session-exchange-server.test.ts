@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { rpc } from "./rpc-server-helper.js";
 
 describe("session exchange API", () => {
@@ -92,7 +93,9 @@ describe("session exchange API", () => {
       ...store.getWorkspaceState(),
       entries,
     });
-    expect(JSON.parse(await readFile(sessionFilePath, "utf8"))).toEqual({
+    expect(
+      JSON.parse(await readFile(workspaceFilePath(sessionFilePath), "utf8")),
+    ).toEqual({
       version: 2,
       activeWorkspaceId: "default",
       workspaces: [{ id: "default", name: "Default", entries }],
@@ -122,7 +125,10 @@ describe("session exchange API", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [previous] = await store.addEntries([firstPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const onSessionChanged = vi.fn();
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
@@ -133,7 +139,9 @@ describe("session exchange API", () => {
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect(onSessionChanged).not.toHaveBeenCalled();
     await app.close();
   });
@@ -180,7 +188,10 @@ describe("session exchange API", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [previous] = await store.addEntries([firstPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const onSessionChanged = vi.fn();
     const app = await createApp({ sessionStore: store, onSessionChanged });
 
@@ -191,7 +202,9 @@ describe("session exchange API", () => {
 
     expect(response.code).toBe(-32602);
     expect(store.getSession()).toEqual({ entries: [previous] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect(onSessionChanged).not.toHaveBeenCalled();
     await app.close();
   });

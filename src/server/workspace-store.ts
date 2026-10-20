@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
+import path from "node:path";
 import { nanoid } from "nanoid";
 import { writeFileAtomically } from "../shared/atomic-file.js";
 import type { Entry } from "./session.js";
@@ -12,6 +13,24 @@ import {
   workspaceName,
 } from "./workspace-state.js";
 
+/**
+ * ワークスペースの保存先のファイル名。
+ * ワークスペースのない版も同じディレクトリーの session.json を読み書きするため、別の名前にして上書きを避ける。
+ */
+export const WORKSPACE_FILE_NAME = "workspaces.json";
+/** 保存のたびに直前の内容を残すディレクトリーの名前と、残す数。 */
+export const WORKSPACE_BACKUP_DIRECTORY = "backups";
+export const WORKSPACE_BACKUP_LIMIT = 20;
+
+/**
+ * 保存先のファイルを返す。
+ * @param sessionFilePath - session.json の場所（`ZATTO_SESSION_FILE` で変えられる）
+ * @returns 同じディレクトリーの workspaces.json
+ */
+export function workspaceFilePath(sessionFilePath: string): string {
+  return path.join(path.dirname(sessionFilePath), WORKSPACE_FILE_NAME);
+}
+
 /** Serializes durable mutations of named file collections. */
 export class WorkspaceStore {
   protected document: WorkspaceDocument = {
@@ -20,10 +39,19 @@ export class WorkspaceStore {
     workspaces: [{ id: "default", name: "Default", entries: [] }],
   };
   private pending: Promise<unknown> = Promise.resolve();
+  private readonly filePath: string;
+  /** 保存済みの内容。次の保存で、これをバックアップとして残す。 */
+  private saved: string | null = null;
+  /**
+   * @param legacyFilePath - session.json の場所。workspaces.json がないときだけ、ここから読み込んで移す
+   * @param write - 原子的な書き込み
+   */
   constructor(
-    private readonly filePath: string,
+    private readonly legacyFilePath: string,
     private readonly write = writeFileAtomically,
-  ) {}
+  ) {
+    this.filePath = workspaceFilePath(legacyFilePath);
+  }
 
   /**
    * Restores all workspaces, migrating single-session files without changing entry IDs.
@@ -32,10 +60,15 @@ export class WorkspaceStore {
    */
   async load(): Promise<{ entries: Entry[] }> {
     return this.enqueue(async () => {
-      if (!(await fileExists(this.filePath))) return this.getSession();
-      const document = parseWorkspaceDocument(
-        JSON.parse(await readFile(this.filePath, "utf8")),
-      );
+      const source = (await fileExists(this.filePath))
+        ? this.filePath
+        : (await fileExists(this.legacyFilePath))
+          ? this.legacyFilePath
+          : null;
+      if (!source) return this.getSession();
+      const text = await readFile(source, "utf8");
+      if (source === this.filePath) this.saved = text;
+      const document = parseWorkspaceDocument(JSON.parse(text));
       for (const workspace of document.workspaces) {
         const existing = await Promise.all(
           workspace.entries.map(async (entry) =>
@@ -210,7 +243,39 @@ export class WorkspaceStore {
     return next;
   }
   private async commit(document: WorkspaceDocument): Promise<void> {
-    await this.write(this.filePath, `${JSON.stringify(document, null, 2)}\n`);
+    const text = `${JSON.stringify(document, null, 2)}\n`;
+    const previous = this.saved;
+    await this.write(this.filePath, text);
     this.document = document;
+    this.saved = text;
+    if (previous !== null && previous !== text) await this.backup(previous);
+  }
+  /**
+   * 直前の内容を backups/ に残し、上限を超えた古いものから消す。
+   * 本体の保存はすでに終わっているため、バックアップの失敗で操作を失敗にしない。
+   */
+  private async backup(text: string): Promise<void> {
+    const directory = path.join(
+      path.dirname(this.filePath),
+      WORKSPACE_BACKUP_DIRECTORY,
+    );
+    try {
+      const stamp = new Date().toISOString().replaceAll(":", "-");
+      // 注入された書き込みは本体の保存だけに使う
+      await writeFileAtomically(
+        path.join(directory, `workspaces-${stamp}-${nanoid(6)}.json`),
+        text,
+      );
+      const backups = (await readdir(directory))
+        .filter((name) => /^workspaces-.+\.json$/.test(name))
+        .sort();
+      await Promise.all(
+        backups
+          .slice(0, Math.max(0, backups.length - WORKSPACE_BACKUP_LIMIT))
+          .map((name) => rm(path.join(directory, name), { force: true })),
+      );
+    } catch {
+      // バックアップは保険なので、書けなくても本体の保存を優先する
+    }
   }
 }

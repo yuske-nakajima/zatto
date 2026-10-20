@@ -45,7 +45,7 @@ describe("session action shelf layout", () => {
     render(<FilePanel {...baseProps} />);
 
     const actions = screen.getByRole("region", {
-      name: "Session file management",
+      name: "Workspace file management",
     });
     const scrollRegion = actions.previousElementSibling;
     expect(scrollRegion?.classList).toContain("sidebar-scroll-region");

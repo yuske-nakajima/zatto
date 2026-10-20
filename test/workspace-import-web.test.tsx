@@ -59,7 +59,7 @@ test.each(["workspace switches", "subsequent session updates"])(
       type: "application/json",
     });
     Object.defineProperty(file, "text", { value: async () => exchange });
-    await user.upload(screen.getByLabelText("Import session file"), file);
+    await user.upload(screen.getByLabelText("Import workspace file"), file);
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(

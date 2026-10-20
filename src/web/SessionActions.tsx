@@ -74,7 +74,7 @@ export function SessionActions({
   }
 
   return (
-    <section className="session-actions" aria-label="Session file management">
+    <section className="session-actions" aria-label="Workspace file management">
       {isAvailable ? (
         <span className="session-action-buttons">
           <label
@@ -82,15 +82,15 @@ export function SessionActions({
               isPending ? " session-action-button--disabled" : ""
             }`}
             aria-disabled={isPending}
-            data-status-description="Replace this session from a JSON file."
+            data-status-description="Replace the files of this workspace from a JSON file."
           >
             {pending === "import" && <SessionActionSpinner />}
-            {pending === "import" ? <em>Importing…</em> : "Import session…"}
+            {pending === "import" ? <em>Importing…</em> : "Import workspace…"}
             <input
               className="visually-hidden"
               type="file"
               accept=".json,application/json"
-              aria-label="Import session file"
+              aria-label="Import workspace file"
               disabled={isPending}
               onChange={importSelectedFile}
             />
@@ -100,13 +100,13 @@ export function SessionActions({
           </span>
           <button
             className="session-action-button"
-            data-status-description="Download this session as a JSON file."
+            data-status-description="Download the file list of this workspace as a JSON file."
             type="button"
             disabled={isPending}
             onClick={openExportDialog}
           >
             {pending === "export" && <SessionActionSpinner />}
-            {pending === "export" ? <em>Exporting…</em> : "Export session…"}
+            {pending === "export" ? <em>Exporting…</em> : "Export workspace…"}
           </button>
         </span>
       ) : (
@@ -116,12 +116,12 @@ export function SessionActions({
         </span>
       )}
       <p>
-        Session exports contain absolute paths and local information. Do not
+        Workspace exports contain absolute paths and local information. Do not
         share them.
       </p>
       {dialog?.kind === "import" && (
         <ChoiceDialog
-          title="Import session"
+          title="Import workspace"
           description="Choose how to add entries from the selected file."
           options={IMPORT_OPTIONS}
           confirmLabel="Import"
@@ -131,7 +131,7 @@ export function SessionActions({
       )}
       {dialog?.kind === "export" && (
         <ChoiceDialog
-          title="Export session"
+          title="Export workspace"
           description="Choose the entry order for the exported file."
           options={EXPORT_OPTIONS}
           confirmLabel="Export"

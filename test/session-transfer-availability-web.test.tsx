@@ -39,16 +39,16 @@ describe("session transfer availability", () => {
     render(<App />);
 
     expect(screen.getByRole("status").textContent).toContain("loading…");
-    expect(screen.queryByLabelText("Import session file")).toBeNull();
+    expect(screen.queryByLabelText("Import workspace file")).toBeNull();
     resolveSession?.(Response.json({ entries: [], ...capability }));
 
     await waitFor(() =>
       expect(
-        screen.getByLabelText("Import session file").hasAttribute("disabled"),
+        screen.getByLabelText("Import workspace file").hasAttribute("disabled"),
       ).toBe(false),
     );
     const actions = screen.getByRole("region", {
-      name: "Session file management",
+      name: "Workspace file management",
     });
     expect(
       actions.previousElementSibling?.querySelector(".empty-list"),

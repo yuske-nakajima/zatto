@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 
 describe("SessionStore atomic persistence", () => {
@@ -28,7 +29,10 @@ describe("SessionStore atomic persistence", () => {
     const initialStore = new SessionStore(sessionFilePath);
     await initialStore.load();
     const [previous] = await initialStore.addEntries([firstPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     let writeCount = 0;
     const store = new SessionStore(sessionFilePath, async (target, content) => {
       writeCount += 1;
@@ -48,9 +52,11 @@ describe("SessionStore atomic persistence", () => {
     );
 
     expect(store.getSession()).toEqual({ entries: [previous] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect((await readdir(path.dirname(sessionFilePath))).sort()).toEqual([
-      "session.json",
+      "workspaces.json",
     ]);
   });
 
@@ -58,7 +64,10 @@ describe("SessionStore atomic persistence", () => {
     const initialStore = new SessionStore(sessionFilePath);
     await initialStore.load();
     const [previous] = await initialStore.addEntries([firstPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     let writeCount = 0;
     const store = new SessionStore(sessionFilePath, async (target, content) => {
       writeCount += 1;
@@ -78,9 +87,11 @@ describe("SessionStore atomic persistence", () => {
     );
 
     expect(store.getSession()).toEqual({ entries: [previous] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect((await readdir(path.dirname(sessionFilePath))).sort()).toEqual([
-      "session.json",
+      "workspaces.json",
     ]);
   });
 });

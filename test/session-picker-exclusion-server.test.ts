@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createApp } from "../src/server/app.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { SessionStore } from "../src/server/session.js";
+import { workspaceFilePath } from "../src/server/workspace-store.js";
 import { writeFileAtomically } from "../src/shared/atomic-file.js";
 import { rpc } from "./rpc-server-helper.js";
 
@@ -85,7 +86,10 @@ describe("native picker exclusion and failures", () => {
     const store = new SessionStore(sessionFilePath);
     await store.load();
     const [existingEntry] = await store.addEntries([existingPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     const realtimeHub = new RealtimeHub();
     const broadcast = vi.spyOn(realtimeHub, "broadcast");
     const onSessionChanged = vi.fn();
@@ -109,7 +113,9 @@ describe("native picker exclusion and failures", () => {
 
     expect(response.code).toBe(1001);
     expect(store.getSession()).toEqual({ entries: [existingEntry] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect(addEntries).not.toHaveBeenCalled();
     expect(onSessionChanged).not.toHaveBeenCalled();
     expect(broadcast).not.toHaveBeenCalled();
@@ -129,7 +135,10 @@ describe("native picker exclusion and failures", () => {
     });
     await store.load();
     const [existingEntry] = await store.addEntries([existingPath]);
-    const persistedBefore = await readFile(sessionFilePath, "utf8");
+    const persistedBefore = await readFile(
+      workspaceFilePath(sessionFilePath),
+      "utf8",
+    );
     rejectWrites = true;
     const realtimeHub = new RealtimeHub();
     const broadcast = vi.spyOn(realtimeHub, "broadcast");
@@ -153,7 +162,9 @@ describe("native picker exclusion and failures", () => {
 
     expect(response.code).toBe(-32603);
     expect(store.getSession()).toEqual({ entries: [existingEntry] });
-    expect(await readFile(sessionFilePath, "utf8")).toBe(persistedBefore);
+    expect(await readFile(workspaceFilePath(sessionFilePath), "utf8")).toBe(
+      persistedBefore,
+    );
     expect(onSessionChanged).not.toHaveBeenCalled();
     expect(broadcast).not.toHaveBeenCalled();
     await app.close();

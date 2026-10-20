@@ -136,7 +136,7 @@ describe("built-in documentation view integration", () => {
     ).toHaveLength(entries.length);
     expect(within(entryList).queryByText("Docs")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Export session…" }));
+    await user.click(screen.getByRole("button", { name: "Export workspace…" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
     expect(fetch).toHaveBeenCalledWith(
       "/rpc",
