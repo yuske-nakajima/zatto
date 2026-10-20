@@ -38,6 +38,8 @@ const npmEnvironment = {
 let serverStarted = false;
 let installedBin;
 const sessionPath = path.join(consumerDirectory, "session.json");
+// ワークスペースは ZATTO_SESSION_FILE と同じディレクトリーの workspaces.json に保存される
+const workspacesPath = path.join(consumerDirectory, "workspaces.json");
 const runtimePath = path.join(consumerDirectory, "server.json");
 let serverEnvironment = process.env;
 
@@ -204,7 +206,7 @@ try {
   if (envelope.jsonrpc !== "2.0" || envelope.id !== 1 || envelope.error)
     throw new Error("パッケージのRPC応答が不正です");
   const health = envelope.result;
-  const session = await readFile(sessionPath, "utf8");
+  const session = await readFile(workspacesPath, "utf8");
   const documentationIsAvailable = documentationResponses.every(
     (response) =>
       response.ok &&
