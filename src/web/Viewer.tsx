@@ -270,6 +270,11 @@ export function Viewer({
             requestedThreadId={requestedThreadId}
             onRequestedThreadOpened={onRequestedThreadOpened}
             panelRequest={panelRequest}
+            onEscapeFirst={() => {
+              if (!pageSearch.isOpen) return false;
+              pageSearch.close();
+              return true;
+            }}
           />
         )}
         {selectedEntry ? (

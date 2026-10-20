@@ -449,6 +449,96 @@ describe("レビューのコメント", () => {
     expect(screen.queryByRole("dialog", { name: "Comment thread" })).toBeNull();
   });
 
+  test("最大化したスレッドは Esc で元の大きさに戻り、次の Esc で閉じる。フォーカスが外にあっても効き、変換中は反応しない", async () => {
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /閲覧URL/ }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Comment thread",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Maximize thread" }));
+    expect(dialog.className).toContain("review-popover--maximized");
+    expect(
+      screen
+        .getByRole("button", { name: "Restore thread size" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    fireEvent.keyDown(document.body, { key: "Escape", isComposing: true });
+    expect(dialog.className).toContain("review-popover--maximized");
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(dialog.className).not.toContain("review-popover--maximized");
+    expect(screen.getByRole("dialog", { name: "Comment thread" })).toBe(dialog);
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Comment thread" })).toBeNull();
+  });
+
+  test("ページ内検索が開いているときの Esc は、スレッドより先にページ内検索を閉じる", async () => {
+    render(<App />);
+    await screen.findByTitle("Plan preview");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /閲覧URL/ }));
+    await screen.findByRole("dialog", { name: "Comment thread" });
+    const frame = screen.getByTitle<HTMLIFrameElement>("Plan preview");
+    const frameWindow = frame.contentWindow as
+      | (Window & typeof globalThis)
+      | null;
+    for (const view of [window, frameWindow]) {
+      if (!view) continue;
+      view.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+      view.Range.prototype.getBoundingClientRect = () => new DOMRect();
+      view.Element.prototype.scrollIntoView = () => undefined;
+    }
+    frame.contentDocument?.write("<p>閲覧URL を返す</p>");
+    frame.contentDocument?.close();
+    fireEvent.load(frame);
+    (frame.contentDocument ?? document).dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "f",
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await screen.findByRole("search", { name: "Find in preview" });
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("search", { name: "Find in preview" }),
+      ).toBeNull(),
+    );
+    expect(screen.getByRole("dialog", { name: "Comment thread" })).toBeTruthy();
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Comment thread" })).toBeNull();
+
+    // フォーカスがプレビューの本文にあるときの Esc は iframe の文書に届く
+    fireEvent.click(screen.getByRole("button", { name: /閲覧URL/ }));
+    await screen.findByRole("dialog", { name: "Comment thread" });
+    const FrameKeyboardEvent = frameWindow?.KeyboardEvent ?? KeyboardEvent;
+    frame.contentDocument?.body.dispatchEvent(
+      new FrameKeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Comment thread" }),
+      ).toBeNull(),
+    );
+  });
+
   test("コメントを送ると、閉じずに作ったスレッドを開く", async () => {
     render(<App />);
     await screen.findByTitle("Plan preview");

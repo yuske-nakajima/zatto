@@ -65,6 +65,8 @@ interface ReviewLayerProps {
   onRequestedThreadOpened?: () => void;
   /** Increments to open the Comments list, such as from the status bar. */
   panelRequest?: number;
+  /** Esc をスレッドより先に受け取る。受け取って閉じたものがあれば true を返す（ページ内検索など）。 */
+  onEscapeFirst?: () => boolean;
 }
 
 interface Position {
@@ -107,6 +109,7 @@ export function ReviewLayer({
   requestedThreadId,
   onRequestedThreadOpened,
   panelRequest = 0,
+  onEscapeFirst,
 }: ReviewLayerProps) {
   const seen = useSeenReplies();
   const [frameDocument, setFrameDocument] = useState<Document | null>(null);
@@ -117,6 +120,47 @@ export function ReviewLayer({
   }, [panelRequest]);
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [zoomed, setZoomed] = useState<ReviewAttachment | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 開いているものが変わったら通常の大きさに戻す
+  useEffect(() => {
+    setIsMaximized(false);
+  }, [popover]);
+
+  /**
+   * Esc は、拡大した画像 → ページ内検索 → 最大化 → スレッドの順に 1 つだけ閉じる。
+   * フォーカスがプレビューの本文にあると Esc は iframe の文書に届くため、外側の画面と iframe の両方で受ける。
+   */
+  const handleEscape = useEffectEvent((event: KeyboardEvent) => {
+    if (
+      event.key !== "Escape" ||
+      event.isComposing ||
+      event.keyCode === 229 ||
+      event.defaultPrevented
+    )
+      return;
+    if (zoomed) {
+      event.preventDefault();
+      setZoomed(null);
+      return;
+    }
+    if (onEscapeFirst?.()) {
+      event.preventDefault();
+      return;
+    }
+    if (!popover) return;
+    event.preventDefault();
+    if (isMaximized) setIsMaximized(false);
+    else setPopover(null);
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => handleEscape(event);
+    window.addEventListener("keydown", listener);
+    frameDocument?.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+      frameDocument?.removeEventListener("keydown", listener);
+    };
+  }, [frameDocument]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: フレームの差し替えごとに読み直す
   useEffect(() => {
@@ -490,11 +534,7 @@ export function ReviewLayer({
         </button>
       )}
       {popover?.kind === "compose" && placement && (
-        <PopoverFrame
-          label="New comment"
-          placement={placement}
-          onClose={closePopover}
-        >
+        <PopoverFrame label="New comment" placement={placement}>
           <header className="review-popover-header">
             <Quote text={popover.anchor?.exact ?? null} />
             <CloseButton onClose={closePopover} />
@@ -521,7 +561,7 @@ export function ReviewLayer({
         <PopoverFrame
           label="Comment thread"
           placement={placement}
-          onClose={closePopover}
+          isMaximized={isMaximized}
         >
           <ThreadView
             isVisible={placement !== "hidden"}
@@ -531,6 +571,8 @@ export function ReviewLayer({
             review={review}
             onClose={closePopover}
             onZoom={setZoomed}
+            isMaximized={isMaximized}
+            onToggleMaximized={() => setIsMaximized((current) => !current)}
           />
         </PopoverFrame>
       )}
@@ -751,24 +793,26 @@ export function ReviewStatus({
 function PopoverFrame({
   label,
   placement,
-  onClose,
+  isMaximized = false,
   children,
 }: {
   label: string;
   placement: PopoverPlacement | "hidden";
-  onClose: () => void;
+  /** プレビューの表示エリア全体を覆う。テキストの位置に合わせた配置は使わない。 */
+  isMaximized?: boolean;
   children: ReactNode;
 }) {
   return (
     <div
-      className="review-popover"
+      className={
+        isMaximized
+          ? "review-popover review-popover--maximized"
+          : "review-popover"
+      }
       role="dialog"
       aria-label={label}
-      hidden={placement === "hidden"}
-      style={placement === "hidden" ? undefined : placement}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-      }}
+      hidden={!isMaximized && placement === "hidden"}
+      style={isMaximized || placement === "hidden" ? undefined : placement}
     >
       {children}
     </div>
@@ -797,9 +841,13 @@ function ThreadView({
   review,
   onClose,
   onZoom,
+  isMaximized,
+  onToggleMaximized,
 }: {
   /** False while the popover is hidden because its text is scrolled out of view. */
   isVisible: boolean;
+  isMaximized: boolean;
+  onToggleMaximized: () => void;
   seen: ReturnType<typeof useSeenReplies>;
   thread: ReviewThread;
   isLocated: boolean;
@@ -825,6 +873,16 @@ function ThreadView({
           onClick={() => void review.resolve(thread.id, !thread.resolved)}
         >
           {thread.resolved ? "↺ Reopen" : "✓ Resolve"}
+        </button>
+        <button
+          type="button"
+          className="review-icon-button"
+          aria-label={isMaximized ? "Restore thread size" : "Maximize thread"}
+          aria-pressed={isMaximized}
+          title={isMaximized ? "Restore (Esc)" : "Maximize"}
+          onClick={onToggleMaximized}
+        >
+          {isMaximized ? "⤡" : "⤢"}
         </button>
         <CloseButton onClose={onClose} />
       </header>
@@ -971,10 +1029,7 @@ export function Avatar({ author }: { author: ReviewAuthor }) {
   );
 }
 
-/**
- * 拡大した画像。Esc は画像だけを閉じ、スレッドは閉じない。
- * フォーカスはスレッドの中に残るため、スレッドが Esc を受け取る前に window の capture で受ける。
- */
+/** 拡大した画像。Esc は ReviewLayer がほかより先に受け、画像だけを閉じる。 */
 function Lightbox({
   attachment,
   onClose,
@@ -982,19 +1037,8 @@ function Lightbox({
   attachment: ReviewAttachment;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const close = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.isComposing) return;
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-    };
-    window.addEventListener("keydown", close, { capture: true });
-    return () =>
-      window.removeEventListener("keydown", close, { capture: true });
-  }, [onClose]);
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: Esc は window で受ける
+    // biome-ignore lint/a11y/useKeyWithClickEvents: Esc は ReviewLayer が window で受ける
     <div
       className="review-lightbox"
       role="dialog"
