@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.1](https://github.com/yuske-nakajima/zatto/compare/v3.3.0...v3.3.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **server:** Host ヘッダーと WebSocket の Origin を検証して DNS rebinding を防ぐ ([37eb8e6](https://github.com/yuske-nakajima/zatto/commit/37eb8e665a3748a35365c13b028b451fe4c853b4))
+* **server:** Host ヘッダーと WebSocket の Origin を検証して DNS rebinding を防ぐ ([46790e1](https://github.com/yuske-nakajima/zatto/commit/46790e19f82f83809df6816967adebd05d499e22)), closes [#103](https://github.com/yuske-nakajima/zatto/issues/103)
+
 ## [3.3.0](https://github.com/yuske-nakajima/zatto/compare/v3.2.1...v3.3.0) (2026-10-20)
 
 
