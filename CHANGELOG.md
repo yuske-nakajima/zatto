@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.0](https://github.com/yuske-nakajima/zatto/compare/v3.2.1...v3.3.0) (2026-10-20)
+
+
+### Features
+
+* **review:** 開いているタブがあれば zatto review は新しいタブを開かずそのタブにファイルを表示する ([29b0aed](https://github.com/yuske-nakajima/zatto/commit/29b0aed18d243f84ec1d8766b3903c27808cd576))
+* **review:** 開いているタブがあれば zatto review は新しいタブを開かずそのタブにファイルを表示する ([3aa947c](https://github.com/yuske-nakajima/zatto/commit/3aa947c5fe7018ada2583360a85a264236524daf))
+
 ## [3.2.1](https://github.com/yuske-nakajima/zatto/compare/v3.2.0...v3.2.1) (2026-10-18)
 
 
