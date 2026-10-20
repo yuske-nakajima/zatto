@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.7.0](https://github.com/yuske-nakajima/zatto/compare/v3.6.0...v3.7.0) (2026-10-20)
+
+
+### Features
+
+* **view:** Markdown の表示幅を切り替え、Mermaid の図を最大化できるようにする ([#125](https://github.com/yuske-nakajima/zatto/issues/125)) ([23a1b75](https://github.com/yuske-nakajima/zatto/commit/23a1b75f552e3635e6bc435f7973ab51088320df))
+
+
+### Bug Fixes
+
+* **release:** パッケージの検証を workspaces.json に合わせ、PR の CI でも実行する ([#126](https://github.com/yuske-nakajima/zatto/issues/126)) ([be8687c](https://github.com/yuske-nakajima/zatto/commit/be8687caa4533627c63e33d018ded6861319ed4f))
+
 ## [3.6.0](https://github.com/yuske-nakajima/zatto/compare/v3.5.0...v3.6.0) (2026-10-20)
 
 
