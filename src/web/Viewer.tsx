@@ -4,6 +4,13 @@ import type { TextAnchor } from "../shared/review.js";
 import type { CopyFeedback } from "./copy-feedback.js";
 import { Icon } from "./icons.js";
 import { type LinkedPage, linkedPageOf } from "./linked-page.js";
+import {
+  applyMarkdownWidth,
+  isMarkdownPath,
+  type MarkdownWidth,
+  readMarkdownWidth,
+  writeMarkdownWidth,
+} from "./markdown-width.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
 import { ReviewLayer, ReviewStatus } from "./ReviewLayer.js";
 import { useRemoteAccess } from "./remote-access.js";
@@ -106,6 +113,17 @@ export function Viewer({
     linkedPages.open(entryId);
   }
   const [showsPathTooltip, setShowsPathTooltip] = useState(false);
+  const [markdownWidth, setMarkdownWidth] =
+    useState<MarkdownWidth>(readMarkdownWidth);
+  const isMarkdown = selectedEntry
+    ? isMarkdownPath(selectedEntry.absPath)
+    : false;
+  function toggleMarkdownWidth(): void {
+    const next = markdownWidth === "full" ? "readable" : "full";
+    setMarkdownWidth(next);
+    writeMarkdownWidth(next);
+    applyMarkdownWidth(iframeRef.current, next);
+  }
   const pathTooltipId = useId();
   const { iframeRef, revealTarget, clearRevealedTarget } =
     usePreviewSearchTarget({
@@ -169,6 +187,22 @@ export function Viewer({
           )}
         </div>
         <div className="viewer-actions">
+          {isMarkdown && (
+            <button
+              className="markdown-width-button"
+              data-status-description={
+                markdownWidth === "full"
+                  ? "Show Markdown at a readable width."
+                  : "Show Markdown at the full width of the preview."
+              }
+              type="button"
+              aria-label="Full-width Markdown"
+              aria-pressed={markdownWidth === "full"}
+              onClick={toggleMarkdownWidth}
+            >
+              {markdownWidth === "full" ? "⇥⇤" : "⇤⇥"}
+            </button>
+          )}
           {selectedEntry && review && (
             <ReviewStatus
               review={review}
@@ -284,6 +318,7 @@ export function Viewer({
             title={`${selectedEntry.title} preview`}
             src={`/f/${encodeURIComponent(selectedEntry.id)}/`}
             onLoad={() => {
+              applyMarkdownWidth(iframeRef.current, markdownWidth);
               detectLinkedPage();
               if (!pageSearch.isOpen) revealTarget();
               pageSearch.handleFrameLoad();

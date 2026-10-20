@@ -77,6 +77,13 @@ body { background-color: Canvas; }
 .markdown-body pre.mermaid:has(.zatto-diagram-error) { text-align: left; }
 .markdown-body .zatto-diagram-error { color: #d1242f; white-space: pre-wrap; }
 @media (max-width: 767px) { .markdown-body { padding: 16px; } }
+html[data-zatto-width="full"] .markdown-body { max-width: none; }
+.markdown-body pre.mermaid { position: relative; }
+.zatto-diagram-expand { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 6px; background: Canvas; color: CanvasText; font: 14px/1.4 system-ui, sans-serif; cursor: zoom-in; opacity: 0; }
+.markdown-body pre.mermaid:hover .zatto-diagram-expand, .zatto-diagram-expand:focus-visible { opacity: 1; }
+.zatto-diagram-overlay { position: fixed; inset: 0; z-index: 10; display: flex; box-sizing: border-box; padding: 48px 24px 24px; background: Canvas; }
+.zatto-diagram-overlay svg { width: 100%; height: 100%; max-width: none !important; }
+.zatto-diagram-close { position: absolute; top: 12px; right: 16px; padding: 2px 10px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 6px; background: Canvas; color: CanvasText; font: 14px/1.4 system-ui, sans-serif; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -103,7 +110,16 @@ function diagramScript(): string {
       const id = "zatto-diagram-" + current + "-" + index;
       try {
         const { svg } = await mermaid.render(id, sources[index]);
-        if (current === generation) node.innerHTML = svg;
+        if (current !== generation) return;
+        node.innerHTML = svg;
+        const expand = document.createElement("button");
+        expand.type = "button";
+        expand.className = "zatto-diagram-expand";
+        expand.textContent = "⤢";
+        expand.title = "Maximize diagram";
+        expand.setAttribute("aria-label", "Maximize diagram");
+        expand.addEventListener("click", () => open(node));
+        node.append(expand);
       } catch (error) {
         // mermaid.render は失敗時に描画用の一時要素 "d" + id を body に残す
         document.getElementById("d" + id)?.remove();
@@ -117,7 +133,44 @@ function diagramScript(): string {
       }
     }
   }
-  scheme.addEventListener("change", () => void render());
+  let overlay = null;
+  // 最大化した図は、表示エリアに収まるよう SVG の大きさの指定を外して描き直す
+  function open(node) {
+    const svg = node.querySelector("svg");
+    if (!svg) return;
+    close();
+    overlay = document.createElement("div");
+    overlay.className = "zatto-diagram-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-label", "Diagram");
+    const copy = svg.cloneNode(true);
+    copy.removeAttribute("width");
+    copy.removeAttribute("height");
+    copy.style.removeProperty("max-width");
+    copy.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "zatto-diagram-close";
+    button.textContent = "×";
+    button.title = "Close (Esc)";
+    button.setAttribute("aria-label", "Close diagram");
+    button.addEventListener("click", close);
+    overlay.append(copy, button);
+    document.body.append(overlay);
+    button.focus();
+  }
+  function close() {
+    overlay?.remove();
+    overlay = null;
+  }
+  // 外側の画面もこの文書で Esc を受けるため、最大化を戻すときは先に受けて止める
+  document.addEventListener("keydown", (event) => {
+    if (!overlay || event.key !== "Escape" || event.isComposing) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    close();
+  }, true);
+  scheme.addEventListener("change", () => { close(); void render(); });
   void render();
 })();
 </script>
