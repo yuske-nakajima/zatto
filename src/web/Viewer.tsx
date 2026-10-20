@@ -6,6 +6,7 @@ import { Icon } from "./icons.js";
 import { type LinkedPage, linkedPageOf } from "./linked-page.js";
 import { PreviewPageSearch } from "./PreviewPageSearch.js";
 import { ReviewLayer, ReviewStatus } from "./ReviewLayer.js";
+import { useRemoteAccess } from "./remote-access.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
 import { usePreviewPageSearch } from "./usePreviewPageSearch.js";
 import { usePreviewSearchTarget } from "./usePreviewSearchTarget.js";
@@ -65,6 +66,7 @@ export function Viewer({
   onRequestedThreadOpened,
   panelRequest,
 }: ViewerProps) {
+  const isRemote = useRemoteAccess();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [linkedPage, setLinkedPage] = useState<LinkedPage | null>(null);
   const [pendingComment, setPendingComment] = useState<{
@@ -191,29 +193,39 @@ export function Viewer({
               {copyFeedback.message}
             </span>
           )}
-          <button
-            className="copy-path-button"
-            data-status-description="Copy the selected file path."
-            type="button"
-            aria-label="Copy file path"
-            aria-describedby={selectedEntry ? "selected-file-path" : undefined}
-            disabled={!selectedEntry}
-            onClick={() => selectedEntry && onCopyPath(selectedEntry.absPath)}
-          >
-            <Icon name="clipboardCopy" size={12} />
-            Copy
-          </button>
-          <button
-            className="preview-remove-button icon-button"
-            data-status-description="Remove the selected file from this session."
-            type="button"
-            aria-label="Remove selected file from session"
-            aria-describedby={selectedEntry ? "selected-file-path" : undefined}
-            disabled={!selectedEntry}
-            onClick={() => selectedEntry && onRemove(selectedEntry.id)}
-          >
-            <Icon name="trash" size={12} />
-          </button>
+          {!isRemote && (
+            <>
+              <button
+                className="copy-path-button"
+                data-status-description="Copy the selected file path."
+                type="button"
+                aria-label="Copy file path"
+                aria-describedby={
+                  selectedEntry ? "selected-file-path" : undefined
+                }
+                disabled={!selectedEntry}
+                onClick={() =>
+                  selectedEntry && onCopyPath(selectedEntry.absPath)
+                }
+              >
+                <Icon name="clipboardCopy" size={12} />
+                Copy
+              </button>
+              <button
+                className="preview-remove-button icon-button"
+                data-status-description="Remove the selected file from this session."
+                type="button"
+                aria-label="Remove selected file from session"
+                aria-describedby={
+                  selectedEntry ? "selected-file-path" : undefined
+                }
+                disabled={!selectedEntry}
+                onClick={() => selectedEntry && onRemove(selectedEntry.id)}
+              >
+                <Icon name="trash" size={12} />
+              </button>
+            </>
+          )}
         </div>
       </header>
       {errorMessage && (

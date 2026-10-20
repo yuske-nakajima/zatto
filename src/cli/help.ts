@@ -15,6 +15,7 @@ Commands:
 
 Options:
   --port <n>      初回起動時のサーバーポート (default: ${DEFAULT_PORT})
+  --host <addr>   初回起動時に、外の端末からの閲覧をこのアドレスでも受け付ける
   --no-open       ブラウザを自動で開かない
   --stop          常駐サーバーを停止する
   --import <file> セッションJSONを読み込んで全置換する

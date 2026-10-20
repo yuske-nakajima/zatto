@@ -23,6 +23,7 @@ export interface ServerClientDependencies {
     port: number,
     instanceId: string,
     runtimeFilePath: string,
+    host?: string,
   ) => Promise<void> | void;
   wait: (milliseconds: number) => Promise<void>;
   runtimeFilePath: string;
@@ -49,6 +50,7 @@ export async function connectToRunningServer(
 export async function connectOrStartServer(
   preferredPort: number,
   dependencies: ServerClientDependencies,
+  host?: string,
 ): Promise<ServerConnection> {
   const existing = await resolveManagedServer(dependencies);
   if (existing) return { record: existing, started: false };
@@ -87,6 +89,7 @@ export async function connectOrStartServer(
     preferredPort,
     instanceId,
     dependencies.runtimeFilePath,
+    host,
   );
   const record = await waitForServer(dependencies);
   return { record, started: record.instanceId === instanceId };

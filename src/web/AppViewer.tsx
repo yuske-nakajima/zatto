@@ -23,7 +23,7 @@ interface AppViewerProps {
   onCopyPath: (path: string) => void;
   onRemove: (id: string) => void;
   onPickFiles: () => void;
-  review: ReviewThreads;
+  review?: ReviewThreads;
   linkedPages: LinkedPages;
   requestedThreadId: string | null;
   onRequestedThreadOpened: () => void;

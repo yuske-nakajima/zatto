@@ -18,6 +18,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 export function useEntrySearch(
   refreshVersion: number,
   initialQuery = "",
+  workspaceId?: string,
 ): EntrySearchState {
   const [query, setQuery] = useState(initialQuery);
   const [result, setResult] = useState<SearchResponse | null>(null);
@@ -53,7 +54,7 @@ export function useEntrySearch(
       try {
         const nextResult = await rpcCall(
           "search.query",
-          { query },
+          workspaceId === undefined ? { query } : { query, workspaceId },
           { signal: controller.signal },
         );
         if (requestVersionRef.current !== requestVersion) {
@@ -76,7 +77,7 @@ export function useEntrySearch(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, refreshVersion, retryVersion]);
+  }, [query, refreshVersion, retryVersion, workspaceId]);
 
   return {
     query,

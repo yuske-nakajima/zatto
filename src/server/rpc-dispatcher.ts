@@ -1,4 +1,4 @@
-import type { RpcId, RpcResponse } from "../shared/rpc-contract.js";
+import type { RpcAccess, RpcId, RpcResponse } from "../shared/rpc-contract.js";
 import type { CommandEffects } from "./commands/context.js";
 import { CommandError } from "./commands/errors.js";
 import type { Commands } from "./commands/index.js";
@@ -19,6 +19,7 @@ export async function dispatchRpc(
   input: unknown,
   commands: Commands,
   logError: (error: unknown) => void,
+  access: RpcAccess = "local",
 ): Promise<RpcDispatchResult> {
   const effects: CommandEffects = [];
   async function execute(value: unknown): Promise<RpcResponse | undefined> {
@@ -38,6 +39,7 @@ export async function dispatchRpc(
         value.method,
         value.params === undefined ? {} : value.params,
         effects,
+        access,
       );
       return notification ? undefined : { jsonrpc: "2.0", id, result };
     } catch (error) {

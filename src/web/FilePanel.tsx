@@ -6,6 +6,7 @@ import { EntryRow } from "./EntryRow.js";
 import { FilePanelHeader } from "./FilePanelHeader.js";
 import { FilePanelViews } from "./FilePanelViews.js";
 import type { FilePanelView } from "./file-panel-model.js";
+import { useRemoteAccess } from "./remote-access.js";
 import { SessionActions } from "./SessionActions.js";
 import type {
   DirectoryPickerMode,
@@ -54,7 +55,7 @@ export function FilePanel({
   workspaceControls,
   entries,
   selectedId,
-  view,
+  view: requestedView,
   draggedId,
   dropTargetId,
   canPickFiles,
@@ -82,6 +83,11 @@ export function FilePanel({
   onImportSession,
   onExportSession,
 }: FilePanelProps) {
+  const isRemote = useRemoteAccess();
+  // 外の端末ではフォルダの構造を見せないため、Folders を List として表示する
+  const view =
+    isRemote && requestedView === "directories" ? "list" : requestedView;
+  const canReorder = view === "list" && !isRemote;
   const visibleEntries =
     view === "favorites" ? entries.filter((entry) => entry.favorite) : entries;
   return (
@@ -92,29 +98,31 @@ export function FilePanel({
         <span className="entry-count">
           ENTRIES <strong>{entries.length}</strong>
         </span>
-        <div className="list-actions">
-          <AddEntryControls
-            canPickFiles={canPickFiles}
-            canPickDirectory={canPickDirectory}
-            pending={nativePickerPending}
-            onPickFiles={onPickFiles}
-            onPickDirectory={onPickDirectory}
-          />
-          <button
-            className="clear-button"
-            data-status-description={
-              view === "favorites"
-                ? "Switch to List or Folders to clear this workspace."
-                : "Remove all files from this session."
-            }
-            type="button"
-            aria-label="Clear all"
-            disabled={entries.length === 0 || view === "favorites"}
-            onClick={onClear}
-          >
-            Clear All
-          </button>
-        </div>
+        {!isRemote && (
+          <div className="list-actions">
+            <AddEntryControls
+              canPickFiles={canPickFiles}
+              canPickDirectory={canPickDirectory}
+              pending={nativePickerPending}
+              onPickFiles={onPickFiles}
+              onPickDirectory={onPickDirectory}
+            />
+            <button
+              className="clear-button"
+              data-status-description={
+                view === "favorites"
+                  ? "Switch to List or Folders to clear this workspace."
+                  : "Remove all files from this session."
+              }
+              type="button"
+              aria-label="Clear all"
+              disabled={entries.length === 0 || view === "favorites"}
+              onClick={onClear}
+            >
+              Clear All
+            </button>
+          </div>
+        )}
       </div>
       <FilePanelViews
         view={view}
@@ -134,17 +142,17 @@ export function FilePanel({
               <EntryRow
                 entry={entry}
                 isSelected={entry.id === selectedId}
-                isDragging={view === "list" && entry.id === draggedId}
-                isDropTarget={view === "list" && entry.id === dropTargetId}
+                isDragging={canReorder && entry.id === draggedId}
+                isDropTarget={canReorder && entry.id === dropTargetId}
                 key={entry.id}
                 onSelect={onSelect}
                 onCopyPath={onCopyPath}
                 onRemove={onRemove}
                 onFavorite={onFavorite}
-                onDragStart={view === "list" ? onDragStart : undefined}
-                onDragEnter={view === "list" ? onDragEnter : undefined}
+                onDragStart={canReorder ? onDragStart : undefined}
+                onDragEnter={canReorder ? onDragEnter : undefined}
                 onDragEnd={onDragEnd}
-                onDrop={view === "list" ? onDrop : undefined}
+                onDrop={canReorder ? onDrop : undefined}
               />
             ))}
           </ol>
@@ -167,17 +175,25 @@ export function FilePanel({
         )}
         {view !== "favorites" && entries.length === 0 && (
           <div className="empty-list">
-            <p>Add HTML or Markdown files from the CLI</p>
-            <code>zatto page.html</code>
+            {isRemote ? (
+              <p>No files in this workspace.</p>
+            ) : (
+              <>
+                <p>Add HTML or Markdown files from the CLI</p>
+                <code>zatto page.html</code>
+              </>
+            )}
           </div>
         )}
       </div>
-      <SessionActions
-        isAvailable={isSessionLoaded}
-        pending={sessionTransferPending}
-        onImport={onImportSession}
-        onExport={onExportSession}
-      />
+      {!isRemote && (
+        <SessionActions
+          isAvailable={isSessionLoaded}
+          pending={sessionTransferPending}
+          onImport={onImportSession}
+          onExport={onExportSession}
+        />
+      )}
     </aside>
   );
 }

@@ -36,6 +36,7 @@ export const RPC_ERROR = {
   busy: 1005,
   searchLimit: 1006,
   conflict: 1007,
+  forbidden: 1008,
 } as const;
 /** Empty named parameters. */
 export type EmptyParams = Record<string, never>;
@@ -47,8 +48,11 @@ export interface RequestContext {
 export interface WorkspaceParams extends RequestContext {
   workspaceId: string;
 }
+/** 要求の接続元。`remote` は `--host` で受け付けた外の端末で、閲覧だけを許す。 */
+export type RpcAccess = "local" | "remote";
 /** Session snapshot with server capabilities. */
 export interface SessionResult extends Session, WorkspaceState {
+  access?: RpcAccess;
   serverIdentity?: { instanceId: string };
   filePicker: { available: boolean; instanceId?: string };
   directoryPicker: { available: boolean; instanceId?: string };
@@ -202,7 +206,7 @@ export interface RpcMethods {
     result: { shown: boolean };
   };
   "search.query": {
-    params: RequestContext & { query: string };
+    params: RequestContext & { query: string; workspaceId?: string };
     result: SearchResponse;
   };
 }

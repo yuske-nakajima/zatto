@@ -113,6 +113,40 @@ describe("managed zatto server", () => {
     await restarted?.app.close();
   });
 
+  test("--host を指定すると、127.0.0.1 と同じポートでそのアドレスでも待ち受け、トークンを記録する", async () => {
+    const server = await startServer(0, {
+      instanceId: "remote-instance",
+      runtimeFilePath,
+      sessionFilePath,
+      exit: vi.fn(),
+      host: "::1",
+    });
+    expect(server).not.toBeNull();
+    const record = await readServerRecord(runtimeFilePath);
+    expect(record?.remote).toEqual({
+      host: "::1",
+      token: expect.stringMatching(/^[\w-]{32}$/),
+    });
+    for (const host of ["127.0.0.1", "[::1]"]) {
+      const response = await fetch(`http://${host}:${server?.port}/rpc`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "server.health",
+          params: {},
+        }),
+      });
+      expect(response.status).toBe(200);
+    }
+    // WebSocket の接続が残っていても止まる
+    const socket = new WebSocket(`ws://[::1]:${server?.port}/ws`);
+    await new Promise((resolve) => socket.addEventListener("open", resolve));
+    await server?.app.close();
+    await expect(fetch(`http://[::1]:${server?.port}/`)).rejects.toThrow();
+  });
+
   test("record保存に失敗した場合はlistenとlockを解放する", async () => {
     let attemptedRecord: ServerRecord | undefined;
 

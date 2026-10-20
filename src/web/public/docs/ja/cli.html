@@ -44,6 +44,7 @@ Report
       <table>
         <tbody>
           <tr><th><code>--port &lt;n&gt;</code></th><td>初回起動時の希望ポートです。既定値は<code>6280</code>で、使用中の場合はOSがポートを割り当てます。</td></tr>
+          <tr><th><code>--host &lt;addr&gt;</code></th><td>初回起動時に、外の端末からの閲覧をこのアドレスでも受け付けます。<code>127.0.0.1</code>での待ち受けは続きます。トークン付きのURLを標準エラーへ表示し、外の端末にはトークンを示した閲覧だけを許します。<code>0.0.0.0</code>はすべてのアドレスで待ち受けます。起動済みのサーバーには適用しません。</td></tr>
           <tr><th><code>--no-open</code></th><td>ブラウザーを開きません。既定では、サーバーを起動した場合、またはファイル指定なしの場合にブラウザーを開きます。</td></tr>
           <tr><th><code>--stop</code></th><td>同じOSユーザーの常駐サーバーを停止します。</td></tr>
           <tr><th><code>--import &lt;file&gt;</code></th><td><code>zatto-session</code> version 1のJSONを検証し、サーバーのセッションを全置換します。</td></tr>
@@ -105,7 +106,7 @@ npx @yuske-nakajima/zatto --import saved-session.json
 npx @yuske-nakajima/zatto --stop</code></pre>
 
       <h2>サーバー実行ファイル</h2>
-      <p>パッケージのサーバーエントリーは、<code>--port</code>、<code>--instance-id</code>、<code>--runtime-file</code>を受け取ります。これらは管理対象の常駐プロセス用です。通常は<code>zatto</code>コマンドを使ってください。</p>
+      <p>パッケージのサーバーエントリーは、<code>--port</code>、<code>--instance-id</code>、<code>--runtime-file</code>、<code>--host</code>を受け取ります。これらは管理対象の常駐プロセス用です。通常は<code>zatto</code>コマンドを使ってください。</p>
       <h2>ワークスペースの選択</h2><p>ファイルパネルのWorkspaceから名前付きのファイル群を作成・切り替え・名前変更・削除できます。ファイルパスとList順は再起動後も保存されます。単一セッション形式はDefaultへ移行します。選択は全タブとCLIで共有し、追加、インポート、エクスポート、Agentコンテキストは選択中を対象にします。切り替えで検索を解除し、List/Foldersとパネル設定は維持します。削除は確認付きで、実ファイルと最後の1件を残します。</p>
       <h2>お気に入りとセッション交換</h2><p>星はブラウザーで操作します。CLIからの追加は既存の星を変更しません。version 1の交換ファイルはパスだけを保持します。全置換インポートは星なしでエントリを再生成し、追加は既存の星を保持します。星の保存単位はワークスペースです。</p>
       <h2>3.0.0への更新</h2><p>ファイルを変更・エクスポートするRPC操作で、対象ワークスペースの<code>workspaceId</code>が必須になり、サーバーの通信バージョンが4になります。パッケージを更新しても稼働中の2.xサーバーは動き続けるため、3.0.0の<code>zatto --stop</code>で停止してから<code>zatto</code>を起動します。停止するまで、3.0.0のCLIは2.xサーバーへ操作を送りません。ワークスペース、星、並び順と保存形式は引き継ぎます。</p>

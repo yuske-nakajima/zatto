@@ -149,7 +149,11 @@ const schemas = {
     entryId: id.optional(),
   }),
   "viewer.show": z.strictObject({ ...guards, workspaceId, entryId: id }),
-  "search.query": z.strictObject({ ...guards, query: z.string() }),
+  "search.query": z.strictObject({
+    ...guards,
+    query: z.string(),
+    workspaceId: workspaceId.optional(),
+  }),
 } satisfies Record<RpcMethod, z.ZodType>;
 /**
  * Validates command names using own-property membership.

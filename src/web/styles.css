@@ -620,6 +620,11 @@ button:focus-visible,
   padding: var(--spacing-10) 0;
 }
 
+/* 並べ替えのつまみがない行も、つまみのある行と同じ位置から文字を始める */
+.entry-row--static:not(.entry-row--grouped) .entry-select {
+  padding-left: 20px;
+}
+
 .entry-copy {
   position: relative;
   display: block;

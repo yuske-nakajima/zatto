@@ -44,8 +44,11 @@ export function registerRpcRoute(
       } catch {
         return reply.send(failure(null, -32700, "Parse error"));
       }
-      const outcome = await dispatchRpc(input, commands, (error) =>
-        app.log.error(error),
+      const outcome = await dispatchRpc(
+        input,
+        commands,
+        (error) => app.log.error(error),
+        request.remote ? "remote" : "local",
       );
       if (outcome.effects.length)
         reply.raw.once("finish", () => {

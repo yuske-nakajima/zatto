@@ -6,6 +6,8 @@ import "./workspace.css";
 interface WorkspaceControlsProps {
   state: WorkspaceState | null;
   reportError: (message: string | null) => void;
+  /** 指定すると、サーバーの選択を変えずにこの画面だけで切り替え、ワークスペースの管理を隠す。 */
+  onView?: (id: string) => void;
 }
 
 /**
@@ -17,6 +19,7 @@ interface WorkspaceControlsProps {
 export function WorkspaceControls({
   state,
   reportError,
+  onView,
 }: WorkspaceControlsProps) {
   const [pending, setPending] = useState(false);
   if (!state) return null;
@@ -73,11 +76,19 @@ export function WorkspaceControls({
     <section className="workspace-controls" aria-label="Workspace controls">
       <label htmlFor="workspace-select">Workspace</label>
       <select
-        data-status-description="Switch the shared workspace and restore its files and List order."
+        data-status-description={
+          onView
+            ? "Show another workspace on this device without changing the shared selection."
+            : "Switch the shared workspace and restore its files and List order."
+        }
         id="workspace-select"
         value={state.activeWorkspaceId}
         disabled={pending}
-        onChange={(event) => void change("activate", event.target.value)}
+        onChange={(event) =>
+          onView
+            ? onView(event.target.value)
+            : void change("activate", event.target.value)
+        }
       >
         {state.workspaces.map(({ id, name }) => (
           <option key={id} value={id}>
@@ -85,32 +96,34 @@ export function WorkspaceControls({
           </option>
         ))}
       </select>
-      <div className="workspace-actions">
-        <button
-          type="button"
-          disabled={pending}
-          data-status-description="Create and select an empty named workspace."
-          onClick={() => nameWorkspace(true)}
-        >
-          New workspace
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          data-status-description="Rename the selected workspace."
-          onClick={() => nameWorkspace(false)}
-        >
-          Rename
-        </button>
-        <button
-          type="button"
-          disabled={pending || state.workspaces.length < 2}
-          data-status-description="Delete this workspace after confirmation; keep its files on disk."
-          onClick={removeWorkspace}
-        >
-          Delete
-        </button>
-      </div>
+      {!onView && (
+        <div className="workspace-actions">
+          <button
+            type="button"
+            disabled={pending}
+            data-status-description="Create and select an empty named workspace."
+            onClick={() => nameWorkspace(true)}
+          >
+            New workspace
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            data-status-description="Rename the selected workspace."
+            onClick={() => nameWorkspace(false)}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            disabled={pending || state.workspaces.length < 2}
+            data-status-description="Delete this workspace after confirmation; keep its files on disk."
+            onClick={removeWorkspace}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </section>
   );
 }

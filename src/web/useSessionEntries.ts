@@ -7,6 +7,10 @@ import {
   readNativePickerCapabilities,
 } from "./native-picker-capability.js";
 import {
+  readRemoteWorkspaceId,
+  writeRemoteWorkspaceId,
+} from "./remote-access.js";
+import {
   pushSelectedEntryIdInUrl,
   readSelectedEntryIdFromUrl,
 } from "./selected-entry-url.js";
@@ -24,6 +28,10 @@ export function useSessionEntries(
     null,
   );
   const workspaceIdRef = useRef<string | null>(null);
+  // 外の端末の画面は、サーバーの選択に追従せず、見ているワークスペースを自分で持つ
+  const [isRemote, setIsRemote] = useState(false);
+  const remoteRef = useRef(false);
+  const viewedWorkspaceIdRef = useRef<string | null>(null);
   const socketUpdateRef = useRef(0);
   const sessionRevision = socketUpdateRef.current;
   const workspaceGenerationRef = useRef(0);
@@ -31,13 +39,20 @@ export function useSessionEntries(
   const applyWorkspace = useEffectEvent(
     (state: Partial<WorkspaceState>): boolean => {
       if (!state.activeWorkspaceId || !state.workspaces) return false;
+      const viewed = viewedWorkspaceIdRef.current;
+      const shownId =
+        remoteRef.current &&
+        viewed !== null &&
+        state.workspaces.some(({ id }) => id === viewed)
+          ? viewed
+          : state.activeWorkspaceId;
+      if (remoteRef.current) viewedWorkspaceIdRef.current = shownId;
       const changed =
-        workspaceIdRef.current !== null &&
-        workspaceIdRef.current !== state.activeWorkspaceId;
+        workspaceIdRef.current !== null && workspaceIdRef.current !== shownId;
       if (changed) workspaceGenerationRef.current += 1;
-      workspaceIdRef.current = state.activeWorkspaceId;
+      workspaceIdRef.current = shownId;
       setWorkspaceState({
-        activeWorkspaceId: state.activeWorkspaceId,
+        activeWorkspaceId: shownId,
         workspaces: state.workspaces,
       });
       return changed;
@@ -70,15 +85,26 @@ export function useSessionEntries(
     let active = true;
     const updateVersion = socketUpdateRef.current;
     rpcCall("session.get", {})
-      .then((session) => {
+      .then(async (session) => {
+        if (session.access === "remote") {
+          remoteRef.current = true;
+          viewedWorkspaceIdRef.current = readRemoteWorkspaceId();
+          setIsRemote(true);
+        }
         if (active) {
           if (updateVersion === socketUpdateRef.current) {
             applyWorkspace(session);
-            setEntries(session.entries);
+            const shownId = workspaceIdRef.current;
+            const shownEntries =
+              shownId && shownId !== session.activeWorkspaceId
+                ? (await rpcCall("workspaces.get", { id: shownId })).entries
+                : session.entries;
+            if (!active) return;
+            setEntries(shownEntries);
             setSelectedId(
               resolveSelectedEntryIdAndUpdateUrl(
                 readSelectedEntryIdFromUrl(),
-                session.entries,
+                shownEntries,
               ),
             );
           }
@@ -138,6 +164,20 @@ export function useSessionEntries(
       const workspaceChanged = applyWorkspace(message);
       onSessionUpdate(workspaceChanged);
       setSearchVersion((current) => current + 1);
+      const shownId = workspaceIdRef.current;
+      if (
+        remoteRef.current &&
+        shownId &&
+        message.activeWorkspaceId !== undefined &&
+        shownId !== message.activeWorkspaceId
+      ) {
+        // 通知は選択中のワークスペースの中身なので、見ているワークスペースは取り直す
+        void showWorkspaceEntries(
+          shownId,
+          workspaceChanged ? null : selectedId,
+        );
+        return;
+      }
       setEntries(message.entries);
       setSelectedId(
         resolveSelectedEntryIdAndUpdateUrl(
@@ -155,6 +195,37 @@ export function useSessionEntries(
     }
   });
 
+  async function showWorkspaceEntries(
+    id: string,
+    requestedId: string | null,
+  ): Promise<void> {
+    try {
+      const workspace = await rpcCall("workspaces.get", { id });
+      if (workspaceIdRef.current !== id) return;
+      setEntries(workspace.entries);
+      setSelectedId(
+        resolveSelectedEntryIdAndUpdateUrl(requestedId, workspace.entries),
+      );
+    } catch {
+      setErrorMessage("Could not load the workspace.");
+    }
+  }
+
+  /** 外の端末の画面で、サーバーの選択を変えずに見るワークスペースを切り替える。 */
+  function viewWorkspace(id: string): void {
+    if (!remoteRef.current || workspaceIdRef.current === id) return;
+    viewedWorkspaceIdRef.current = id;
+    writeRemoteWorkspaceId(id);
+    workspaceGenerationRef.current += 1;
+    workspaceIdRef.current = id;
+    setWorkspaceState((current) =>
+      current ? { ...current, activeWorkspaceId: id } : current,
+    );
+    onSessionUpdate(true);
+    setSearchVersion((current) => current + 1);
+    void showWorkspaceEntries(id, null);
+  }
+
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(
@@ -165,6 +236,8 @@ export function useSessionEntries(
   }, []);
 
   return {
+    isRemote,
+    viewWorkspace,
     workspaceState,
     isCurrentWorkspace: (id: string | null) =>
       workspaceIdRef.current === id &&

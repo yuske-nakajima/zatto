@@ -172,6 +172,7 @@ describe("zatto CLI", () => {
       6280,
       "requested-instance",
       runtimeFilePath,
+      undefined,
     );
     expect(openBrowser).toHaveBeenCalledWith("http://127.0.0.1:7345/");
   });

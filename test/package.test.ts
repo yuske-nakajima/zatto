@@ -90,7 +90,13 @@ describe("npmパッケージ", () => {
       ) => { unref(): void }
     >(() => ({ unref() {} }));
 
-    spawnDetachedServer(6280, "instance-id", "/tmp/zatto-runtime.json", spawn);
+    spawnDetachedServer(
+      6280,
+      "instance-id",
+      "/tmp/zatto-runtime.json",
+      undefined,
+      spawn,
+    );
 
     expect(spawn).toHaveBeenCalledWith(
       process.execPath,

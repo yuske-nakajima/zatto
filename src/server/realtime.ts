@@ -1,8 +1,12 @@
 import WebSocket from "ws";
 import type { ServerMessage } from "../shared/protocol.js";
+import { remoteMessage } from "./remote-view.js";
 
-/** WebSocket の接続元。`viewer` は Web UI のタブで、CLI の待機は含まない。 */
-export type RealtimeClientRole = "viewer" | "other";
+/**
+ * WebSocket の接続元。
+ * `viewer` は Mac の Web UI のタブ、`remote` は外の端末のタブで、`other` は CLI の待機などを指す。
+ */
+export type RealtimeClientRole = "viewer" | "remote" | "other";
 
 export class RealtimeHub {
   private readonly clients = new Map<WebSocket, RealtimeClientRole>();
@@ -14,7 +18,7 @@ export class RealtimeHub {
     });
   }
 
-  /** 開いている Web UI のタブの数。 */
+  /** 開いている Mac の Web UI のタブの数。外の端末のタブは数えない。 */
   viewerCount(): number {
     let count = 0;
     for (const [client, role] of this.clients) {
@@ -25,10 +29,12 @@ export class RealtimeHub {
 
   broadcast(message: ServerMessage): void {
     const payload = JSON.stringify(message);
-    for (const client of this.clients.keys()) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(payload);
-      }
+    const remote = remoteMessage(message);
+    const remotePayload = remote ? JSON.stringify(remote) : null;
+    for (const [client, role] of this.clients) {
+      if (client.readyState !== WebSocket.OPEN) continue;
+      if (role !== "remote") client.send(payload);
+      else if (remotePayload) client.send(remotePayload);
     }
   }
 }

@@ -20,12 +20,14 @@ export function runServerCommand(
       port: { type: "string", default: String(defaultPort) },
       "instance-id": { type: "string" },
       "runtime-file": { type: "string" },
+      host: { type: "string" },
     },
   });
 
   void serverStarter(Number(values.port), {
     instanceId: values["instance-id"],
     runtimeFilePath: values["runtime-file"],
+    host: values.host,
   }).catch((error: unknown) => {
     console.error(error);
     process.exit(1);
