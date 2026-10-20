@@ -5,6 +5,7 @@ import { AgentContextStore } from "./agent-context.js";
 import { createCommands } from "./commands/index.js";
 import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
+import { registerOriginGuard } from "./origin-guard.js";
 import { RealtimeHub } from "./realtime.js";
 import { registerReviewAttachmentRoute } from "./review-attachment-route.js";
 import { ReviewStore } from "./review-store.js";
@@ -34,6 +35,7 @@ export async function createApp(
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const realtimeHub = options.realtimeHub ?? new RealtimeHub();
+  registerOriginGuard(app);
   await app.register(websocket);
 
   app.get<{ Querystring: { client?: string } }>(
