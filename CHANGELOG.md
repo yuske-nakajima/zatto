@@ -5,7 +5,6 @@
 
 ### Features
 
-* --host で外の端末からの閲覧を受け付ける（トークン認証・閲覧のみ） ([ee57dfd](https://github.com/yuske-nakajima/zatto/commit/ee57dfdc889bed52dbdfb868077050890e3783af))
 * --host で外の端末からの閲覧を受け付ける（トークン認証・閲覧のみ） ([9296301](https://github.com/yuske-nakajima/zatto/commit/9296301bc1d20d03a5c9cf9afccbe00b4e265573)), closes [#104](https://github.com/yuske-nakajima/zatto/issues/104)
 
 ## [3.3.1](https://github.com/yuske-nakajima/zatto/compare/v3.3.0...v3.3.1) (2026-10-20)
@@ -13,7 +12,6 @@
 
 ### Bug Fixes
 
-* **server:** Host ヘッダーと WebSocket の Origin を検証して DNS rebinding を防ぐ ([37eb8e6](https://github.com/yuske-nakajima/zatto/commit/37eb8e665a3748a35365c13b028b451fe4c853b4))
 * **server:** Host ヘッダーと WebSocket の Origin を検証して DNS rebinding を防ぐ ([46790e1](https://github.com/yuske-nakajima/zatto/commit/46790e19f82f83809df6816967adebd05d499e22)), closes [#103](https://github.com/yuske-nakajima/zatto/issues/103)
 
 ## [3.3.0](https://github.com/yuske-nakajima/zatto/compare/v3.2.1...v3.3.0) (2026-10-20)
@@ -21,7 +19,6 @@
 
 ### Features
 
-* **review:** 開いているタブがあれば zatto review は新しいタブを開かずそのタブにファイルを表示する ([29b0aed](https://github.com/yuske-nakajima/zatto/commit/29b0aed18d243f84ec1d8766b3903c27808cd576))
 * **review:** 開いているタブがあれば zatto review は新しいタブを開かずそのタブにファイルを表示する ([3aa947c](https://github.com/yuske-nakajima/zatto/commit/3aa947c5fe7018ada2583360a85a264236524daf))
 
 ## [3.2.1](https://github.com/yuske-nakajima/zatto/compare/v3.2.0...v3.2.1) (2026-10-18)
@@ -31,7 +28,6 @@
 
 * **media:** READMEの英日のGIF・ポスター・コマ一覧とaltを25秒のPVに合わせる ([1c0d2fc](https://github.com/yuske-nakajima/zatto/commit/1c0d2fc7848f376d32ec1f4a9cff0fa6882be339))
 * **video:** PVをAIの資料へのコメントと返事を中心にした25秒の構成に作り直す ([3e44bdc](https://github.com/yuske-nakajima/zatto/commit/3e44bdcdca0ea1314647d69cfd28dbc594d5b064))
-* **video:** PVをAIの資料へのコメントと返事を中心に作り直し、40秒の機能紹介を加える ([3114a0d](https://github.com/yuske-nakajima/zatto/commit/3114a0d3aaa8f34787cae4eacb5af087c6e5bbe0))
 * **video:** 機能を一通り見せる40秒の英日の機能紹介動画を加える ([9d413c4](https://github.com/yuske-nakajima/zatto/commit/9d413c41f216f888d91ef1c66f470770194d7843))
 
 ## [3.2.0](https://github.com/yuske-nakajima/zatto/compare/v3.1.0...v3.2.0) (2026-10-18)
@@ -43,7 +39,6 @@
 * **review:** コメント・返信のたびにLLMのセッションへ届け、画面からレビューを始める ([fc5b5e4](https://github.com/yuske-nakajima/zatto/commit/fc5b5e4f3bf4eab5018da232f5ebd2918b216e99)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
 * **review:** コメントの表示を整え、画像の添付と配信状態を加える ([a67fb2c](https://github.com/yuske-nakajima/zatto/commit/a67fb2c5948931aa93a032ba8650571018d77b46)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
 * **review:** スレッドをチャットの吹き出しで表示し、返信した LLM をアバターで示す ([b0de57f](https://github.com/yuske-nakajima/zatto/commit/b0de57f2cbb8ee0d91647749bf9cb199f666f0d5)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
-* **review:** プレビューの文章にコメントのスレッドを立て、LLMと確認をやり取りする ([880302a](https://github.com/yuske-nakajima/zatto/commit/880302a3aefc39439dd0c56cb750351e3f490cee))
 * **review:** プレビューの文章にコメントのスレッドを立て、LLMと確認をやり取りする ([880ce6a](https://github.com/yuske-nakajima/zatto/commit/880ce6a3c03b8f61d1e42fc9230298546ab51186)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
 * **review:** やり取りの場所と LLM の動きを見失わないようにする ([b86494b](https://github.com/yuske-nakajima/zatto/commit/b86494b2e0e165caaa645779c4f20ae2a4cf7222)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
 * **review:** リンクで移った先のページを登録して選び直し、コメントできるようにする ([321a02a](https://github.com/yuske-nakajima/zatto/commit/321a02a9abab64469916076c91ea7cd892db4825)), closes [#94](https://github.com/yuske-nakajima/zatto/issues/94)
@@ -65,7 +60,6 @@
 ### Features
 
 * **view:** Markdownのタスクリストのチェックをプレビューから切り替える ([1fe1871](https://github.com/yuske-nakajima/zatto/commit/1fe1871d82569183b8f81dce7dc2a105c802911b)), closes [#67](https://github.com/yuske-nakajima/zatto/issues/67)
-* **view:** Markdownファイルを閲覧専用で表示する ([0071905](https://github.com/yuske-nakajima/zatto/commit/0071905f1dc61ed5123741ce1b37df1e605288d3))
 * **view:** Markdownファイルを閲覧専用で表示する ([16e8b30](https://github.com/yuske-nakajima/zatto/commit/16e8b30aef131344b704dd04141fe6aeda0468e4)), closes [#67](https://github.com/yuske-nakajima/zatto/issues/67)
 
 
@@ -89,7 +83,6 @@
 
 ### Features
 
-* **mcp:** ワークスペースの整理状態の参照とファイル登録を追加 ([54e0134](https://github.com/yuske-nakajima/zatto/commit/54e0134c489b3d51082d23c2a78bc46bd63dd2d2))
 * **mcp:** ワークスペースの整理状態の参照とファイル登録を追加 ([d474e03](https://github.com/yuske-nakajima/zatto/commit/d474e03b2a26adbe3a61c98f0b8a003ae107446a)), closes [#71](https://github.com/yuske-nakajima/zatto/issues/71)
 
 
