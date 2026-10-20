@@ -14,4 +14,5 @@ export type ServerMessage =
     }
   | { type: "review:update"; entryId: string }
   | ({ type: "review:states" } & ReviewStates)
-  | { type: "review:event"; session: string };
+  | { type: "review:event"; session: string }
+  | { type: "viewer:show"; workspaceId: string; entryId: string };

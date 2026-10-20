@@ -235,6 +235,81 @@ describe("zatto review", () => {
     await expect(running).resolves.toBe(0);
   });
 
+  test("Web UI のタブがなければブラウザーで開く", async () => {
+    let interrupt = () => {};
+    const deps = dependencies((handler) => {
+      interrupt = handler;
+      return () => {};
+    });
+    const cli = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    await new Promise((resolve) => cli.addEventListener("open", resolve));
+    const running = runReviewCommand([file, "--session", "s"], deps);
+    const review = await activeReview();
+    await vi.waitFor(() =>
+      expect(deps.openBrowser).toHaveBeenCalledWith(
+        `http://127.0.0.1:${port}/?entry=${review.entryId}`,
+      ),
+    );
+    interrupt();
+    await expect(running).resolves.toBe(130);
+    cli.close();
+  });
+
+  test("viewer.show を持たない版のサーバーではブラウザーで開く", async () => {
+    let interrupt = () => {};
+    const deps = {
+      ...dependencies((handler) => {
+        interrupt = handler;
+        return () => {};
+      }),
+      fetch: (async (input, init) => {
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        if (body.method === "viewer.show")
+          return Response.json({
+            jsonrpc: "2.0",
+            id: body.id,
+            error: { code: -32601, message: "Method not found" },
+          });
+        return globalThis.fetch(input, init);
+      }) as typeof fetch,
+    };
+    const viewer = new WebSocket(`ws://127.0.0.1:${port}/ws?client=viewer`);
+    await new Promise((resolve) => viewer.addEventListener("open", resolve));
+    const running = runReviewCommand([file, "--session", "s"], deps);
+    await activeReview();
+    await vi.waitFor(() => expect(deps.openBrowser).toHaveBeenCalledOnce());
+    interrupt();
+    await expect(running).resolves.toBe(130);
+    viewer.close();
+  });
+
+  test("Web UI のタブが開いていれば新しく開かず、そのタブにファイルを表示させる", async () => {
+    let interrupt = () => {};
+    const deps = dependencies((handler) => {
+      interrupt = handler;
+      return () => {};
+    });
+    const viewer = new WebSocket(`ws://127.0.0.1:${port}/ws?client=viewer`);
+    const messages: unknown[] = [];
+    viewer.addEventListener("message", (event) =>
+      messages.push(JSON.parse(String(event.data))),
+    );
+    await new Promise((resolve) => viewer.addEventListener("open", resolve));
+    const running = runReviewCommand([file, "--session", "s"], deps);
+    const review = await activeReview();
+    await vi.waitFor(() =>
+      expect(messages).toContainEqual({
+        type: "viewer:show",
+        workspaceId: review.workspaceId,
+        entryId: review.entryId,
+      }),
+    );
+    interrupt();
+    await expect(running).resolves.toBe(130);
+    expect(deps.openBrowser).not.toHaveBeenCalled();
+    viewer.close();
+  });
+
   test("中断すると 130 で終わる", async () => {
     let interrupt = () => {};
     const deps = dependencies((handler) => {

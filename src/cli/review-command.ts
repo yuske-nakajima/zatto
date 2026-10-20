@@ -221,7 +221,15 @@ async function follow(
       dependencies.stderr(
         `レビュー中にしました。ユーザーのコメントを待ちます: ${url.href}`,
       );
-      if (options.open && review.createdAt >= startedAt)
+      if (
+        options.open &&
+        review.createdAt >= startedAt &&
+        !(await call("viewer.show", { workspaceId, entryId: entry.id }).then(
+          ({ shown }) => shown,
+          // viewer.show を持たない版のサーバーでは、タブの有無が分からないため開く
+          () => false,
+        ))
+      )
         dependencies.openBrowser(url.href);
     }
 

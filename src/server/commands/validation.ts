@@ -148,6 +148,7 @@ const schemas = {
     session,
     entryId: id.optional(),
   }),
+  "viewer.show": z.strictObject({ ...guards, workspaceId, entryId: id }),
   "search.query": z.strictObject({ ...guards, query: z.string() }),
 } satisfies Record<RpcMethod, z.ZodType>;
 /**

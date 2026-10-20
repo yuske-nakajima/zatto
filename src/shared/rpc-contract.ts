@@ -197,6 +197,10 @@ export interface RpcMethods {
     params: RequestContext & { session: string; entryId?: string };
     result: { events: ReviewEvent[] };
   };
+  "viewer.show": {
+    params: WorkspaceParams & { entryId: string };
+    result: { shown: boolean };
+  };
   "search.query": {
     params: RequestContext & { query: string };
     result: SearchResponse;

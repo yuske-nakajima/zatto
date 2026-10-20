@@ -157,7 +157,9 @@ export function useSessionEntries(
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const socket = new WebSocket(
+      `${protocol}//${window.location.host}/ws?client=viewer`,
+    );
     socket.addEventListener("message", handleSocketMessage);
     return () => socket.close();
   }, []);

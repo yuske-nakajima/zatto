@@ -36,9 +36,16 @@ export async function createApp(
   const realtimeHub = options.realtimeHub ?? new RealtimeHub();
   await app.register(websocket);
 
-  app.get("/ws", { websocket: true }, (socket) => {
-    realtimeHub.add(socket);
-  });
+  app.get<{ Querystring: { client?: string } }>(
+    "/ws",
+    { websocket: true },
+    (socket, request) => {
+      realtimeHub.add(
+        socket,
+        request.query.client === "viewer" ? "viewer" : "other",
+      );
+    },
+  );
 
   registerStaticRoutes(app, options.frontendDistPath);
 

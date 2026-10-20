@@ -239,6 +239,8 @@ export function isRpcResult<M extends RpcMethod>(
       return value === null;
     case "markdown.setTask":
       return object(value) && text(value.revision);
+    case "viewer.show":
+      return object(value) && boolean(value.shown);
     case "session.setFavorite":
     case "session.reorder":
     case "session.removeMany":
