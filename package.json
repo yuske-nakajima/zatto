@@ -42,7 +42,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.13.0",
   "scripts": {
     "build": "pnpm run build:web && pnpm run build:node && pnpm run typecheck",
     "build:node": "tsc -p tsconfig.build.json",
@@ -69,7 +69,7 @@
     "marked": "18.1.0",
     "nanoid": "6.0.2",
     "ws": "8.22.0",
-    "zod": "4.5.4"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

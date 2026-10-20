@@ -45,6 +45,7 @@ describe("Zatto MCP server", () => {
         "create_workspace",
         "update_files",
         "list_review_threads",
+        "get_review_thread",
         "create_review_thread",
         "reply_review_thread",
         "resolve_review_thread",
@@ -64,6 +65,7 @@ describe("Zatto MCP server", () => {
       "list_workspaces",
       "list_workspace_files",
       "list_review_threads",
+      "get_review_thread",
     ];
     const creates = [
       "create_workspace",
@@ -403,6 +405,15 @@ describe("Zatto MCP server", () => {
       ],
     });
     await expect(
+      toolResult(client, "get_review_thread", { threadId: userThread.id }),
+    ).resolves.toMatchObject({
+      file: { id: entry.id, title: entry.title, path: entry.absPath },
+      thread: {
+        id: userThread.id,
+        comments: [{ author: { kind: "user" }, body: "具体例は？" }],
+      },
+    });
+    await expect(
       toolResult(client, "reply_review_thread", {
         threadId: userThread.id,
         body: "例を追記しました",
@@ -471,6 +482,7 @@ const TOOL_ARGUMENTS: Record<string, Record<string, unknown>> = {
   create_workspace: { name: "Notes" },
   update_files: { files: [{ entryId: "a", favorite: true }] },
   list_review_threads: { entryId: "a" },
+  get_review_thread: { threadId: "t" },
   create_review_thread: { entryId: "a", body: "Why?" },
   reply_review_thread: { threadId: "t", body: "Fixed" },
   resolve_review_thread: { threadId: "t" },

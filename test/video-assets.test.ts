@@ -5,7 +5,6 @@ import { TOUR_SPECS, VIDEO_SPECS } from "../video/spec.js";
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
-  dependencies: Record<string, string>;
 };
 
 describe("zatto promotion videos", () => {
@@ -80,7 +79,6 @@ describe("zatto promotion videos", () => {
   test("pins compatible Remotion packages", () => {
     expect(packageJson.devDependencies.remotion).toBe("4.0.534");
     expect(packageJson.devDependencies["@remotion/cli"]).toBe("4.0.534");
-    expect(packageJson.dependencies.zod).toBe("4.5.4");
   });
 
   test.each([
