@@ -44,7 +44,9 @@ describe("session actions", () => {
     expect(screen.getByRole("status").textContent).toContain("loading…");
     expect(container.querySelector(".session-action-spinner")).toBeTruthy();
     expect(screen.queryByLabelText("Import workspace file")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Export workspace/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Export workspace/ }),
+    ).toBeNull();
   });
 
   test("import中はspinner付き状態と区切りとdisabled exportを表示する", () => {
@@ -114,7 +116,9 @@ describe("session actions", () => {
     expect(onImport).not.toHaveBeenCalled();
     expect(input).toBe(document.activeElement);
     await user.upload(input, file);
-    expect(screen.getByRole("dialog", { name: "Import workspace" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Import workspace" }),
+    ).toBeTruthy();
   });
 
   test("exportをcancelするとrequestせずtriggerへfocusを戻す", async () => {
