@@ -13,7 +13,9 @@ export function registerViewRoutes(
   store: SessionStore,
 ): void {
   app.get<{ Params: { id: string } }>("/f/:id/", async (request, reply) => {
-    const entry = store.getEntry(request.params.id);
+    const entry = request.remote
+      ? store.findEntry(request.params.id)
+      : store.getEntry(request.params.id);
     if (!entry) {
       return reply.code(404).send({ message: "エントリが見つかりません" });
     }
@@ -25,7 +27,9 @@ export function registerViewRoutes(
   app.get<{ Params: { id: string; "*": string } }>(
     "/f/:id/*",
     async (request, reply) => {
-      const entry = store.getEntry(request.params.id);
+      const entry = request.remote
+        ? store.findEntry(request.params.id)
+        : store.getEntry(request.params.id);
       if (!entry) {
         return reply.code(404).send({ message: "エントリが見つかりません" });
       }

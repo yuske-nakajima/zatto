@@ -85,6 +85,14 @@ export class WorkspaceStore {
     const entry = this.active().entries.find((entry) => entry.id === id);
     return entry ? { ...entry } : undefined;
   }
+  /** どのワークスペースのエントリでも返す。外の端末は選択中でないワークスペースも見るため使う。 */
+  findEntry(id: string): Entry | undefined {
+    for (const workspace of this.document.workspaces) {
+      const entry = workspace.entries.find((item) => item.id === id);
+      if (entry) return { ...entry };
+    }
+    return undefined;
+  }
 
   /**
    * Creates an empty named workspace without switching selection.

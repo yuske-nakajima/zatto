@@ -15,14 +15,21 @@ import {
 } from "./search-navigation-url.js";
 import { useEntrySearch } from "./useEntrySearch.js";
 
-export function useSearchNavigation(refreshVersion: number) {
+export function useSearchNavigation(
+  refreshVersion: number,
+  workspaceId?: string,
+) {
   const [initialLocation] = useState(readSearchLocation);
   const [initialSnapshot] = useState(readSearchHistorySnapshot);
   const initialPreviewTarget = mergeSearchHistoryLocator(
     initialLocation.locator,
     initialSnapshot.previewTarget,
   );
-  const search = useEntrySearch(refreshVersion, initialLocation.query);
+  const search = useEntrySearch(
+    refreshVersion,
+    initialLocation.query,
+    workspaceId,
+  );
   const [isVisible, setIsVisible] = useState(initialLocation.isSearchVisible);
   const [previewTarget, setPreviewTarget] = useState(initialPreviewTarget);
   const triggerRef = useRef<HTMLButtonElement>(null);

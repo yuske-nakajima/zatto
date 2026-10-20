@@ -1,4 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
+import { createServer, type Server } from "node:http";
+import type { Socket } from "node:net";
 import path from "node:path";
 import { createApp, defaultFrontendDistPath } from "./app.js";
 import { runServerCommand } from "./command.js";
@@ -31,6 +33,8 @@ export interface StartServerOptions {
   instanceId?: string;
   runtimeFilePath?: string;
   sessionFilePath?: string;
+  /** 外の端末からの閲覧を受け付けるアドレス。省略時は 127.0.0.1 だけで待ち受ける。 */
+  host?: string;
   writeRuntimeRecord?: (
     runtimeFilePath: string,
     record: ServerRecord,
@@ -84,7 +88,11 @@ export async function startServer(
     entryWatcher = createdEntryWatcher;
     createdEntryWatcher.sync(sessionStore.getSession().entries);
 
+    const remote = options.host
+      ? { host: options.host, token: randomBytes(24).toString("base64url") }
+      : undefined;
     const createdApp = await createApp({
+      remote,
       sessionStore,
       reviewStore,
       pickFiles: createNativeFilePicker(),
@@ -123,7 +131,31 @@ export async function startServer(
       }
     });
 
-    const port = await listenWithFallback(createdApp, preferredPort);
+    const wildcard = remote !== undefined && WILDCARD_HOSTS.has(remote.host);
+    let remoteServer: Server | undefined;
+    const remoteSockets = new Set<Socket>();
+    // Fastify は待ち受けを始めたあとにフックを登録できないため、先に登録する
+    createdApp.addHook("onClose", async () => {
+      const server = remoteServer;
+      if (!server) return;
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+        // WebSocket へ切り替えた接続は closeAllConnections の対象外のため、自分で閉じる
+        for (const socket of remoteSockets) socket.destroy();
+      });
+    });
+    const port = await listenWithFallback(
+      createdApp,
+      preferredPort,
+      wildcard ? remote.host : "127.0.0.1",
+    );
+    if (remote && !wildcard) {
+      remoteServer = await listenRemote(createdApp, remote.host, port);
+      remoteServer.on("connection", (socket) => {
+        remoteSockets.add(socket);
+        socket.once("close", () => remoteSockets.delete(socket));
+      });
+    }
     const ownsRuntime = await updateServerLockState(
       runtimeFilePath,
       processFingerprint,
@@ -143,6 +175,7 @@ export async function startServer(
       pid: process.pid,
       port,
       protocolVersion: SERVER_PROTOCOL_VERSION,
+      ...(remote ? { remote } : {}),
     });
     heartbeat = setInterval(() => {
       heartbeatUpdate = heartbeatUpdate
@@ -185,17 +218,21 @@ export async function startServer(
   }
 }
 
+/** すべてのアドレスで待ち受けるホスト。ループバックも含むため、別の待ち受けを作らない。 */
+const WILDCARD_HOSTS = new Set(["0.0.0.0", "::"]);
+
 async function listenWithFallback(
   app: Awaited<ReturnType<typeof createApp>>,
   preferredPort: number,
+  host: string,
 ): Promise<number> {
   try {
-    await app.listen({ host: "127.0.0.1", port: preferredPort });
+    await app.listen({ host, port: preferredPort });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EADDRINUSE") {
       throw error;
     }
-    await app.listen({ host: "127.0.0.1", port: 0 });
+    await app.listen({ host, port: 0 });
   }
 
   const address = app.server.address();
@@ -203,6 +240,36 @@ async function listenWithFallback(
     throw new Error("zatto サーバーの待受ポートを取得できませんでした");
   }
   return address.port;
+}
+
+/**
+ * 127.0.0.1 と同じポートで、外の端末向けのアドレスでも待ち受ける。
+ * Fastify は 1 つのアドレスでしか待ち受けないため、要求と WebSocket の upgrade を同じアプリへ渡す。
+ * @param app - 127.0.0.1 で待ち受けているアプリ
+ * @param host - 外の端末向けのアドレス
+ * @param port - 127.0.0.1 で待ち受けているポート
+ * @returns 外の端末向けのサーバー
+ * @throws 待ち受けに失敗した場合
+ */
+async function listenRemote(
+  app: Awaited<ReturnType<typeof createApp>>,
+  host: string,
+  port: number,
+): Promise<Server> {
+  const server = createServer((request, response) =>
+    app.routing(request, response),
+  );
+  server.on("upgrade", (request, socket, head) => {
+    app.server.emit("upgrade", request, socket, head);
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+  return server;
 }
 
 if (isDirectExecution(import.meta.url, process.argv[1])) {

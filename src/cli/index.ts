@@ -9,6 +9,7 @@ import { HELP_TEXT } from "./help.js";
 import { runMcpCommand } from "./mcp-command.js";
 import { createMcpConnector } from "./mcp-connection.js";
 import { openBrowser, spawnDetachedServer } from "./platform.js";
+import { remoteUrls } from "./remote-urls.js";
 import { runReviewCommand } from "./review-command.js";
 import { exportSession, importSession, serverUrl } from "./server-api.js";
 import {
@@ -93,7 +94,19 @@ export async function runCli(
     const importedExchange = options.importFile
       ? await readSessionExchangeFile(options.importFile)
       : null;
-    const connection = await connectOrStartServer(options.port, dependencies);
+    const connection = await connectOrStartServer(
+      options.port,
+      dependencies,
+      options.host ?? undefined,
+    );
+    if (
+      options.host &&
+      !connection.started &&
+      connection.record.remote?.host !== options.host
+    )
+      dependencies.stderr(
+        "起動済みの zatto サーバーには --host を適用しません。zatto --stop で停止してから再実行してください",
+      );
     if (options.importFile && importedExchange) {
       await importSession(
         connection.record,
@@ -122,6 +135,8 @@ export async function runCli(
         ? await addFiles(connection.record, options.files, dependencies.fetch)
         : null;
     dependencies.stdout(url);
+    for (const remoteUrl of remoteUrls(connection.record))
+      dependencies.stderr(`外の端末から開く URL: ${remoteUrl}`);
     if (result)
       printFileUrls(
         url,

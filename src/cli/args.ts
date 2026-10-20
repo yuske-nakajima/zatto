@@ -6,6 +6,8 @@ import { DEFAULT_PORT } from "../server/index.js";
 export interface CliOptions {
   files: string[];
   port: number;
+  /** 外の端末からの閲覧を受け付けるアドレス。 */
+  host: string | null;
   open: boolean;
   stop: boolean;
   importFile: string | null;
@@ -25,6 +27,7 @@ export function parseCliArgs(args: string[]): CliOptions {
     args,
     options: {
       port: { type: "string", default: String(DEFAULT_PORT) },
+      host: { type: "string" },
       open: { type: "boolean", default: true },
       stop: { type: "boolean", default: false },
       import: { type: "string" },
@@ -40,6 +43,10 @@ export function parseCliArgs(args: string[]): CliOptions {
   const port = Number(values.port);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error("`--port` には 1〜65535 の整数を指定してください");
+  }
+
+  if (values.host !== undefined && values.host.trim() === "") {
+    throw new Error("`--host` には空でないアドレスを指定してください");
   }
 
   if (values.import === "" || values.export === "") {
@@ -65,6 +72,7 @@ export function parseCliArgs(args: string[]): CliOptions {
   return {
     files: positionals.map((file) => path.resolve(file)),
     port,
+    host: values.host?.trim() ?? null,
     open: values.open ?? true,
     stop: values.stop ?? false,
     importFile,

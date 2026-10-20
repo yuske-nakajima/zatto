@@ -22,6 +22,7 @@ export function sessionCommands(context: CommandContext) {
   const store = context.sessionStore;
   return {
     "session.get": () => ({
+      access: "local" as const,
       ...store.getSession(),
       ...store.getWorkspaceState(),
       serverIdentity: context.serverIdentity

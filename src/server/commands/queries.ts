@@ -26,7 +26,7 @@ export function queryCommands(context: CommandContext) {
       context.agentContextStore.setBrowserContext({ activeEntryId, view });
       return null;
     },
-    "search.query": async ({ query }) => {
+    "search.query": async ({ query, workspaceId }) => {
       if (query.length > SEARCH_LIMITS.queryLength)
         throw domainError("searchLimit", "The search text is too long.", {
           code: "SEARCH_QUERY_TOO_LONG",
@@ -34,7 +34,9 @@ export function queryCommands(context: CommandContext) {
         });
       try {
         return await searchEntries(
-          context.sessionStore.getSession().entries,
+          workspaceId === undefined
+            ? context.sessionStore.getSession().entries
+            : context.sessionStore.getWorkspace(workspaceId).entries,
           query,
         );
       } catch (error) {

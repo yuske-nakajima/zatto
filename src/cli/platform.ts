@@ -18,6 +18,7 @@ export function spawnDetachedServer(
   port: number,
   instanceId: string,
   runtimeFilePath: string,
+  host?: string,
   spawnProcess: SpawnProcess = spawn,
 ): void {
   const serverEntry = fileURLToPath(
@@ -33,6 +34,7 @@ export function spawnDetachedServer(
       instanceId,
       "--runtime-file",
       runtimeFilePath,
+      ...(host ? ["--host", host] : []),
     ],
     { detached: true, stdio: "ignore" },
   );

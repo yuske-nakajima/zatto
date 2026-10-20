@@ -242,6 +242,7 @@ service.
 | Option | Description |
 | --- | --- |
 | `--port <n>` | Set the port used for the first server start. The default is `6280` |
+| `--host <addr>` | On the first server start, also accept read-only access from other devices on this address |
 | `--no-open` | Start without opening a browser |
 | `--stop` | Stop the background server for the current OS user |
 | `--import <file>` | Replace the session from a session JSON file |
@@ -262,6 +263,27 @@ Prevent the browser from opening automatically.
 ```bash
 npx @yuske-nakajima/zatto --no-open page.html
 ```
+
+## View from another device
+
+With `--host`, a browser on another device in the same LAN or VPN (such as Tailscale) can view the registered files.
+The server keeps listening on `127.0.0.1`, so the CLI, MCP, and `zatto review` work as before.
+
+```bash
+npx @yuske-nakajima/zatto --host 100.64.0.1
+```
+
+On start, the command prints a URL with a token to standard error. Open it once on the other device; the browser remembers the token.
+The token changes each time the server starts. `0.0.0.0` listens on every address and prints a URL for each one.
+`--host` does not apply to a server that is already running; stop it with `--stop` and start it again.
+
+Other devices can only view files.
+- Available: the file list (List and Favorites), previews, search, built-in Docs, and switching workspaces on that device only
+- Not available: comments, replies, reviews, and other communication with the LLM; the Folders view; showing or copying paths; adding, removing, reordering, or starring files; managing workspaces; import and export; stopping the server
+
+Lists sent to other devices carry only file names in place of absolute paths.
+The server rejects unauthenticated connections and every operation other than viewing.
+The token is the only authentication, so use this only on networks you trust. Do not expose it to the internet.
 
 ## Stop the background server
 
@@ -287,7 +309,7 @@ const serverEntry = require.resolve("@yuske-nakajima/zatto/server");
 ```
 
 The subpath also exports `startServer` and `DEFAULT_PORT` for ESM consumers.
-The executable entry accepts `--port`, `--instance-id`, and `--runtime-file`.
+The executable entry accepts `--port`, `--instance-id`, `--runtime-file`, and `--host`.
 Sending `SIGTERM` stops the server and removes its runtime record and lock.
 
 ## Development

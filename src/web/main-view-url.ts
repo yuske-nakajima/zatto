@@ -7,6 +7,7 @@ export const NAVIGATION_PARAMETERS = {
   matchText: "matchText",
   search: "search",
   searchView: "searchView",
+  workspace: "workspace",
 } as const;
 
 /** Main-area views represented by mutually exclusive URL parameters. */

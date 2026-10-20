@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import type { FilePanelView } from "./file-panel-model.js";
+import { useRemoteAccess } from "./remote-access.js";
 
 interface FilePanelViewsProps {
   view: FilePanelView;
@@ -23,8 +24,15 @@ export function FilePanelViews({
   searchButtonRef,
   onOpenSearch,
 }: FilePanelViewsProps) {
+  const isRemote = useRemoteAccess();
   return (
-    <fieldset className="view-switcher">
+    <fieldset
+      className={
+        isRemote
+          ? "view-switcher view-switcher--without-folders"
+          : "view-switcher"
+      }
+    >
       <legend className="visually-hidden">File panel view</legend>
       <button
         type="button"
@@ -34,14 +42,16 @@ export function FilePanelViews({
       >
         List
       </button>
-      <button
-        type="button"
-        data-status-description="Group files by folder."
-        aria-pressed={view === "directories"}
-        onClick={() => onViewChange("directories")}
-      >
-        Folders
-      </button>
+      {!isRemote && (
+        <button
+          type="button"
+          data-status-description="Group files by folder."
+          aria-pressed={view === "directories"}
+          onClick={() => onViewChange("directories")}
+        >
+          Folders
+        </button>
+      )}
       <button
         type="button"
         data-status-description="Show starred files in List order."

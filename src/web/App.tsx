@@ -6,6 +6,7 @@ import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
 import { ReviewStatusBar } from "./ReviewStatusBar.js";
+import { RemoteAccessContext } from "./remote-access.js";
 import { ReviewFileStatesProvider } from "./review-status-context.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
@@ -29,6 +30,8 @@ export { moveEntry, selectAvailableEntry } from "./file-panel-model.js";
 export function App() {
   const { copyFeedback, copyPath, resetCopyFeedback } = useCopyPath();
   const {
+    isRemote,
+    viewWorkspace,
     workspaceState,
     isCurrentWorkspace,
     entries,
@@ -61,17 +64,25 @@ export function App() {
     selectEntry,
     setErrorMessage,
   });
-  const review = useReviewThreads(workspaceId, selectedId, setErrorMessage);
+  // 外の端末には LLM との通信を出さないため、レビューの取得もしない
+  const review = useReviewThreads(
+    isRemote ? null : workspaceId,
+    selectedId,
+    setErrorMessage,
+  );
   const [requestedThreadId, setRequestedThreadId] = useState<string | null>(
     null,
   );
   const [panelRequest, setPanelRequest] = useState(0);
   useMarkdownTaskBridge({
-    workspaceId,
+    workspaceId: isRemote ? null : workspaceId,
     selectedEntryId: selectedId,
     setErrorMessage,
   });
-  const search = useSearchNavigation(searchVersion);
+  const search = useSearchNavigation(
+    searchVersion,
+    isRemote ? (workspaceId ?? undefined) : undefined,
+  );
   const docs = useDocsNavigation();
   const filePanel = useFilePanelNavigation(search.flushHistory);
   const entryReordering = useEntryReordering({
@@ -99,7 +110,7 @@ export function App() {
     workspaceId,
     activeEntryId: selectedEntry?.id ?? null,
     view: mainView,
-    enabled: isSessionLoaded,
+    enabled: isSessionLoaded && !isRemote,
   });
   function selectEntry(id: string): void {
     resetCopyFeedback();
@@ -161,101 +172,106 @@ export function App() {
     docs.open();
   }
   return (
-    <ReviewFileStatesProvider value={review.fileStates}>
-      <StatusBarFrame
-        isDocsVisible={docs.isVisible}
-        docsButtonRef={docs.triggerRef}
-        onToggleDocs={toggleDocs}
-        activity={
-          <ReviewStatusBar
-            review={review}
-            entries={entries}
-            onOpen={(entryId, threadId) => {
-              selectEntry(entryId);
-              setRequestedThreadId(threadId);
-            }}
-            onOpenComments={(entryId) => {
-              selectEntry(entryId);
-              setPanelRequest((count) => count + 1);
-            }}
-          />
-        }
-      >
-        <ResizableLayout
-          isFilePanelVisible={filePanel.isVisible}
-          filePanel={
-            filePanel.isVisible ? (
-              <FilePanel
-                workspaceControls={
-                  <WorkspaceControls
-                    state={workspaceState}
-                    reportError={setErrorMessage}
-                  />
-                }
+    <RemoteAccessContext.Provider value={isRemote}>
+      <ReviewFileStatesProvider value={review.fileStates}>
+        <StatusBarFrame
+          isDocsVisible={docs.isVisible}
+          docsButtonRef={docs.triggerRef}
+          onToggleDocs={toggleDocs}
+          activity={
+            isRemote ? null : (
+              <ReviewStatusBar
+                review={review}
                 entries={entries}
-                selectedId={selectedId}
-                view={filePanel.view}
-                draggedId={entryReordering.draggedId}
-                dropTargetId={entryReordering.dropTargetId}
-                canPickFiles={filePicker.available}
-                canPickDirectory={directoryPicker.available}
-                nativePickerPending={pickerControl.pending}
-                sessionTransferPending={sessionTransfer.pending}
-                isSessionLoaded={isSessionLoaded}
-                isSearchVisible={search.isVisible}
-                hasSearchState={search.hasState}
-                searchButtonRef={search.triggerRef}
-                onViewChange={filePanel.setView}
-                onClear={clearEntries}
-                onSelect={selectEntry}
-                onCopyPath={copyPath}
-                onFavorite={setFavorite}
-                onRemove={removeEntry}
-                onRemoveEntries={createFolderSessionRemover(
-                  setErrorMessage,
-                  workspaceId,
-                )}
-                onDragStart={entryReordering.handleDragStart}
-                onDragEnter={entryReordering.setDropTargetId}
-                onDragEnd={entryReordering.resetDragState}
-                onDrop={entryReordering.reorderEntries}
-                onPickFiles={pickerControl.openFiles}
-                onPickDirectory={pickerControl.openDirectory}
-                onOpenSearch={openSearch}
-                onImportSession={sessionTransfer.importFile}
-                onExportSession={sessionTransfer.exportFile}
+                onOpen={(entryId, threadId) => {
+                  selectEntry(entryId);
+                  setRequestedThreadId(threadId);
+                }}
+                onOpenComments={(entryId) => {
+                  selectEntry(entryId);
+                  setPanelRequest((count) => count + 1);
+                }}
               />
-            ) : null
+            )
           }
-          viewer={
-            <AppViewer
-              search={search}
-              docs={docs}
-              selectedEntry={selectedEntry}
-              reloadVersion={reloadVersion}
-              isFilePanelVisible={filePanel.isVisible}
-              errorMessage={errorMessage}
-              copyFeedback={copyFeedback}
-              canPickFiles={filePicker.available}
-              isFilePickerOpen={pickerControl.isOpen}
-              onSelect={selectSearchResult}
-              onToggleFilePanel={filePanel.toggleVisibility}
-              onCopyPath={copyPath}
-              onRemove={removeEntry}
-              onPickFiles={pickerControl.openFiles}
-              review={review}
-              requestedThreadId={requestedThreadId}
-              onRequestedThreadOpened={() => setRequestedThreadId(null)}
-              panelRequest={panelRequest}
-              linkedPages={{
-                entries,
-                open: selectEntry,
-                register: registerLinkedFile,
-              }}
-            />
-          }
-        />
-      </StatusBarFrame>
-    </ReviewFileStatesProvider>
+        >
+          <ResizableLayout
+            isFilePanelVisible={filePanel.isVisible}
+            filePanel={
+              filePanel.isVisible ? (
+                <FilePanel
+                  workspaceControls={
+                    <WorkspaceControls
+                      state={workspaceState}
+                      reportError={setErrorMessage}
+                      onView={isRemote ? viewWorkspace : undefined}
+                    />
+                  }
+                  entries={entries}
+                  selectedId={selectedId}
+                  view={filePanel.view}
+                  draggedId={entryReordering.draggedId}
+                  dropTargetId={entryReordering.dropTargetId}
+                  canPickFiles={filePicker.available}
+                  canPickDirectory={directoryPicker.available}
+                  nativePickerPending={pickerControl.pending}
+                  sessionTransferPending={sessionTransfer.pending}
+                  isSessionLoaded={isSessionLoaded}
+                  isSearchVisible={search.isVisible}
+                  hasSearchState={search.hasState}
+                  searchButtonRef={search.triggerRef}
+                  onViewChange={filePanel.setView}
+                  onClear={clearEntries}
+                  onSelect={selectEntry}
+                  onCopyPath={copyPath}
+                  onFavorite={setFavorite}
+                  onRemove={removeEntry}
+                  onRemoveEntries={createFolderSessionRemover(
+                    setErrorMessage,
+                    workspaceId,
+                  )}
+                  onDragStart={entryReordering.handleDragStart}
+                  onDragEnter={entryReordering.setDropTargetId}
+                  onDragEnd={entryReordering.resetDragState}
+                  onDrop={entryReordering.reorderEntries}
+                  onPickFiles={pickerControl.openFiles}
+                  onPickDirectory={pickerControl.openDirectory}
+                  onOpenSearch={openSearch}
+                  onImportSession={sessionTransfer.importFile}
+                  onExportSession={sessionTransfer.exportFile}
+                />
+              ) : null
+            }
+            viewer={
+              <AppViewer
+                search={search}
+                docs={docs}
+                selectedEntry={selectedEntry}
+                reloadVersion={reloadVersion}
+                isFilePanelVisible={filePanel.isVisible}
+                errorMessage={errorMessage}
+                copyFeedback={copyFeedback}
+                canPickFiles={filePicker.available}
+                isFilePickerOpen={pickerControl.isOpen}
+                onSelect={selectSearchResult}
+                onToggleFilePanel={filePanel.toggleVisibility}
+                onCopyPath={copyPath}
+                onRemove={removeEntry}
+                onPickFiles={pickerControl.openFiles}
+                review={isRemote ? undefined : review}
+                requestedThreadId={requestedThreadId}
+                onRequestedThreadOpened={() => setRequestedThreadId(null)}
+                panelRequest={panelRequest}
+                linkedPages={{
+                  entries,
+                  open: selectEntry,
+                  register: registerLinkedFile,
+                }}
+              />
+            }
+          />
+        </StatusBarFrame>
+      </ReviewFileStatesProvider>
+    </RemoteAccessContext.Provider>
   );
 }

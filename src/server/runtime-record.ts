@@ -27,6 +27,8 @@ export interface ServerRecord {
   processFingerprint: string;
   pid: number;
   port: number;
+  /** `--host` で外の端末を受け付けているときの待ち受けアドレスとトークン。 */
+  remote?: { host: string; token: string };
 }
 
 type ServerRecordInput = Omit<ServerRecord, "processFingerprint"> & {
@@ -152,6 +154,11 @@ function isServerRecord(value: unknown): value is ServerRecord {
     typeof record.port === "number" &&
     Number.isInteger(record.port) &&
     record.port > 0 &&
-    record.port <= 65_535
+    record.port <= 65_535 &&
+    (record.remote === undefined ||
+      (typeof record.remote === "object" &&
+        record.remote !== null &&
+        typeof (record.remote as Record<string, unknown>).host === "string" &&
+        typeof (record.remote as Record<string, unknown>).token === "string"))
   );
 }

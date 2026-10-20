@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
+import { type RemoteAccess, registerAccessGuard } from "./access-guard.js";
 import { AgentContextStore } from "./agent-context.js";
 import { createCommands } from "./commands/index.js";
 import { registerDocsRoute } from "./docs-route.js";
 import type { PickDirectory, PickFiles } from "./file-picker.js";
-import { registerOriginGuard } from "./origin-guard.js";
 import { RealtimeHub } from "./realtime.js";
 import { registerReviewAttachmentRoute } from "./review-attachment-route.js";
 import { ReviewStore } from "./review-store.js";
@@ -28,6 +28,8 @@ type CreateAppOptions = {
     instanceId: string;
     protocolVersion: number;
   };
+  /** `--host` で外の端末からの閲覧を受け付けるときの設定。 */
+  remote?: RemoteAccess;
 };
 
 export async function createApp(
@@ -35,7 +37,7 @@ export async function createApp(
 ): Promise<FastifyInstance> {
   const app = Fastify();
   const realtimeHub = options.realtimeHub ?? new RealtimeHub();
-  registerOriginGuard(app);
+  registerAccessGuard(app, options.remote);
   await app.register(websocket);
 
   app.get<{ Querystring: { client?: string } }>(
@@ -44,7 +46,11 @@ export async function createApp(
     (socket, request) => {
       realtimeHub.add(
         socket,
-        request.query.client === "viewer" ? "viewer" : "other",
+        request.remote
+          ? "remote"
+          : request.query.client === "viewer"
+            ? "viewer"
+            : "other",
       );
     },
   );

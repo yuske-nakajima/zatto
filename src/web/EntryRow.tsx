@@ -4,6 +4,7 @@ import { BubbleIcon, ResolvedBubbleIcon } from "./BubbleIcon.js";
 import { FavoriteButton } from "./FavoriteButton.js";
 import { fileName } from "./file-panel-model.js";
 import { Icon } from "./icons.js";
+import { useRemoteAccess } from "./remote-access.js";
 import { useReviewFileState } from "./review-status-context.js";
 
 interface EntryRowProps {
@@ -44,6 +45,7 @@ export function EntryRow({
   onDrop,
 }: EntryRowProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const isRemote = useRemoteAccess();
   const { isReviewing, openThreads, resolvedThreads } = useReviewFileState(
     entry.id,
   );
@@ -157,27 +159,31 @@ export function EntryRow({
           )}
         </span>
       </button>
-      <span className="entry-actions">
-        {onFavorite && <FavoriteButton entry={entry} onFavorite={onFavorite} />}
-        <button
-          className="entry-path-copy icon-button"
-          data-status-description="Copy this file path."
-          type="button"
-          aria-label={`Copy file path ${entry.absPath}`}
-          onClick={() => onCopyPath(entry.absPath)}
-        >
-          <Icon name={isSelected ? "linkAccent" : "link"} size={12} />
-        </button>
-        <button
-          className="entry-remove icon-button"
-          data-status-description="Remove this file from the session."
-          type="button"
-          aria-label={`Remove ${entry.title}`}
-          onClick={() => onRemove(entry.id)}
-        >
-          <Icon name={isSelected ? "trashAccent" : "trash"} size={12} />
-        </button>
-      </span>
+      {!isRemote && (
+        <span className="entry-actions">
+          {onFavorite && (
+            <FavoriteButton entry={entry} onFavorite={onFavorite} />
+          )}
+          <button
+            className="entry-path-copy icon-button"
+            data-status-description="Copy this file path."
+            type="button"
+            aria-label={`Copy file path ${entry.absPath}`}
+            onClick={() => onCopyPath(entry.absPath)}
+          >
+            <Icon name={isSelected ? "linkAccent" : "link"} size={12} />
+          </button>
+          <button
+            className="entry-remove icon-button"
+            data-status-description="Remove this file from the session."
+            type="button"
+            aria-label={`Remove ${entry.title}`}
+            onClick={() => onRemove(entry.id)}
+          >
+            <Icon name={isSelected ? "trashAccent" : "trash"} size={12} />
+          </button>
+        </span>
+      )}
     </li>
   );
 

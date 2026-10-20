@@ -10,7 +10,7 @@ let dir: string;
 let app: FastifyInstance;
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(os.tmpdir(), "zatto-origin-guard-"));
+  dir = await mkdtemp(path.join(os.tmpdir(), "zatto-access-guard-"));
   const store = new SessionStore(path.join(dir, "session.json"));
   await store.load();
   app = await createApp({ sessionStore: store });
