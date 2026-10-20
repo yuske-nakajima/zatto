@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/yuske-nakajima/zatto/compare/v3.4.3...v3.5.0) (2026-10-20)
+
+
+### Features
+
+* **review:** コメントスレッドを最大化し、Esc で開いているものを 1 つずつ閉じる ([#120](https://github.com/yuske-nakajima/zatto/issues/120)) ([e4e79eb](https://github.com/yuske-nakajima/zatto/commit/e4e79eb825ad5a912805f733c1eaf8d003e0b6a8))
+
 ## [3.4.3](https://github.com/yuske-nakajima/zatto/compare/v3.4.2...v3.4.3) (2026-10-20)
 
 
