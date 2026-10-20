@@ -16,6 +16,7 @@ import { queryCommands } from "./queries.js";
 import { reviewCommands } from "./review.js";
 import { type CommandHandlers, sessionCommands } from "./session.js";
 import { commandParams, isCommandMethod } from "./validation.js";
+import { viewerCommands } from "./viewer.js";
 import { workspaceCommands } from "./workspaces.js";
 /** Shared validated command entry point. */
 export interface Commands {
@@ -41,6 +42,7 @@ export function createCommands(options: CommandOptions): Commands {
     ...queryCommands(context),
     ...markdownCommands(context),
     ...reviewCommands(context),
+    ...viewerCommands(context),
   };
   return {
     has: isCommandMethod,

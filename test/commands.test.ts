@@ -25,7 +25,7 @@ function fixture() {
     serverIdentity: { instanceId: "server", protocolVersion: 3 },
     logError: vi.fn(),
   });
-  return { store, commands, broadcast };
+  return { store, commands, broadcast, hub };
 }
 test("direct command callers share validation, workspace targets, and instance guards", async () => {
   const { commands, store, broadcast } = fixture();
@@ -98,4 +98,45 @@ test("direct commands publish persisted mutations and preserve entry identity", 
       [],
     ),
   ).rejects.toMatchObject({ code: 1003 });
+});
+test("viewer.show は選択中のワークスペースを開いている Web UI のタブにだけ表示を頼む", async () => {
+  const { commands, store, broadcast, hub } = fixture();
+  await store.load();
+  const file = path.join(dir, "plan.md");
+  await writeFile(file, "# plan\n");
+  const add = async (workspaceId: string) =>
+    (await commands.execute("session.add", { paths: [file], workspaceId }, []))
+      .resolved[0]?.id ?? "";
+  const active = store.getWorkspaceState().activeWorkspaceId;
+  const params = { workspaceId: active, entryId: await add(active) };
+  await expect(commands.execute("viewer.show", params, [])).resolves.toEqual({
+    shown: false,
+  });
+
+  hub.add({ readyState: 1, once: vi.fn(), send: vi.fn() } as never);
+  await expect(commands.execute("viewer.show", params, [])).resolves.toEqual({
+    shown: false,
+  });
+  hub.add({ readyState: 1, once: vi.fn(), send: vi.fn() } as never, "viewer");
+  await expect(commands.execute("viewer.show", params, [])).resolves.toEqual({
+    shown: true,
+  });
+  expect(broadcast).toHaveBeenLastCalledWith({
+    type: "viewer:show",
+    ...params,
+  });
+
+  const other = (
+    await commands.execute("workspaces.create", { name: "other" }, [])
+  ).id;
+  await expect(
+    commands.execute(
+      "viewer.show",
+      { workspaceId: other, entryId: await add(other) },
+      [],
+    ),
+  ).resolves.toEqual({ shown: false });
+  await expect(
+    commands.execute("viewer.show", { ...params, entryId: "missing" }, []),
+  ).rejects.toMatchObject({ code: 1001 });
 });

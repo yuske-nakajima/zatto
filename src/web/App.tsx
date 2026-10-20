@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import type { ServerMessage } from "../shared/protocol.js";
 import { rpcCall } from "../shared/rpc-client.js";
 import { AppViewer } from "./AppViewer.js";
 import { FilePanel } from "./FilePanel.js";
@@ -8,6 +9,7 @@ import { ReviewStatusBar } from "./ReviewStatusBar.js";
 import { ReviewFileStatesProvider } from "./review-status-context.js";
 import { StatusBarFrame } from "./StatusBarFrame.js";
 import type { SearchResultLocator } from "./search-navigation-url.js";
+import { subscribeServerMessages } from "./server-messages.js";
 import { useAgentContextSync } from "./useAgentContextSync.js";
 import { useCopyPath } from "./useCopyPath.js";
 import { useDocsNavigation } from "./useDocsNavigation.js";
@@ -106,6 +108,14 @@ export function App() {
     selectSessionEntry(id);
     search.showPreview();
   }
+  const showRequestedEntry = useEffectEvent((message: ServerMessage) => {
+    if (message.type === "viewer:show" && message.workspaceId === workspaceId)
+      selectEntry(message.entryId);
+  });
+  useEffect(
+    () => subscribeServerMessages((message) => showRequestedEntry(message)),
+    [],
+  );
   async function registerLinkedFile(absPath: string): Promise<string | null> {
     if (!workspaceId) return null;
     try {
