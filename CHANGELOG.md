@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.4.0](https://github.com/yuske-nakajima/zatto/compare/v3.3.1...v3.4.0) (2026-10-20)
+
+
+### Features
+
+* --host で外の端末からの閲覧を受け付ける（トークン認証・閲覧のみ） ([ee57dfd](https://github.com/yuske-nakajima/zatto/commit/ee57dfdc889bed52dbdfb868077050890e3783af))
+* --host で外の端末からの閲覧を受け付ける（トークン認証・閲覧のみ） ([9296301](https://github.com/yuske-nakajima/zatto/commit/9296301bc1d20d03a5c9cf9afccbe00b4e265573)), closes [#104](https://github.com/yuske-nakajima/zatto/issues/104)
+
 ## [3.3.1](https://github.com/yuske-nakajima/zatto/compare/v3.3.0...v3.3.1) (2026-10-20)
 
 
