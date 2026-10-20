@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1](https://github.com/yuske-nakajima/zatto/compare/v3.4.0...v3.4.1) (2026-10-20)
+
+
+### Documentation
+
+* CHANGELOG の重複行を消し、squash だけでマージする設定と PR テンプレートを加える ([#114](https://github.com/yuske-nakajima/zatto/issues/114)) ([ed8c32f](https://github.com/yuske-nakajima/zatto/commit/ed8c32f9aa8fc06dc912a9b4fea96a0946fd3581))
+
 ## [3.4.0](https://github.com/yuske-nakajima/zatto/compare/v3.3.1...v3.4.0) (2026-10-20)
 
 
