@@ -136,7 +136,7 @@ export const REVIEW_REANCHOR_GUIDE =
 
 /** What an LLM may use in replies and how it reads images, shared by the MCP tools and the copied request. */
 export const REVIEW_REPLY_GUIDE =
-  "Replies render as Markdown limited to paragraphs, bulleted and numbered lists, bold, inline code, fenced code blocks, and links; other syntax shows as plain text. Images the user attached are listed in each comment's attachments with a local path you can read.";
+  "Replies render as GitHub Flavored Markdown: paragraphs, headings, lists, task lists, tables, quotes, bold, italic, strikethrough, inline code, code blocks, and http, https, or mailto links. Raw HTML shows as plain text. To show an image, write ![alt](/absolute/path.png) with a local PNG, JPEG, WebP, or GIF file, or pass its path as an attachment: it is uploaded and rendered in place, and its path is not shown. Image URLs are not loaded; only their alt text shows. Images the user attached are listed in each comment's attachments with a local path you can read.";
 
 /**
  * Claude Code のバックグラウンド Bash は終了時にしか通知しないため、1 行ごとに通知する Monitor で待つよう案内する。

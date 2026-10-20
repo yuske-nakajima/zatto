@@ -430,6 +430,29 @@ describe("Zatto MCP server", () => {
         ],
       },
     });
+    const image = path.join(dir, "shot.png");
+    await writeFile(
+      image,
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "base64",
+      ),
+    );
+    const withImage = (await toolResult(client, "reply_review_thread", {
+      threadId: userThread.id,
+      body: `スクリーンショット ![画面](${image})`,
+      attachments: [image],
+    })) as {
+      thread: {
+        comments: Array<{ body: string; attachments?: { name: string }[] }>;
+      };
+    };
+    const latest = withImage.thread.comments.at(-1);
+    expect(latest?.body).toBe("スクリーンショット ![画面](attachment:1)");
+    expect(latest?.attachments?.map(({ name }) => name)).toEqual([
+      "shot.png",
+      "shot.png",
+    ]);
     const created = (await toolResult(client, "create_review_thread", {
       entryId: entry.id,
       quote: "A",

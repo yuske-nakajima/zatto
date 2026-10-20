@@ -2,6 +2,7 @@ import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
+import { replyWithImages } from "../cli/reply-images.js";
 import { APP_VERSION } from "../meta.js";
 import {
   type AgentContext,
@@ -627,19 +628,32 @@ function registerReviewTools(server: McpServer, connect: Connect): void {
           .describe(
             "Edited passage the thread moves to; it must appear once in the file",
           ),
+        attachments: z
+          .array(z.string().min(1))
+          .max(4)
+          .optional()
+          .describe(
+            "Absolute paths of PNG, JPEG, WebP, or GIF images to attach below the reply",
+          ),
         session: sessionInput,
       }),
       annotations: CREATE_ANNOTATIONS,
     },
-    ({ threadId, body, quote, session }) =>
-      run(async () => ({
-        thread: await (await connect()).call("review.reply", {
-          threadId,
-          author: llmAuthor(session),
-          body,
-          ...(quote === undefined ? {} : { quote }),
-        }),
-      })),
+    ({ threadId, body, quote, attachments, session }) =>
+      run(async () => {
+        const reply = await replyWithImages(body, attachments);
+        return {
+          thread: await (await connect()).call("review.reply", {
+            threadId,
+            author: llmAuthor(session),
+            body: reply.body,
+            ...(reply.attachments.length
+              ? { attachments: reply.attachments }
+              : {}),
+            ...(quote === undefined ? {} : { quote }),
+          }),
+        };
+      }),
   );
   server.registerTool(
     "resolve_review_thread",

@@ -15,6 +15,7 @@ import {
   detectReviewClient,
 } from "../shared/review-client.js";
 import { rpcCall } from "../shared/rpc-client.js";
+import { replyWithImages } from "./reply-images.js";
 import { serverUrl } from "./server-api.js";
 import type { ServerClientDependencies } from "./server-client.js";
 import {
@@ -54,6 +55,8 @@ type ReviewOptions =
       mode: "reply";
       threadId: string;
       body: string;
+      /** 本文とは別に添付する画像のパス。 */
+      attach: string[];
       client?: ReviewClient;
       quote?: string;
       session: string;
@@ -120,6 +123,7 @@ export async function runReviewCommand(
   if (options.mode === "reply") {
     try {
       const { record } = await connectOrStartServer(options.port, dependencies);
+      const reply = await replyWithImages(options.body, options.attach);
       await rpc(record, dependencies.fetch)("review.reply", {
         threadId: options.threadId,
         author: {
@@ -127,7 +131,8 @@ export async function runReviewCommand(
           session: options.session,
           ...(options.client ? { client: options.client } : {}),
         },
-        body: options.body,
+        body: reply.body,
+        ...(reply.attachments.length ? { attachments: reply.attachments } : {}),
         ...(options.quote === undefined ? {} : { quote: options.quote }),
       });
       dependencies.stdout(`返信しました: thread ${options.threadId}`);
@@ -408,13 +413,25 @@ export function parseReviewArgs(
   let brief = false;
   let open = true;
   let quote: string | undefined;
+  const attach: string[] = [];
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    // スレッド ID は - で始まることがあるため、-- より後ろはオプションとして読まない
+    if (arg === "--") {
+      positionals.push(...args.slice(index + 1));
+      break;
+    }
     if (arg === "--once") once = true;
     else if (arg === "--brief") brief = true;
     else if (arg === "--no-open") open = false;
-    else if (arg === "--quote") {
+    else if (arg === "--attach") {
+      const value = args[index + 1];
+      if (value === undefined || !value.trim())
+        throw new Error("--attach には画像のパスを指定してください");
+      attach.push(value);
+      index += 1;
+    } else if (arg === "--quote") {
       const value = args[index + 1];
       if (value === undefined || !value.trim())
         throw new Error("--quote には直した後の文章を指定してください");
@@ -451,6 +468,7 @@ export function parseReviewArgs(
       mode: "reply",
       threadId,
       body,
+      attach,
       session,
       port,
       ...(client ? { client } : {}),
@@ -458,6 +476,7 @@ export function parseReviewArgs(
     };
   }
   if (quote !== undefined) throw new Error("--quote は reply でだけ使えます");
+  if (attach.length) throw new Error("--attach は reply でだけ使えます");
   if (brief && once)
     throw new Error("--brief と --once は同時に指定できません");
   if (!positionals[0])

@@ -31,7 +31,10 @@ import {
   createTextAnchor,
   locateTextAnchor,
 } from "./review-anchor.js";
-import { renderReplyMarkdown } from "./review-markdown.js";
+import {
+  inlineAttachmentIndexes,
+  renderReplyMarkdown,
+} from "./review-markdown.js";
 import { useSeenReplies } from "./review-seen.js";
 import type { ReviewThreads } from "./useReviewThreads.js";
 import "./review.css";
@@ -532,17 +535,7 @@ export function ReviewLayer({
         </PopoverFrame>
       )}
       {zoomed && (
-        <div
-          className="review-lightbox"
-          role="dialog"
-          aria-label={zoomed.name}
-          onClick={() => setZoomed(null)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setZoomed(null);
-          }}
-        >
-          <img src={attachmentUrl(zoomed)} alt={zoomed.name} />
-        </div>
+        <Lightbox attachment={zoomed} onClose={() => setZoomed(null)} />
       )}
       {!onCommentOnLinkedPage && (
         <div className="review-panel-anchor">
@@ -857,13 +850,17 @@ function ThreadView({
               </span>
               <div className="review-bubble">
                 {comment.author.kind === "llm" ? (
-                  <ReplyMarkdown body={comment.body} />
+                  <ReplyMarkdown
+                    body={comment.body}
+                    attachments={comment.attachments ?? []}
+                    onZoom={onZoom}
+                  />
                 ) : (
                   <p className="review-plain">{comment.body}</p>
                 )}
                 {comment.attachments && (
                   <span className="review-attachments">
-                    {comment.attachments.map((attachment) => (
+                    {rowAttachments(comment).map((attachment) => (
                       <button
                         key={attachment.id}
                         type="button"
@@ -974,14 +971,77 @@ export function Avatar({ author }: { author: ReviewAuthor }) {
   );
 }
 
-/** Renders an LLM reply; copy buttons on code blocks are handled here by delegation. */
-function ReplyMarkdown({ body }: { body: string }) {
+/**
+ * 拡大した画像。Esc は画像だけを閉じ、スレッドは閉じない。
+ * フォーカスはスレッドの中に残るため、スレッドが Esc を受け取る前に window の capture で受ける。
+ */
+function Lightbox({
+  attachment,
+  onClose,
+}: {
+  attachment: ReviewAttachment;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.isComposing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", close, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", close, { capture: true });
+  }, [onClose]);
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: Esc は window で受ける
+    <div
+      className="review-lightbox"
+      role="dialog"
+      aria-label={attachment.name}
+      onClick={onClose}
+    >
+      <img src={attachmentUrl(attachment)} alt={attachment.name} />
+    </div>
+  );
+}
+
+/** 本文の下に並べる添付。LLM の返信で本文の中に描画した添付は除く。 */
+function rowAttachments(comment: {
+  body: string;
+  author: ReviewAuthor;
+  attachments?: ReviewAttachment[];
+}): ReviewAttachment[] {
+  const attachments = comment.attachments ?? [];
+  if (comment.author.kind !== "llm") return attachments;
+  const inline = inlineAttachmentIndexes(comment.body);
+  return attachments.filter((_, index) => !inline.has(index));
+}
+
+/** Renders an LLM reply; copy buttons and inline images are handled here by delegation. */
+function ReplyMarkdown({
+  body,
+  attachments,
+  onZoom,
+}: {
+  body: string;
+  attachments: ReviewAttachment[];
+  onZoom: (attachment: ReviewAttachment) => void;
+}) {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: 中のコピーボタン（button 要素）のクリックをまとめて受ける
     // biome-ignore lint/a11y/useKeyWithClickEvents: キー操作は中の button 要素が受ける
     <div
       className="review-markdown"
       onClick={(event) => {
+        const zoom = (event.target as HTMLElement).closest<HTMLElement>(
+          "[data-review-zoom]",
+        );
+        const zoomed = attachments[Number(zoom?.dataset.reviewZoom)];
+        if (zoomed) {
+          onZoom(zoomed);
+          return;
+        }
         const button = (event.target as HTMLElement).closest<HTMLElement>(
           "[data-review-copy]",
         );
@@ -998,7 +1058,9 @@ function ReplyMarkdown({ body }: { body: string }) {
         );
       }}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: renderReplyMarkdown は許可した書き方以外をすべて文字として出す
-      dangerouslySetInnerHTML={{ __html: renderReplyMarkdown(body) }}
+      dangerouslySetInnerHTML={{
+        __html: renderReplyMarkdown(body, attachments),
+      }}
     />
   );
 }

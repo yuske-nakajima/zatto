@@ -340,6 +340,63 @@ describe("zatto review", () => {
       expect(String(call[0]).length).toBeLessThan(400);
   });
 
+  test("reply は本文の手元の画像と --attach の画像を、パスを残さず添付する", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "s"],
+      deps,
+    );
+    const review = await activeReview();
+    const thread = (await comment(review, "図は？")).json<{ id: string }>();
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      "base64",
+    );
+    await writeFile(path.join(dir, "a.png"), png);
+    await writeFile(path.join(dir, "b.png"), png);
+
+    await expect(
+      runReviewCommand(
+        [
+          "reply",
+          thread.id,
+          `図です ![構成図](${path.join(dir, "a.png")})`,
+          "--attach",
+          path.join(dir, "b.png"),
+          "--session",
+          "s",
+        ],
+        dependencies(),
+      ),
+    ).resolves.toBe(0);
+    const [saved] = (
+      await rpc(app, "review.list", {
+        workspaceId: review.workspaceId,
+        entryId: review.entryId,
+      })
+    ).json<{
+      threads: Array<{
+        comments: Array<{ body: string; attachments?: { name: string }[] }>;
+      }>;
+    }>().threads;
+    const reply = saved?.comments.at(-1);
+    expect(reply?.body).toBe("図です ![構成図](attachment:1)");
+    expect(reply?.attachments?.map(({ name }) => name)).toEqual([
+      "a.png",
+      "b.png",
+    ]);
+    expect(reply?.body).not.toContain(dir);
+
+    await expect(
+      runReviewCommand(
+        ["reply", thread.id, "x", "--attach", "c.txt", "--session", "s"],
+        dependencies(),
+      ),
+    ).resolves.toBe(1);
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await running;
+  });
+
   test("中断すると 130 で終わる", async () => {
     let interrupt = () => {};
     const deps = dependencies((handler) => {
@@ -392,6 +449,9 @@ describe("zatto review", () => {
     ).toMatchObject({ session: "s", client: "claude" });
     expect(() => parseReviewArgs(["a.md"], {})).toThrow("省略できます");
     expect(() => parseReviewArgs(["a.md"])).toThrow("--session");
+    expect(
+      parseReviewArgs(["reply", "--session", "s", "--", "--id", "本文"]),
+    ).toMatchObject({ mode: "reply", threadId: "--id", body: "本文" });
     expect(
       parseReviewArgs(["a.md", "--session", "s", "--brief"]),
     ).toMatchObject({ brief: true, once: false });
