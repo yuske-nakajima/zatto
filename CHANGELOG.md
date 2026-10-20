@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.2](https://github.com/yuske-nakajima/zatto/compare/v3.4.1...v3.4.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **review:** Claude Code の Monitor でコメントの通知を受け取れるよう --brief と get_review_thread を加える ([#116](https://github.com/yuske-nakajima/zatto/issues/116)) ([e00dee6](https://github.com/yuske-nakajima/zatto/commit/e00dee6c95590fb77eeaf3286ac3f6b645400dc4))
+
 ## [3.4.1](https://github.com/yuske-nakajima/zatto/compare/v3.4.0...v3.4.1) (2026-10-20)
 
 
