@@ -215,6 +215,8 @@ command prints a short line with the thread id and the start of the latest comme
 LLM reads the whole thread with `get_review_thread`. It reconnects when zatto restarts, and
 **Finish review** ends it. The file list shows unresolved and resolved thread counts.
 Comments can carry pasted or dropped images, which reach the LLM as local file paths.
+LLM replies render as GitHub Flavored Markdown, including tables and headings. The LLM can attach local
+images to a reply; zatto stores and shows a copy, so the original file path never appears.
 
 Register the server once in your MCP client. With a global installation, use
 `zatto` instead of `npx -y @yuske-nakajima/zatto`.

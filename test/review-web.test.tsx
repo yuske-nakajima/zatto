@@ -113,6 +113,70 @@ describe("レビューのコメント", () => {
     vi.restoreAllMocks();
   });
 
+  test("返信の表と本文の中の画像を描画し、本文で描画した画像は下に重ねない", async () => {
+    thread = {
+      ...baseThread,
+      comments: [
+        baseThread.comments[0] as ReviewThread["comments"][number],
+        {
+          id: "c2",
+          author: { kind: "llm", session: "zatto:a99c", client: "claude" },
+          body: "| 項目 | 値 |\n|---|---|\n| 件数 | 3 |\n\n![構成図](attachment:1)",
+          attachments: [
+            {
+              id: "a1",
+              name: "diagram.png",
+              type: "image/png",
+              path: "/x/a1.png",
+            },
+            {
+              id: "a2",
+              name: "extra.png",
+              type: "image/png",
+              path: "/x/a2.png",
+            },
+          ],
+          createdAt: 2,
+        },
+      ],
+    };
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /閲覧URL.*具体例は？.*2 comments/ }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Comment thread",
+    });
+    expect(dialog.querySelector(".review-markdown table td")?.textContent).toBe(
+      "件数",
+    );
+    const sources = [...dialog.querySelectorAll("img")]
+      .map((image) => image.getAttribute("src"))
+      .filter((src) => src?.startsWith("/review-attachments/"));
+    expect(sources).toEqual([
+      "/review-attachments/a1.png",
+      "/review-attachments/a2.png",
+    ]);
+    expect(
+      dialog.querySelector(".review-markdown img")?.getAttribute("alt"),
+    ).toBe("構成図");
+
+    const inline = dialog.querySelector<HTMLElement>(".review-inline-image");
+    inline?.focus();
+    if (inline) fireEvent.click(inline);
+    expect(screen.getByRole("dialog", { name: "diagram.png" })).toBeTruthy();
+    fireEvent.keyDown(inline ?? dialog, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "diagram.png" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Comment thread" })).toBeTruthy();
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Comment thread" })).toBeNull();
+  });
+
   test("一覧からスレッドを開き、作成者を表示して返信できる", async () => {
     render(<App />);
     await screen.findByTitle("Plan preview");
