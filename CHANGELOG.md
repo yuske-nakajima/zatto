@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.0](https://github.com/yuske-nakajima/zatto/compare/v3.5.0...v3.6.0) (2026-10-20)
+
+
+### Features
+
+* ワークスペースの保存を古い版の上書きから守り、自動でバックアップする ([#123](https://github.com/yuske-nakajima/zatto/issues/123)) ([4933448](https://github.com/yuske-nakajima/zatto/commit/4933448a8b7484b00b58f829a963749f4acd0e3c))
+
 ## [3.5.0](https://github.com/yuske-nakajima/zatto/compare/v3.4.3...v3.5.0) (2026-10-20)
 
 
