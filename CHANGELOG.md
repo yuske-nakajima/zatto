@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.3](https://github.com/yuske-nakajima/zatto/compare/v3.4.2...v3.4.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* **review:** 返信を GFM で描画し、LLM が手元の画像をパスを出さずに添付できるようにする ([#118](https://github.com/yuske-nakajima/zatto/issues/118)) ([c832a92](https://github.com/yuske-nakajima/zatto/commit/c832a92c501e8df94bd9983e07c7e87a5f0f593f))
+
 ## [3.4.2](https://github.com/yuske-nakajima/zatto/compare/v3.4.1...v3.4.2) (2026-10-20)
 
 
