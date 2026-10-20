@@ -79,7 +79,9 @@ Markdown files are shown read-only with GitHub-flavored tables, task lists and
 code blocks. Task list checkboxes can be toggled in the preview; only the
 `[ ]` or `[x]` is written back, and nothing is written if the file changed
 since it was shown. The light or dark theme follows the system setting, and `mermaid`
-code blocks are drawn as diagrams. Relative images and links resolve from the
+code blocks are drawn as diagrams, which can be maximized to fill the preview.
+Markdown can be shown at a readable width of up to 980px or at the full width of
+the preview; the choice is saved in the browser. Relative images and links resolve from the
 file's folder. The themes and the diagram renderer are bundled, so no network
 connection is needed.
 

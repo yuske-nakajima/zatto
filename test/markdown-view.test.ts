@@ -24,6 +24,15 @@ afterEach(async () => {
   await rm(dir, { force: true, recursive: true });
 });
 
+async function waitFor<T>(find: () => T | null): Promise<T> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const found = find();
+    if (found) return found;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("not found");
+}
+
 function parse(html: string): Document {
   return new JSDOM(html).window.document;
 }
@@ -112,6 +121,53 @@ describe("Markdown viewing", () => {
       document.querySelector(`script[src="${MARKDOWN_VENDOR_ASSETS.mermaid}"]`),
     ).not.toBeNull();
     expect(html).toContain("suppressErrorRendering: true");
+  });
+
+  test("表示幅の指定で本文の最大幅を外し、Mermaid の図を最大化して Esc で戻す", async () => {
+    const html = renderMarkdownDocument(
+      "# 図\n\n```mermaid\ngraph TD; A-->B\n```\n",
+      "図",
+    );
+    expect(html).toContain(
+      'html[data-zatto-width="full"] .markdown-body { max-width: none; }',
+    );
+    const dom = new JSDOM(html.replace(/<script src="[^"]+"><\/script>/, ""), {
+      runScripts: "dangerously",
+      beforeParse(window) {
+        Object.assign(window, {
+          matchMedia: () => ({ matches: false, addEventListener() {} }),
+          mermaid: {
+            initialize() {},
+            render: async () => ({
+              svg: '<svg width="200" height="100" style="max-width: 200px" viewBox="0 0 200 100"></svg>',
+            }),
+          },
+        });
+      },
+    });
+    const { document } = dom.window;
+    const expand = await waitFor(() =>
+      document.querySelector<HTMLButtonElement>(".zatto-diagram-expand"),
+    );
+    expand.click();
+    const overlay = document.querySelector(".zatto-diagram-overlay");
+    const copy = overlay?.querySelector("svg");
+    expect(copy?.getAttribute("width")).toBeNull();
+    expect(copy?.getAttribute("style")).not.toContain("max-width");
+
+    let reachedOuter = false;
+    document.addEventListener("keydown", () => {
+      reachedOuter = true;
+    });
+    const escapeKey = new dom.window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(escapeKey);
+    expect(document.querySelector(".zatto-diagram-overlay")).toBeNull();
+    expect(escapeKey.defaultPrevented).toBe(true);
+    expect(reachedOuter).toBe(false);
   });
 
   test("Mermaidがない文書は描画処理を読み込まない", () => {
