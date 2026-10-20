@@ -47,5 +47,6 @@ jobs:
       - name: Test
         run: pnpm run test
 
-      - name: Build
-        run: pnpm run build
+      # ビルドしたうえで tarball を別ディレクトリーへ入れて起動し、公開前と同じ検証を PR で行う
+      - name: Build and verify package
+        run: pnpm run verify:package
