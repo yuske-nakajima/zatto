@@ -154,6 +154,16 @@ export function reviewCommands(context: CommandContext) {
   }
 
   return {
+    "review.get": ({ threadId }) => {
+      const thread = store.get(threadId);
+      if (!thread) throw domainError("notFound", "Thread not found.");
+      const entry = context.sessionStore.findEntry(thread.entryId);
+      if (!entry) throw domainError("notFound", "Entry not found.");
+      return {
+        thread,
+        file: { id: entry.id, title: entry.title, path: entry.absPath },
+      };
+    },
     "review.list": ({ workspaceId, entryId }) => {
       requireEntry(workspaceId, entryId);
       return { threads: store.list(entryId) };
@@ -272,6 +282,7 @@ export function reviewCommands(context: CommandContext) {
     },
   } satisfies Pick<
     CommandHandlers,
+    | "review.get"
     | "review.list"
     | "review.create"
     | "review.reply"

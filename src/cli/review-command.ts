@@ -42,6 +42,8 @@ type FileOptions = {
   session: string;
   client?: ReviewClient;
   once: boolean;
+  /** 1 行を短くし、スレッドの全文の代わりに ID と最新のコメントの冒頭だけを出す。 */
+  brief: boolean;
   open: boolean;
   port: number;
 };
@@ -67,6 +69,21 @@ export interface ReviewCommandDependencies extends ServerClientDependencies {
   reconnectIntervalMs?: number;
   /** Environment that tells the LLM client and its conversation ID; defaults to the process environment. */
   env?: Record<string, string | undefined>;
+}
+
+/** 通知で渡す最新のコメントの最大文字数。Claude Code の Monitor の通知は長い行を途中で切る。 */
+const BRIEF_COMMENT_LENGTH = 120;
+
+/** `--brief` の 1 行。全文は MCP の get_review_thread で読む。 */
+export interface BriefReviewReport {
+  event: "comment" | "finished";
+  file: string;
+  threadId?: string;
+  /** 最新のコメントの冒頭。 */
+  comment?: string;
+  attachments?: number;
+  openThreads?: number;
+  next: string;
 }
 
 /** One delivered user action with the thread state an LLM needs to answer it. */
@@ -256,7 +273,9 @@ async function follow(
           return;
         }
         for (const report of reports)
-          dependencies.stdout(JSON.stringify(report));
+          dependencies.stdout(
+            JSON.stringify(options.brief ? briefReport(report) : report),
+          );
         // 終えたレビューを再接続で張り直さないよう、終了の通知で待機も終える
         if (reports.some((report) => report.event === "finished"))
           settle("done");
@@ -320,6 +339,38 @@ async function waitForServer(
   }
 }
 
+/**
+ * 通知に収まる長さの 1 行に変える。
+ * @param report - 届いたコメントまたはレビューの終了
+ * @returns スレッド ID と最新のコメントの冒頭だけを持つ報告
+ */
+export function briefReport(report: ReviewReport): BriefReviewReport {
+  const file = report.file.title;
+  if (report.event === "finished")
+    return {
+      event: "finished",
+      file,
+      openThreads: report.threads.length,
+      next: "The user finished the review. Read open threads with list_review_threads if needed.",
+    };
+  const thread = report.threads[0];
+  const latest = thread?.comments.at(-1);
+  const body = latest?.body.replace(/\s+/g, " ").trim() ?? "";
+  return {
+    event: "comment",
+    file,
+    ...(thread ? { threadId: thread.id } : {}),
+    comment:
+      body.length > BRIEF_COMMENT_LENGTH
+        ? `${body.slice(0, BRIEF_COMMENT_LENGTH)}…`
+        : body,
+    ...(latest?.attachments?.length
+      ? { attachments: latest.attachments.length }
+      : {}),
+    next: "Read the whole thread with get_review_thread, then answer with reply_review_thread.",
+  };
+}
+
 async function collectReports(
   call: Call,
   events: ReviewEvent[],
@@ -354,12 +405,14 @@ export function parseReviewArgs(
   let session: string | undefined;
   let port = DEFAULT_PORT;
   let once = false;
+  let brief = false;
   let open = true;
   let quote: string | undefined;
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--once") once = true;
+    else if (arg === "--brief") brief = true;
     else if (arg === "--no-open") open = false;
     else if (arg === "--quote") {
       const value = args[index + 1];
@@ -405,6 +458,8 @@ export function parseReviewArgs(
     };
   }
   if (quote !== undefined) throw new Error("--quote は reply でだけ使えます");
+  if (brief && once)
+    throw new Error("--brief と --once は同時に指定できません");
   if (!positionals[0])
     throw new Error("レビューするファイルを指定してください");
   if (positionals.length > 1)
@@ -415,6 +470,7 @@ export function parseReviewArgs(
     session,
     ...(client ? { client } : {}),
     once,
+    brief,
     open,
     port,
   };

@@ -173,6 +173,13 @@ export interface RpcMethods {
     };
     result: ReviewThread;
   };
+  "review.get": {
+    params: RequestContext & { threadId: string };
+    result: {
+      thread: ReviewThread;
+      file: { id: string; title: string; path: string };
+    };
+  };
   "review.resolve": {
     params: RequestContext & { threadId: string; resolved: boolean };
     result: ReviewThread;

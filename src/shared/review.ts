@@ -139,6 +139,13 @@ export const REVIEW_REPLY_GUIDE =
   "Replies render as Markdown limited to paragraphs, bulleted and numbered lists, bold, inline code, fenced code blocks, and links; other syntax shows as plain text. Images the user attached are listed in each comment's attachments with a local path you can read.";
 
 /**
+ * Claude Code のバックグラウンド Bash は終了時にしか通知しないため、1 行ごとに通知する Monitor で待つよう案内する。
+ * Monitor の通知は長い行を途中で切るので、--brief の短い行で受け、全文は MCP で読む。
+ */
+export const REVIEW_MONITOR_GUIDE =
+  "In Claude Code, start the command with the Monitor tool instead of a background command and add --brief: each comment then notifies you with its thread id, and you read the whole thread with get_review_thread from the zatto MCP server. Without the zatto MCP server, run it without --brief. Monitor stops after 30 minutes; start it again, and unanswered comments are delivered again.";
+
+/**
  * A request any LLM conversation can act on: it keeps the review command running for one file.
  * @param cli - Command that runs the zatto CLI of the running server, quoted for a POSIX shell
  * @param filePath - File under review
@@ -150,6 +157,7 @@ export function reviewRequestText(cli: string, filePath: string): string {
     "Run this command in the background and keep it running:",
     `${cli} review ${JSON.stringify(filePath)}`,
     "Claude Code and Codex are detected automatically; in other tools, add --session <id> to both commands, using an ID for this conversation.",
+    REVIEW_MONITOR_GUIDE,
     "When it reports that the file is under review, tell me you are ready.",
     "Each JSON line it prints is a comment I wrote. Read the document and any attached images, then answer in that thread with:",
     `${cli} review reply <thread-id> "<reply>"`,

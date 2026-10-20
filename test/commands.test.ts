@@ -140,3 +140,41 @@ test("viewer.show は選択中のワークスペースを開いている Web UI 
     commands.execute("viewer.show", { ...params, entryId: "missing" }, []),
   ).rejects.toMatchObject({ code: 1001 });
 });
+test("review.get はスレッドの全文と、選択中でないワークスペースのファイルも返す", async () => {
+  const { commands, store } = fixture();
+  await store.load();
+  const file = path.join(dir, "plan.md");
+  await writeFile(file, "# plan\n");
+  const other = await commands.execute(
+    "workspaces.create",
+    { name: "other" },
+    [],
+  );
+  const [entry] = (
+    await commands.execute(
+      "session.add",
+      { paths: [file], workspaceId: other.id },
+      [],
+    )
+  ).resolved;
+  const thread = await commands.execute(
+    "review.create",
+    {
+      workspaceId: other.id,
+      entryId: entry?.id ?? "",
+      anchor: null,
+      author: { kind: "user" },
+      body: "全体の確認",
+    },
+    [],
+  );
+  await expect(
+    commands.execute("review.get", { threadId: thread.id }, []),
+  ).resolves.toEqual({
+    thread,
+    file: { id: entry?.id, title: entry?.title, path: file },
+  });
+  await expect(
+    commands.execute("review.get", { threadId: "missing" }, []),
+  ).rejects.toMatchObject({ code: 1001 });
+});

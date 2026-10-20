@@ -115,6 +115,7 @@ const schemas = {
     body: reviewBody,
     attachments,
   }),
+  "review.get": z.strictObject({ ...guards, threadId: id }),
   "review.reply": z.strictObject({
     ...guards,
     threadId: id,

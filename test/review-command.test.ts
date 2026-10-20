@@ -310,6 +310,36 @@ describe("zatto review", () => {
     viewer.close();
   });
 
+  test("--brief はスレッド ID と最新のコメントの冒頭だけを 1 行で出す", async () => {
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--brief", "--session", "s"],
+      deps,
+    );
+    const review = await activeReview();
+    const long = `${"長い".repeat(100)}\n\n改行`;
+    const created = (await comment(review, long)).json<{ id: string }>();
+    await vi.waitFor(() => expect(deps.stdout).toHaveBeenCalledTimes(1));
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await expect(running).resolves.toBe(0);
+
+    const [first, finished] = lines(deps.stdout);
+    expect(first).toEqual({
+      event: "comment",
+      file: "計画",
+      threadId: created.id,
+      comment: `${"長い".repeat(60)}…`,
+      next: expect.stringContaining("get_review_thread"),
+    });
+    expect(finished).toMatchObject({
+      event: "finished",
+      file: "計画",
+      openThreads: 1,
+    });
+    for (const call of deps.stdout.mock.calls)
+      expect(String(call[0]).length).toBeLessThan(400);
+  });
+
   test("中断すると 130 で終わる", async () => {
     let interrupt = () => {};
     const deps = dependencies((handler) => {
@@ -362,6 +392,12 @@ describe("zatto review", () => {
     ).toMatchObject({ session: "s", client: "claude" });
     expect(() => parseReviewArgs(["a.md"], {})).toThrow("省略できます");
     expect(() => parseReviewArgs(["a.md"])).toThrow("--session");
+    expect(
+      parseReviewArgs(["a.md", "--session", "s", "--brief"]),
+    ).toMatchObject({ brief: true, once: false });
+    expect(() =>
+      parseReviewArgs(["a.md", "--session", "s", "--brief", "--once"]),
+    ).toThrow("--brief と --once");
     expect(() => parseReviewArgs(["--session", "s"])).toThrow(
       "レビューするファイルを指定",
     );
