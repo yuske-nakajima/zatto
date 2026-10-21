@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.0](https://github.com/yuske-nakajima/zatto/compare/v3.7.0...v3.8.0) (2026-10-21)
+
+
+### Features
+
+* Favorites をドラッグで並べ替え、List とは別の順で保存する ([#128](https://github.com/yuske-nakajima/zatto/issues/128)) ([590cc08](https://github.com/yuske-nakajima/zatto/commit/590cc0853a69f1cd35e5b99796f8f61c97054366))
+
 ## [3.7.0](https://github.com/yuske-nakajima/zatto/compare/v3.6.0...v3.7.0) (2026-10-20)
 
 
