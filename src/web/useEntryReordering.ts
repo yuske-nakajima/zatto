@@ -1,5 +1,6 @@
 import { type DragEvent, useState } from "react";
 import type { Entry } from "../server/session.js";
+import { orderedFavorites } from "../shared/favorites.js";
 import { prepareEntryDrag } from "./entry-drag.js";
 import { moveEntry } from "./file-panel-model.js";
 import { requestSessionChange } from "./session-change.js";
@@ -66,6 +67,37 @@ export function useEntryReordering({
     }
   }
 
+  /** お気に入りだけを並べ替える。List の順は変えない。 */
+  async function reorderFavorites(targetId: string): Promise<void> {
+    if (!draggedId || draggedId === targetId) {
+      resetDragState();
+      return;
+    }
+    const previousEntries = entries;
+    const order = moveEntry(orderedFavorites(entries), draggedId, targetId).map(
+      (entry) => entry.id,
+    );
+    const rank = new Map(order.map((id, index) => [id, index]));
+    const reorderedEntries = entries.map((entry) =>
+      entry.favorite ? { ...entry, favoriteRank: rank.get(entry.id) } : entry,
+    );
+    setEntries(reorderedEntries);
+    resetDragState();
+    const reordered = await requestSessionChange("session.reorderFavorites", {
+      ids: order,
+      ...workspaceParams(workspaceId),
+    });
+    if (
+      !reordered &&
+      (!isCurrentWorkspace || isCurrentWorkspace(workspaceId ?? null))
+    ) {
+      setEntries((current) =>
+        current === reorderedEntries ? previousEntries : current,
+      );
+      setErrorMessage("Could not reorder the favorites.");
+    }
+  }
+
   return {
     draggedId,
     dropTargetId,
@@ -73,5 +105,6 @@ export function useEntryReordering({
     setDropTargetId,
     resetDragState,
     reorderEntries,
+    reorderFavorites,
   };
 }

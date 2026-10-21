@@ -4,11 +4,13 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
 import { replyWithImages } from "../cli/reply-images.js";
 import { APP_VERSION } from "../meta.js";
+import type { Entry } from "../server/session.js";
 import {
   type AgentContext,
   normalizeAgentContextTitle,
   parseAgentContext,
 } from "../shared/agent-context.js";
+import { orderedFavorites } from "../shared/favorites.js";
 import {
   REVIEW_MONITOR_GUIDE,
   REVIEW_REANCHOR_GUIDE,
@@ -53,6 +55,7 @@ export type McpRpcMethod =
   | "session.removeMany"
   | "session.setFavorite"
   | "session.reorder"
+  | "session.reorderFavorites"
   | "review.get"
   | "review.list"
   | "review.create"
@@ -212,7 +215,7 @@ function registerWorkspaceFilesTool(server: McpServer, connect: Connect): void {
     {
       title: "List files in a Zatto workspace",
       description:
-        "Use to find files the user organized in a workspace, including ones that are not selected. Returns files in the user's List order with favorite flags and absolute paths. Omit workspaceId for the selected workspace. Viewer URLs are returned only for the selected workspace; selected marks the file open in the viewer.",
+        "Use to find files the user organized in a workspace, including ones that are not selected. Returns files in the user's List order with favorite flags, the one-based position among favorites (favoritePosition, null when not a favorite; the Favorites view uses this order, separate from the List), and absolute paths. Omit workspaceId for the selected workspace. Viewer URLs are returned only for the selected workspace; selected marks the file open in the viewer.",
       inputSchema: z.object({
         workspaceId: workspaceIdInput,
       }),
@@ -226,6 +229,7 @@ function registerWorkspaceFilesTool(server: McpServer, connect: Connect): void {
         const selectedPath = active
           ? (await readContext(connection)).activeFile?.path
           : undefined;
+        const favoritePositions = favoritePositionsOf(workspace.entries);
         return {
           workspace: workspaceSummary(workspace),
           files: workspace.entries.map((entry, index) => ({
@@ -234,6 +238,7 @@ function registerWorkspaceFilesTool(server: McpServer, connect: Connect): void {
             path: entry.absPath,
             position: index + 1,
             favorite: entry.favorite === true,
+            favoritePosition: favoritePositions.get(entry.id) ?? null,
             selected: entry.absPath === selectedPath,
             url: active ? entryUrl(connection.baseUrl, entry.id) : null,
           })),
@@ -426,7 +431,7 @@ function registerUpdateFilesTool(server: McpServer, connect: Connect): void {
     {
       title: "Update favorites and List order in Zatto",
       description:
-        "Use to organize files in the given workspace, or the selected one when workspaceId is omitted. Sets favorite flags and moves files to a one-based List position. Changes apply in the order given; a position beyond the end moves the file to the end. Returns the target workspace and, per file, updated with its resulting position and favorite, or missing. Changes saved before a failure remain saved.",
+        "Use to organize files in the given workspace, or the selected one when workspaceId is omitted. Sets favorite flags, moves files to a one-based List position, and moves favorites to a one-based position in the Favorites order (favoritePosition), which is separate from the List. A file newly starred is added to the end of the Favorites order. Changes apply in the order given; a position beyond the end moves the file to the end. Returns the target workspace and, per file, updated with its resulting position and favorite, or missing. Changes saved before a failure remain saved.",
       inputSchema: z.object({
         files: z
           .array(
@@ -440,11 +445,21 @@ function registerUpdateFilesTool(server: McpServer, connect: Connect): void {
                   .min(1)
                   .optional()
                   .describe("One-based position in the List"),
+                favoritePosition: z
+                  .number()
+                  .int()
+                  .min(1)
+                  .optional()
+                  .describe(
+                    "One-based position among favorites; the file must be a favorite after this update",
+                  ),
               })
               .refine(
                 (file) =>
-                  file.favorite !== undefined || file.position !== undefined,
-                { message: "Set favorite or position" },
+                  file.favorite !== undefined ||
+                  file.position !== undefined ||
+                  file.favoritePosition !== undefined,
+                { message: "Set favorite, position, or favoritePosition" },
               ),
           )
           .min(1),
@@ -485,9 +500,32 @@ function registerUpdateFilesTool(server: McpServer, connect: Connect): void {
             ids: order,
             workspaceId: target.id,
           });
-        const updated = await connection.call("workspaces.get", {
+        let updated = await connection.call("workspaces.get", {
           id: target.id,
         });
+        const current = orderedFavorites(updated.entries).map(({ id }) => id);
+        let favoriteOrder = current;
+        for (const file of files) {
+          if (
+            file.favoritePosition === undefined ||
+            !favoriteOrder.includes(file.entryId)
+          )
+            continue;
+          favoriteOrder = favoriteOrder.filter((id) => id !== file.entryId);
+          favoriteOrder.splice(
+            Math.min(file.favoritePosition, favoriteOrder.length + 1) - 1,
+            0,
+            file.entryId,
+          );
+        }
+        if (favoriteOrder.some((id, index) => id !== current[index])) {
+          await connection.call("session.reorderFavorites", {
+            ids: favoriteOrder,
+            workspaceId: target.id,
+          });
+          updated = await connection.call("workspaces.get", { id: target.id });
+        }
+        const favoritePositions = favoritePositionsOf(updated.entries);
         const positions = new Map(
           updated.entries.map((entry, index) => [entry.id, { entry, index }]),
         );
@@ -502,6 +540,7 @@ function registerUpdateFilesTool(server: McpServer, connect: Connect): void {
                   title: fileTitle(current.entry),
                   position: current.index + 1,
                   favorite: current.entry.favorite === true,
+                  favoritePosition: favoritePositions.get(entryId) ?? null,
                 }
               : { id: entryId, status: "missing" };
           }),
@@ -674,6 +713,13 @@ function registerReviewTools(server: McpServer, connect: Connect): void {
           resolved: resolved ?? true,
         }),
       })),
+  );
+}
+
+/** お気に入りの順での 1 始まりの位置。お気に入りでないエントリは含まない。 */
+function favoritePositionsOf(entries: Entry[]): Map<string, number> {
+  return new Map(
+    orderedFavorites(entries).map((entry, index) => [entry.id, index + 1]),
   );
 }
 

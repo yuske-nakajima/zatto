@@ -58,6 +58,7 @@ const schemas = {
     workspaceId,
   }),
   "session.reorder": z.strictObject({ ...guards, ids, workspaceId }),
+  "session.reorderFavorites": z.strictObject({ ...guards, ids, workspaceId }),
   "session.removeMany": z.strictObject({
     ...guards,
     ids: ids.min(1).refine((values) => new Set(values).size === values.length),

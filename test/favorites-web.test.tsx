@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -22,7 +23,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-test("Favorites follows List order without drag handles, keeps preview after unstar, and protects Clear All", async () => {
+test("Favorites shows starred files with drag handles, keeps preview after unstar, and protects Clear All", async () => {
   const fetch = setup();
   const user = userEvent.setup();
   render(<App />);
@@ -41,7 +42,11 @@ test("Favorites follows List order without drag handles, keeps preview after uns
     expect.stringContaining("Gamma"),
   ]);
   expect(within(list).queryByRole("button", { name: "Open Alpha" })).toBeNull();
-  expect(within(list).queryByRole("button", { name: /^Reorder / })).toBeNull();
+  expect(
+    within(list)
+      .getAllByRole("button", { name: /^Reorder / })
+      .map((button) => button.getAttribute("aria-label")),
+  ).toEqual(["Reorder Beta", "Reorder Gamma"]);
   expect(
     (screen.getByRole("button", { name: "Clear all" }) as HTMLButtonElement)
       .disabled,
@@ -161,3 +166,47 @@ test.each(["http", "rpc"])(
     ).toBe("false");
   },
 );
+test("Favorites でドラッグするとお気に入りの順だけを保存し、List の順は変えない", async () => {
+  const fetch = setup();
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByTitle("Alpha preview");
+  await user.click(screen.getByRole("button", { name: "Favorites" }));
+  const list = screen.getByRole("list", { name: "Favorite entries" });
+  const dataTransfer = {
+    effectAllowed: "",
+    dropEffect: "",
+    setData: vi.fn(),
+    getData: vi.fn(),
+  };
+  fireEvent.dragStart(
+    within(list).getByRole("button", { name: "Reorder Gamma" }),
+    { dataTransfer },
+  );
+  const betaRow = within(list)
+    .getByRole("button", { name: "Open Beta" })
+    .closest("li");
+  fireEvent.dragOver(betaRow as Element, { dataTransfer });
+  fireEvent.drop(betaRow as Element, { dataTransfer });
+
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("session.reorderFavorites", {
+        ids: ["c", "b"],
+        workspaceId: "default",
+      }),
+    ),
+  );
+  expect(
+    within(list)
+      .getAllByRole("button", { name: /^Open / })
+      .map((button) => button.getAttribute("aria-label")),
+  ).toEqual(["Open Gamma", "Open Beta"]);
+  expect(fetch).not.toHaveBeenCalledWith(
+    "/rpc",
+    expect.objectContaining({
+      body: expect.stringContaining('"session.reorder"'),
+    }),
+  );
+});

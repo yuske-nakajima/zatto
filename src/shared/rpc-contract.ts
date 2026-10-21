@@ -88,6 +88,10 @@ export interface RpcMethods {
     params: WorkspaceParams & { ids: string[] };
     result: null;
   };
+  "session.reorderFavorites": {
+    params: WorkspaceParams & { ids: string[] };
+    result: null;
+  };
   "session.removeMany": {
     params: WorkspaceParams & { ids: string[] };
     result: null;

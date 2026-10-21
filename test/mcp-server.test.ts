@@ -142,6 +142,7 @@ describe("Zatto MCP server", () => {
           path: files.b,
           position: 1,
           favorite: false,
+          favoritePosition: null,
           selected: true,
           url: `${BASE_URL}?entry=${b.id}`,
         },
@@ -151,6 +152,7 @@ describe("Zatto MCP server", () => {
           path: files.a,
           position: 2,
           favorite: true,
+          favoritePosition: 1,
           selected: false,
           url: `${BASE_URL}?entry=${a.id}`,
         },
@@ -352,6 +354,7 @@ describe("Zatto MCP server", () => {
           title: "C",
           position: 1,
           favorite: true,
+          favoritePosition: 1,
         },
         {
           id: a.id,
@@ -359,6 +362,7 @@ describe("Zatto MCP server", () => {
           title: "A",
           position: 3,
           favorite: false,
+          favoritePosition: null,
         },
         { id: "missing", status: "missing" },
       ],
@@ -368,6 +372,29 @@ describe("Zatto MCP server", () => {
     );
     expect(store.getWorkspaceState().activeWorkspaceId).toBe("default");
     expect(broadcast).toHaveBeenCalledTimes(2);
+
+    // お気に入りの順は List とは別に並べ替える
+    const favorites = (await toolResult(client, "update_files", {
+      workspaceId: research.id,
+      files: [
+        { entryId: b.id, favorite: true },
+        { entryId: b.id, favoritePosition: 1 },
+      ],
+    })) as { files: Array<{ favoritePosition: number | null }> };
+    expect(favorites.files.at(-1)?.favoritePosition).toBe(1);
+    expect(store.getWorkspace(research.id).entries.map(({ id }) => id)).toEqual(
+      [c.id, b.id, a.id],
+    );
+    const listed = (await toolResult(client, "list_workspace_files", {
+      workspaceId: research.id,
+    })) as { files: Array<{ id: string; favoritePosition: number | null }> };
+    expect(
+      listed.files.map(({ id, favoritePosition }) => [id, favoritePosition]),
+    ).toEqual([
+      [c.id, 2],
+      [b.id, 1],
+      [a.id, null],
+    ]);
 
     const invalid = await client.callTool({
       name: "update_files",

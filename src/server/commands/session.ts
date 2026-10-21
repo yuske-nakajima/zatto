@@ -65,6 +65,15 @@ export function sessionCommands(context: CommandContext) {
       await context.publish();
       return null;
     },
+    "session.reorderFavorites": async ({ ids, workspaceId }) => {
+      if (!(await store.reorderFavorites(ids, workspaceId)))
+        throw new CommandError(
+          -32602,
+          "`ids` には現在のお気に入りを重複なく指定してください",
+        );
+      await context.publish();
+      return null;
+    },
     "session.removeMany": async ({ ids, workspaceId }) => {
       if (!(await store.removeEntries(ids, workspaceId)))
         throw domainError("notFound", "エントリが見つかりません");
@@ -108,6 +117,7 @@ export function sessionCommands(context: CommandContext) {
     | "session.add"
     | "session.setFavorite"
     | "session.reorder"
+    | "session.reorderFavorites"
     | "session.removeMany"
     | "session.remove"
     | "session.clear"

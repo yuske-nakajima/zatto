@@ -18,7 +18,8 @@ function entry(value: unknown): boolean {
     text(value.title) &&
     text(value.absPath) &&
     number(value.addedAt) &&
-    (value.favorite === undefined || boolean(value.favorite))
+    (value.favorite === undefined || boolean(value.favorite)) &&
+    (value.favoriteRank === undefined || number(value.favoriteRank))
   );
 }
 function session(value: unknown): value is Record<string, unknown> {
@@ -252,6 +253,7 @@ export function isRpcResult<M extends RpcMethod>(
       return object(value) && boolean(value.shown);
     case "session.setFavorite":
     case "session.reorder":
+    case "session.reorderFavorites":
     case "session.removeMany":
     case "session.remove":
     case "session.clear":

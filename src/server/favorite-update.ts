@@ -19,5 +19,14 @@ export function updateFavorite(
   if (!entry) return { result: "missing" };
   if (Boolean(entry.favorite) === favorite) return { result: "unchanged" };
   entry.favorite = favorite;
+  if (favorite) {
+    // 新しくお気に入りにしたファイルは、お気に入りの順の末尾に加える
+    const ranks = entries.flatMap((item) =>
+      item !== entry && item.favorite && item.favoriteRank !== undefined
+        ? [item.favoriteRank]
+        : [],
+    );
+    entry.favoriteRank = ranks.length ? Math.max(...ranks) + 1 : 0;
+  } else delete entry.favoriteRank;
   return { entries, result: "updated" };
 }

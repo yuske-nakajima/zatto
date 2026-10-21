@@ -1,5 +1,6 @@
 import type { DragEvent, ReactNode, RefObject } from "react";
 import type { Entry } from "../server/session.js";
+import { orderedFavorites } from "../shared/favorites.js";
 import { AddEntryControls } from "./AddEntryControls.js";
 import { DirectoryTree } from "./DirectoryTree.js";
 import { EntryRow } from "./EntryRow.js";
@@ -44,6 +45,8 @@ interface FilePanelProps {
   onDragEnter: (id: string) => void;
   onDragEnd: () => void;
   onDrop: (id: string) => void;
+  /** Favorites で落としたときに、お気に入りの順を並べ替える。 */
+  onDropFavorite: (id: string) => void;
   onPickFiles: () => void;
   onPickDirectory: (mode: DirectoryPickerMode) => void;
   onOpenSearch: () => void;
@@ -77,6 +80,7 @@ export function FilePanel({
   onDragEnter,
   onDragEnd,
   onDrop,
+  onDropFavorite,
   onPickFiles,
   onPickDirectory,
   onOpenSearch,
@@ -87,9 +91,11 @@ export function FilePanel({
   // 外の端末ではフォルダの構造を見せないため、Folders を List として表示する
   const view =
     isRemote && requestedView === "directories" ? "list" : requestedView;
-  const canReorder = view === "list" && !isRemote;
+  // Favorites は List とは別の順で並べ替える
+  const canReorder = (view === "list" || view === "favorites") && !isRemote;
   const visibleEntries =
-    view === "favorites" ? entries.filter((entry) => entry.favorite) : entries;
+    view === "favorites" ? orderedFavorites(entries) : entries;
+  const handleDrop = view === "favorites" ? onDropFavorite : onDrop;
   return (
     <aside className="sidebar">
       <FilePanelHeader />
@@ -152,7 +158,7 @@ export function FilePanel({
                 onDragStart={canReorder ? onDragStart : undefined}
                 onDragEnter={canReorder ? onDragEnter : undefined}
                 onDragEnd={onDragEnd}
-                onDrop={canReorder ? onDrop : undefined}
+                onDrop={canReorder ? handleDrop : undefined}
               />
             ))}
           </ol>
