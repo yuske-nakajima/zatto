@@ -78,7 +78,7 @@ test("workspaces.get reads any workspace in List order without changing the sele
   expect(read.json()).toEqual({
     id: research.id,
     name: "Research",
-    entries: [two, { ...one, favorite: true }],
+    entries: [two, { ...one, favorite: true, favoriteRank: 0 }],
   });
   expect(store.getWorkspaceState().activeWorkspaceId).toBe("default");
   expect((await rpc(app, "workspaces.get", { id: "missing" })).code).toBe(1002);

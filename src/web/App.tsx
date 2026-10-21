@@ -234,6 +234,7 @@ export function App() {
                   onDragEnter={entryReordering.setDropTargetId}
                   onDragEnd={entryReordering.resetDragState}
                   onDrop={entryReordering.reorderEntries}
+                  onDropFavorite={entryReordering.reorderFavorites}
                   onPickFiles={pickerControl.openFiles}
                   onPickDirectory={pickerControl.openDirectory}
                   onOpenSearch={openSearch}

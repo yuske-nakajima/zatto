@@ -65,7 +65,8 @@ export function setup(entries = initial) {
             activeWorkspaceId: "default",
             workspaces: [{ id: "default", name: "Default" }],
           })
-        : Response.json({}),
+        : // 変更系の操作は結果を持たない（null）
+          new Response(null, { status: 204 }),
     ),
   );
   vi.stubGlobal("fetch", fetch);

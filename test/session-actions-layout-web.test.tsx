@@ -31,6 +31,7 @@ const baseProps = {
   onDragEnter: vi.fn(),
   onDragEnd: vi.fn(),
   onDrop: vi.fn(),
+  onDropFavorite: vi.fn(),
   onPickFiles: vi.fn(),
   onPickDirectory: vi.fn(),
   onOpenSearch: vi.fn(),

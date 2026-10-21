@@ -25,7 +25,7 @@
   <body>
     <main>
       <h1>JSON-RPC API</h1>
-      <p class="lead">全34操作は<code>POST /rpc</code>へ<code>application/json</code>で送信します。2.0.0でREST操作ルートを廃止し、静的配信とWebSocket通知は維持します。</p>
+      <p class="lead">全35操作は<code>POST /rpc</code>へ<code>application/json</code>で送信します。2.0.0でREST操作ルートを廃止し、静的配信とWebSocket通知は維持します。</p>
       <h2>要求と応答</h2>
       <pre><code>{
   &quot;jsonrpc&quot;: &quot;2.0&quot;,
@@ -59,6 +59,7 @@
       <section><h3><code class="operation">session.add</code></h3><p>パスを絶対パスへ解決し、既存・追加エントリを指定順で1回ずつ返します。存在しないパスは除外し、読取り・保存失敗時は追加全体を確定しません。HTMLの拡張子は必須ではありません。</p><p>params: <code>{ workspaceId: string, paths: string[] }</code><br>result: <code>{ added, resolved, workspaceId, activeWorkspaceId, session }</code></p></section>
       <section><h3><code class="operation">session.setFavorite</code></h3><p>星を明示的な真偽値で保存します。並び順を変更せず、同じ値の再指定では保存も通知もしません。</p><p>params: <code>{ workspaceId: string, id: string, favorite: boolean }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.reorder</code></h3><p>対象ワークスペースの全エントリIDを、希望するList順で重複なく1回ずつ指定します。</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.reorderFavorites</code></h3><p>対象ワークスペースのお気に入りのIDを、希望するFavoritesの順で重複なく1回ずつ指定します。お気に入りの順はList順とは別に保存し、List順は変えません。新しくお気に入りにしたファイルは、お気に入りの順の末尾に加わります。エントリの<code>favoriteRank</code>がお気に入りの順を表します。</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.removeMany</code></h3><p>空でない既知のIDを重複なく指定し、一覧から原子的に外します。実ファイルは残します。</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.remove</code></h3><p>指定したエントリを一覧から外し、実ファイルは残します。</p><p>params: <code>{ workspaceId: string, id: string }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.clear</code></h3><p>対象の一覧を空にし、実ファイルは残します。</p><p>params: <code>{ workspaceId: string }</code><br>result: <code>null</code></p></section>

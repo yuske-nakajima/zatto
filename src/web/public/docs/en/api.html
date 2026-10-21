@@ -25,7 +25,7 @@
   <body>
     <main>
       <h1>JSON-RPC API</h1>
-      <p class="lead">All 34 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
+      <p class="lead">All 35 operations use <code>POST /rpc</code> with <code>application/json</code>. REST operation routes are removed in 2.0.0. Static resources and WebSocket events retain their own transports.</p>
       <h2>Requests and responses</h2>
       <pre><code>{
   &quot;jsonrpc&quot;: &quot;2.0&quot;,
@@ -59,6 +59,7 @@
       <section><h3><code class="operation">session.add</code></h3><p>Resolve paths and return requested existing/new entries once in argument order. Missing paths are skipped; read or save failure rejects the batch atomically. The endpoint does not require an HTML file extension.</p><p>params: <code>{ workspaceId: string, paths: string[] }</code><br>result: <code>{ added, resolved, workspaceId, activeWorkspaceId, session }</code></p></section>
       <section><h3><code class="operation">session.setFavorite</code></h3><p>Set a persisted workspace star without reordering. An unchanged value performs no save or broadcast.</p><p>params: <code>{ workspaceId: string, id: string, favorite: boolean }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.reorder</code></h3><p>Supply every entry ID of the target workspace exactly once in the desired List order.</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
+      <section><h3><code class="operation">session.reorderFavorites</code></h3><p>Pass every favorite ID of the target workspace exactly once in the desired Favorites order. The Favorites order is saved separately from the List order, which does not change. A newly starred file is added to the end of the Favorites order. An entry's <code>favoriteRank</code> holds its position in the Favorites order.</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.removeMany</code></h3><p>Remove a nonempty unique collection of known IDs atomically; leave disk files intact.</p><p>params: <code>{ workspaceId: string, ids: string[] }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.remove</code></h3><p>Remove one registered entry, leaving its disk file intact.</p><p>params: <code>{ workspaceId: string, id: string }</code><br>result: <code>null</code></p></section>
       <section><h3><code class="operation">session.clear</code></h3><p>Clear the target workspace collection without deleting disk files.</p><p>params: <code>{ workspaceId: string }</code><br>result: <code>null</code></p></section>

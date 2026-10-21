@@ -15,6 +15,8 @@ export interface Entry {
   title: string;
   addedAt: number;
   favorite?: boolean;
+  /** お気に入りの順。小さいほど前。お気に入りでないエントリは持たない。 */
+  favoriteRank?: number;
 }
 /** Ordered entries belonging to the active workspace. */
 export interface Session {
@@ -164,6 +166,38 @@ export class SessionStore extends WorkspaceStore {
       )
         return { result: false };
       return { entries: ids.map((id) => byId.get(id) as Entry), result: true };
+    });
+  }
+  /**
+   * お気に入りだけを並べ替える。List の順は変えない。
+   * @param ids - お気に入りの ID。現在のお気に入りを重複なくすべて含む
+   * @param workspaceId - 対象のワークスペース
+   * @returns ID の集合がお気に入りと一致して保存したか
+   * @throws When persistence fails or the workspace no longer exists
+   */
+  async reorderFavorites(
+    ids: string[],
+    workspaceId = this.activeId(),
+  ): Promise<boolean> {
+    return this.updateEntries(workspaceId, (entries) => {
+      const favorites = new Set(
+        entries.filter((entry) => entry.favorite).map((entry) => entry.id),
+      );
+      if (
+        ids.length !== favorites.size ||
+        new Set(ids).size !== ids.length ||
+        ids.some((id) => !favorites.has(id))
+      )
+        return { result: false };
+      const rank = new Map(ids.map((id, index) => [id, index]));
+      return {
+        entries: entries.map((entry) =>
+          entry.favorite
+            ? { ...entry, favoriteRank: rank.get(entry.id) }
+            : entry,
+        ),
+        result: true,
+      };
     });
   }
   /**

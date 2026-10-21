@@ -50,11 +50,13 @@ files retain the version 1 single-collection format.
 
 Use the star beside a file in **List**, **Folders**, or **Favorites** to keep
 frequently used files close at hand. Stars are saved per workspace and survive
-server restarts. **Favorites** shows starred files in their original List order;
-starring a file never reorders the full list. Unstarring the previewed file
+server restarts. **Favorites** shows starred files in a Favorites order that is
+saved separately from the List; drag to reorder them. Reordering Favorites never
+changes the List, and a newly starred file is added to the end of the Favorites
+order. Unstarring the previewed file
 keeps its preview open even when it disappears from Favorites.
 
-Drag to reorder in List. **Clear All** is disabled in Favorites; switch to
+**Clear All** is disabled in Favorites; switch to
 List or Folders to clear the entire workspace. The Favorites view supports
 keyboard controls, browser history, reload, and the saved file-panel preference.
 Search still searches every file in the workspace.
@@ -473,7 +475,7 @@ IDs atomically without deleting files. Operations that change or export files re
 `workspaceId`, the target workspace, which need not be the selected one. Native pickers,
 import and shutdown validate `instanceId` in params.
 Successful calls return `result`; failures return `error.code` and `error.data`.
-The built-in API documentation describes all 34 methods, parameters, results and errors.
+The built-in API documentation describes all 35 methods, parameters, results and errors.
 
 Native folder selection uses the server.health instanceId. Replace the placeholder before running.
 
