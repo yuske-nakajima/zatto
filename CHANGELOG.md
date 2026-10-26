@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.1](https://github.com/yuske-nakajima/zatto/compare/v3.8.0...v3.8.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** Node.js・pnpm と依存パッケージを更新 ([#131](https://github.com/yuske-nakajima/zatto/issues/131)) ([39bc74e](https://github.com/yuske-nakajima/zatto/commit/39bc74ea28e3369dd1d5cbe5d56e261117d80326))
+
 ## [3.8.0](https://github.com/yuske-nakajima/zatto/compare/v3.7.0...v3.8.0) (2026-10-21)
 
 
