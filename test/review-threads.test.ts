@@ -490,7 +490,7 @@ describe("review threads", () => {
     );
 
     expect(text).toContain(
-      `"/opt/node" "/opt/zatto/bin/zatto.js" review ${JSON.stringify(entry.absPath)}\n`,
+      `"/opt/node" "/opt/zatto/bin/zatto.js" review ${JSON.stringify(entry.absPath)} --workspace "default"\n`,
     );
     expect(text).toContain(
       '"/opt/node" "/opt/zatto/bin/zatto.js" review reply <thread-id>',

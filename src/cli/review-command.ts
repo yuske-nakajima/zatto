@@ -24,10 +24,11 @@ import {
 } from "./server-client.js";
 
 export const REVIEW_USAGE = `Usage:
-  zatto review <file> [--session <id>] [--once] [--no-open] [--port <n>]
+  zatto review <file> [--session <id>] [--workspace <id>] [--once] [--no-open] [--port <n>]
   zatto review reply <thread-id> <body> [--session <id>] [--quote <text>] [--port <n>]
 
-<file> を選択中のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
+<file> を --workspace のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
+--workspace を省くと、起動した時点で選択中のワークスペースを使います。再接続しても同じワークスペースを使い続けます。
 ユーザーがコメント・返信を書くたびに、内容を 1 行の JSON で出力します。Finish review で終了します。
 zatto が停止・再起動しても、起動を待って自動で再接続します。Ctrl+C で終了します。
 --once は、最初に届いた内容を読みやすい形で表示して終了します。
@@ -41,6 +42,8 @@ type FileOptions = {
   mode: "file";
   file: string;
   session: string;
+  /** 登録とレビューに使うワークスペース。省くと最初の接続で選択中のワークスペースに決める。 */
+  workspaceId?: string;
   client?: ReviewClient;
   once: boolean;
   /** 1 行を短くし、スレッドの全文の代わりに ID と最新のコメントの冒頭だけを出す。 */
@@ -149,10 +152,12 @@ export async function runReviewCommand(
   try {
     let record = (await connectOrStartServer(options.port, dependencies))
       .record;
+    // 再接続のたびに選択中のワークスペースを取り直すと、ユーザーが切り替えた先へ登録してしまう
+    const target = { ...options };
     for (let first = true; ; first = false) {
       const outcome = await follow(
         record,
-        options,
+        target,
         dependencies,
         first,
         interruption,
@@ -225,7 +230,10 @@ async function follow(
     });
     // 確認状態はサーバーのメモリーにだけあるため、接続のたびに張り直す
     const startedAt = Date.now();
-    const workspaceId = (await call("workspaces.list", {})).activeWorkspaceId;
+    options.workspaceId ??= (
+      await call("workspaces.list", {})
+    ).activeWorkspaceId;
+    const workspaceId = options.workspaceId;
     const entry = (
       await call("session.add", { paths: [options.file], workspaceId })
     ).resolved[0];
@@ -408,6 +416,7 @@ export function parseReviewArgs(
   env: Record<string, string | undefined> = {},
 ): ReviewOptions {
   let session: string | undefined;
+  let workspaceId: string | undefined;
   let port = DEFAULT_PORT;
   let once = false;
   let brief = false;
@@ -437,12 +446,18 @@ export function parseReviewArgs(
         throw new Error("--quote には直した後の文章を指定してください");
       quote = value;
       index += 1;
-    } else if (arg === "--session" || arg === "--port") {
+    } else if (
+      arg === "--session" ||
+      arg === "--workspace" ||
+      arg === "--port"
+    ) {
       const value = args[index + 1];
-      if (!value || value.startsWith("--"))
+      // ワークスペース ID は nanoid のため -- で始まることがある
+      if (!value || (arg !== "--workspace" && value.startsWith("--")))
         throw new Error(`${arg} の値を指定してください`);
       index += 1;
       if (arg === "--session") session = value;
+      else if (arg === "--workspace") workspaceId = value;
       else {
         port = Number(value);
         if (!Number.isInteger(port) || port < 1 || port > 65535)
@@ -464,6 +479,8 @@ export function parseReviewArgs(
       throw new Error(
         "reply にはスレッド ID と本文を 1 つずつ指定してください",
       );
+    if (workspaceId !== undefined)
+      throw new Error("--workspace は reply では使えません");
     return {
       mode: "reply",
       threadId,
@@ -487,6 +504,7 @@ export function parseReviewArgs(
     mode: "file",
     file: path.resolve(positionals[0]),
     session,
+    ...(workspaceId === undefined ? {} : { workspaceId }),
     ...(client ? { client } : {}),
     once,
     brief,

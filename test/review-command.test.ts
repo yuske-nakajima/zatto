@@ -200,6 +200,48 @@ describe("zatto review", () => {
     await expect(running).resolves.toBe(0);
   });
 
+  test("--workspace のワークスペースへ登録し、選択中のワークスペースには登録しない", async () => {
+    const other = await store.createWorkspace("other");
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "s", "--workspace", other.id],
+      deps,
+    );
+    const review = await activeReview();
+    expect(review.workspaceId).toBe(other.id);
+    expect(store.getWorkspace(other.id).entries.map((e) => e.absPath)).toEqual([
+      file,
+    ]);
+    expect(store.getWorkspace("default").entries).toEqual([]);
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await expect(running).resolves.toBe(0);
+  });
+
+  test("再接続までにユーザーが別のワークスペースを選んでも、最初のワークスペースでレビューを続ける", async () => {
+    const other = await store.createWorkspace("other");
+    const deps = dependencies();
+    const running = runReviewCommand(
+      [file, "--no-open", "--session", "s"],
+      deps,
+    );
+    await activeReview();
+    const previousPort = port;
+    await app.close();
+    await vi.waitFor(() =>
+      expect(deps.stderr).toHaveBeenCalledWith(
+        "zatto サーバーとの接続が切れました。起動を待って再接続します",
+      ),
+    );
+    await store.switchWorkspace(other.id);
+    await startServer(previousPort);
+
+    const review = await activeReview();
+    expect(review.workspaceId).toBe("default");
+    expect(store.getWorkspace(other.id).entries).toEqual([]);
+    await rpc(app, "review.finish", { reviewId: review.id });
+    await expect(running).resolves.toBe(0);
+  });
+
   test("ほかのファイル・ほかのセッションへのコメントは出力しない", async () => {
     const deps = dependencies();
     const running = runReviewCommand(
@@ -447,6 +489,23 @@ describe("zatto review", () => {
     expect(
       parseReviewArgs(["a.md", "--session", "s"], { CLAUDECODE: "1" }),
     ).toMatchObject({ session: "s", client: "claude" });
+    expect(
+      parseReviewArgs(["a.md", "--session", "s", "--workspace", "--w1"]),
+    ).toMatchObject({ mode: "file", workspaceId: "--w1" });
+    expect(parseReviewArgs(["a.md", "--session", "s"])).not.toHaveProperty(
+      "workspaceId",
+    );
+    expect(() =>
+      parseReviewArgs([
+        "reply",
+        "t1",
+        "本文",
+        "--workspace",
+        "w",
+        "--session",
+        "s",
+      ]),
+    ).toThrow("--workspace は reply では使えません");
     expect(() => parseReviewArgs(["a.md"], {})).toThrow("省略できます");
     expect(() => parseReviewArgs(["a.md"])).toThrow("--session");
     expect(

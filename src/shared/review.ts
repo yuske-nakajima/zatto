@@ -149,13 +149,18 @@ export const REVIEW_MONITOR_GUIDE =
  * A request any LLM conversation can act on: it keeps the review command running for one file.
  * @param cli - Command that runs the zatto CLI of the running server, quoted for a POSIX shell
  * @param filePath - File under review
+ * @param workspaceId - Workspace the file belongs to, so the review stays there when the user selects another workspace
  * @returns Text to paste into an LLM conversation
  */
-export function reviewRequestText(cli: string, filePath: string): string {
+export function reviewRequestText(
+  cli: string,
+  filePath: string,
+  workspaceId: string,
+): string {
   return [
     "Please review this document with me in zatto.",
     "Run this command in the background and keep it running:",
-    `${cli} review ${JSON.stringify(filePath)}`,
+    `${cli} review ${JSON.stringify(filePath)} --workspace ${JSON.stringify(workspaceId)}`,
     "Claude Code and Codex are detected automatically; in other tools, add --session <id> to both commands, using an ID for this conversation.",
     REVIEW_MONITOR_GUIDE,
     "When it reports that the file is under review, tell me you are ready.",
