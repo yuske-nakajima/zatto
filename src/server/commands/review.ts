@@ -212,7 +212,9 @@ export function reviewCommands(context: CommandContext) {
         .getWorkspace(workspaceId)
         .entries.find((item) => item.id === entryId);
       if (!entry) throw domainError("notFound", "Entry not found.");
-      return { text: reviewRequestText(context.cliCommand, entry.absPath) };
+      return {
+        text: reviewRequestText(context.cliCommand, entry.absPath, workspaceId),
+      };
     },
     "review.start": ({ workspaceId, entryId, session, client }) => {
       requireEntry(workspaceId, entryId);

@@ -192,7 +192,7 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
 
-LLMと資料について話すときは、ビューアーで**Ask an LLM to review**を押してコピーした依頼文（動いているzattoのCLIを絶対パスで示します）をLLMの会話に貼るか、LLMに`zatto review <file> --session <id>`をバックグラウンドで実行してもらいます。
+LLMと資料について話すときは、ビューアーで**Ask an LLM to review**を押してコピーした依頼文（動いているzattoのCLIを絶対パスで示します）をLLMの会話に貼るか、LLMに`zatto review <file> --session <id> --workspace <id>`をバックグラウンドで実行してもらいます。
 コマンドは待ち続け、ファイルにコメントや返信を書くたびに1行のJSONを出力します。LLMは`zatto review reply`または`reply_review_thread`で答えます。
 Claude Codeでは、バックグラウンドのコマンドは終了したときにしか会話へ通知されません。`Monitor`ツールで`--brief`を付けて起動すると、コメントのたびにスレッドIDと最新のコメントの冒頭だけの短い1行が届き、LLMは`get_review_thread`で全文を読みます。
 zattoが再起動しても再接続し、**Finish review**で終了します。ファイル一覧には未解決と解決済みのスレッド数を表示します。

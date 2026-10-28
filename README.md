@@ -211,7 +211,7 @@ The MCP tools never start the viewer and report an error when it is not running.
 
 To discuss a file with an LLM, press **Ask an LLM to review** in the viewer and paste
 the copied request into an LLM conversation (it names the running zatto CLI by absolute path), or have the LLM run
-`zatto review <file> --session <id>` in the background. The command keeps waiting and
+`zatto review <file> --session <id> --workspace <id>` in the background. The command keeps waiting and
 prints one JSON line each time you comment or reply on the file; the LLM answers with
 `zatto review reply` or `reply_review_thread`. Claude Code notifies the conversation about a
 background command only when it exits; started with the `Monitor` tool and `--brief`, the
