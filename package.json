@@ -1,6 +1,6 @@
 {
   "name": "@yuske-nakajima/zatto",
-  "version": "3.8.1",
+  "version": "3.8.2",
   "description": "A local viewer for browsing HTML and Markdown files as one session.",
   "type": "module",
   "license": "MIT",
