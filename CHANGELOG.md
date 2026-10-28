@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.2](https://github.com/yuske-nakajima/zatto/compare/v3.8.1...v3.8.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **review:** レビューを所属ワークスペースで続け、選択中のワークスペースへ登録しない ([#133](https://github.com/yuske-nakajima/zatto/issues/133)) ([0e5bd70](https://github.com/yuske-nakajima/zatto/commit/0e5bd70bf8770cdbfcefd8e99d5d41f12b8f3184))
+
 ## [3.8.1](https://github.com/yuske-nakajima/zatto/compare/v3.8.0...v3.8.1) (2026-10-26)
 
 
