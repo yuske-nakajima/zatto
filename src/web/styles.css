@@ -546,6 +546,103 @@ button:focus-visible,
   background: var(--color-bg-accent);
 }
 
+.choice-dialog-actions button {
+  transition:
+    transform 90ms ease-out,
+    filter 90ms ease-out;
+}
+
+.choice-dialog-actions button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.choice-dialog-actions button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.95);
+}
+
+.choice-dialog[data-tone="danger"] .choice-dialog-confirm {
+  border-color: var(--color-red-500);
+  background: var(--color-red-500);
+  animation: choice-dialog-danger-pulse 1.4s ease-in-out infinite;
+}
+
+.choice-dialog-field {
+  display: grid;
+  gap: var(--spacing-6);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.choice-dialog-field input {
+  padding: var(--spacing-8) var(--spacing-10);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.choice-dialog-field input:focus-visible {
+  outline: 2px solid var(--color-border-accent);
+  outline-offset: 1px;
+}
+
+.choice-dialog-overlay .choice-dialog-backdrop {
+  animation: choice-dialog-fade-in 160ms ease-out both;
+}
+
+.choice-dialog-overlay .choice-dialog {
+  animation: choice-dialog-pop-in 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.choice-dialog-overlay[data-state="closing"] .choice-dialog-backdrop {
+  animation: choice-dialog-fade-out 140ms ease-in both;
+}
+
+.choice-dialog-overlay[data-state="closing"] .choice-dialog {
+  animation: choice-dialog-pop-out 140ms ease-in both;
+}
+
+@keyframes choice-dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes choice-dialog-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes choice-dialog-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+
+@keyframes choice-dialog-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes choice-dialog-danger-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--color-red-500) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px
+      color-mix(in srgb, var(--color-red-500) 0%, transparent);
+  }
+}
+
 .sidebar-scroll-region {
   display: flex;
   min-height: 0;
@@ -1111,6 +1208,18 @@ button:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .session-action-spinner {
     animation: none;
+  }
+
+  .choice-dialog-overlay .choice-dialog-backdrop,
+  .choice-dialog-overlay .choice-dialog,
+  .choice-dialog-overlay[data-state="closing"] .choice-dialog-backdrop,
+  .choice-dialog-overlay[data-state="closing"] .choice-dialog,
+  .choice-dialog[data-tone="danger"] .choice-dialog-confirm {
+    animation: none;
+  }
+
+  .choice-dialog-actions button:active:not(:disabled) {
+    transform: none;
   }
 }
 

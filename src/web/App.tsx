@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from "react";
 import type { ServerMessage } from "../shared/protocol.js";
 import { rpcCall } from "../shared/rpc-client.js";
 import { AppViewer } from "./AppViewer.js";
+import { DialogHost } from "./dialogs.js";
 import { FilePanel } from "./FilePanel.js";
 import { createFolderSessionRemover } from "./folder-session-removal.js";
 import { ResizableLayout } from "./ResizableLayout.js";
@@ -272,6 +273,7 @@ export function App() {
             }
           />
         </StatusBarFrame>
+        <DialogHost />
       </ReviewFileStatesProvider>
     </RemoteAccessContext.Provider>
   );

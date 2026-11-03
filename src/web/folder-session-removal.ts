@@ -1,3 +1,4 @@
+import { confirmDialog } from "./dialogs.js";
 import { requestSessionChange } from "./session-change.js";
 import { workspaceParams } from "./workspace-request.js";
 
@@ -20,12 +21,14 @@ async function removeFolderEntriesFromSession(
   workspaceId?: string | null,
 ): Promise<void> {
   const fileLabel = ids.length === 1 ? "file" : "files";
-  if (
-    ids.length === 0 ||
-    !window.confirm(`Remove ${ids.length} ${fileLabel} from this session?`)
-  ) {
-    return;
-  }
+  if (ids.length === 0) return;
+  const confirmed = await confirmDialog({
+    title: "Remove from session",
+    message: `Remove ${ids.length} ${fileLabel} from this session?`,
+    confirmLabel: "Remove",
+    tone: "danger",
+  });
+  if (!confirmed) return;
   const removed = await requestSessionChange("session.removeMany", {
     ids,
     ...workspaceParams(workspaceId),

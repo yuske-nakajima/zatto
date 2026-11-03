@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WorkspaceState } from "../server/workspace-state.js";
 import { rpcCall } from "../shared/rpc-client.js";
+import { confirmDialog, promptDialog } from "./dialogs.js";
 import "./workspace.css";
 
 interface WorkspaceControlsProps {
@@ -49,10 +50,24 @@ export function WorkspaceControls({
       setPending(false);
     }
   }
-  function nameWorkspace(create: boolean): void {
-    const name = window.prompt(
-      create ? "Workspace name" : "Rename workspace",
-      create ? "" : current?.name,
+  async function nameWorkspace(create: boolean): Promise<void> {
+    const name = await promptDialog(
+      create
+        ? {
+            title: "New workspace",
+            message: "Create and select an empty named workspace.",
+            label: "Workspace name",
+            confirmLabel: "Create",
+            maxLength: 100,
+          }
+        : {
+            title: "Rename workspace",
+            message: `Rename “${current?.name}”.`,
+            label: "Workspace name",
+            confirmLabel: "Rename",
+            defaultValue: current?.name,
+            maxLength: 100,
+          },
     );
     if (name === null) return;
     if (!name.trim() || name.trim().length > 100) {
@@ -62,13 +77,14 @@ export function WorkspaceControls({
     void change(create ? "create" : "rename", activeWorkspaceId, name.trim());
   }
 
-  function removeWorkspace(): void {
-    if (
-      !window.confirm(
-        `Delete workspace “${current?.name}”? Its files remain on disk.`,
-      )
-    )
-      return;
+  async function removeWorkspace(): Promise<void> {
+    const confirmed = await confirmDialog({
+      title: "Delete workspace",
+      message: `Delete workspace “${current?.name}”? Its files remain on disk.`,
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     void change("delete", activeWorkspaceId);
   }
 
@@ -102,7 +118,7 @@ export function WorkspaceControls({
             type="button"
             disabled={pending}
             data-status-description="Create and select an empty named workspace."
-            onClick={() => nameWorkspace(true)}
+            onClick={() => void nameWorkspace(true)}
           >
             New workspace
           </button>
@@ -110,7 +126,7 @@ export function WorkspaceControls({
             type="button"
             disabled={pending}
             data-status-description="Rename the selected workspace."
-            onClick={() => nameWorkspace(false)}
+            onClick={() => void nameWorkspace(false)}
           >
             Rename
           </button>
@@ -118,7 +134,7 @@ export function WorkspaceControls({
             type="button"
             disabled={pending || state.workspaces.length < 2}
             data-status-description="Delete this workspace after confirmation; keep its files on disk."
-            onClick={removeWorkspace}
+            onClick={() => void removeWorkspace()}
           >
             Delete
           </button>

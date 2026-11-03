@@ -1,3 +1,4 @@
+import { confirmDialog } from "./dialogs.js";
 import { requestSessionChange } from "./session-change.js";
 import { workspaceParams } from "./workspace-request.js";
 
@@ -20,7 +21,14 @@ export function workspaceEntryActions(
       reportError("Could not remove the entry.");
   }
   async function clearEntries(): Promise<void> {
-    if (!hasEntries || !window.confirm("Remove all entries?")) return;
+    if (!hasEntries) return;
+    const confirmed = await confirmDialog({
+      title: "Clear all",
+      message: "Remove all entries?",
+      confirmLabel: "Remove all",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     if (!(await requestSessionChange("session.clear", params)))
       reportError("Could not remove all entries.");
   }
