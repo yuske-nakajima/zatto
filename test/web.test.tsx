@@ -308,7 +308,6 @@ describe("App", () => {
   test("個別削除と確認付き全削除をAPIへ送る", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.mocked(fetch);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<App />);
     await screen.findByTitle("Alpha preview");
 
@@ -319,7 +318,10 @@ describe("App", () => {
       "/rpc",
       rpcRequest("session.remove", { id: "a" }),
     );
-    expect(confirm).toHaveBeenCalledWith("Remove all entries?");
+    expect(
+      screen.getByRole("dialog", { name: "Clear all" }).textContent,
+    ).toContain("Remove all entries?");
+    await user.click(screen.getByRole("button", { name: "Remove all" }));
     expect(fetchMock).toHaveBeenCalledWith(
       "/rpc",
       rpcRequest("session.clear", {}),

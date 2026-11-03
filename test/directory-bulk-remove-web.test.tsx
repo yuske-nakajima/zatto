@@ -117,43 +117,49 @@ describe("folder session removal", () => {
 
   test("cancels before sending a bulk removal request", async () => {
     const fetchMock = mockSessionFetch();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = await renderAppInFolderView();
     await user.click(getFolderRemovalButton("/workspace/reports", 2));
 
-    expect(confirm).toHaveBeenCalledOnce();
-    expect(confirm).toHaveBeenCalledWith("Remove 2 files from this session?");
+    const dialog = screen.getByRole("dialog", { name: "Remove from session" });
+    expect(dialog.textContent).toContain("Remove 2 files from this session?");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(deleteRequests(fetchMock)).toHaveLength(0);
   });
 
   test("sends descendant IDs in one JSON request after confirmation", async () => {
     const fetchMock = mockSessionFetch();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = await renderAppInFolderView();
     await user.click(getFolderRemovalButton("/workspace/reports", 2));
+    expect(
+      screen.getByRole("dialog", { name: "Remove from session" }).textContent,
+    ).toContain("Remove 2 files from this session?");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() => expect(deleteRequests(fetchMock)).toHaveLength(1));
     expect(fetchMock).toHaveBeenCalledWith(
       "/rpc",
       rpcRequest("session.removeMany", { ids: ["report", "daily"] }),
     );
-    expect(confirm).toHaveBeenCalledWith("Remove 2 files from this session?");
   });
 
   test("uses singular wording when removing one file", async () => {
     mockSessionFetch();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = await renderAppInFolderView();
     await user.click(getFolderRemovalButton("/workspace/reports/daily", 1));
 
-    expect(confirm).toHaveBeenCalledWith("Remove 1 file from this session?");
+    expect(
+      screen.getByRole("dialog", { name: "Remove from session" }).textContent,
+    ).toContain("Remove 1 file from this session?");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   test("reports a failed bulk removal request", async () => {
     mockSessionFetch(false);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = await renderAppInFolderView();
     await user.click(getFolderRemovalButton("/workspace/reports", 2));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not remove the files from the session.",

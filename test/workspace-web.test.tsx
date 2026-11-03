@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "../src/web/App.js";
+import { DialogHost } from "../src/web/dialogs.js";
 import { WorkspaceControls } from "../src/web/WorkspaceControls.js";
 import { rpcFixture, rpcMethod, rpcRequest } from "./rpc-client-fixture.js";
 
@@ -57,7 +58,6 @@ test("switching clears search, selects available entries, and sends clear to the
     ),
   );
   vi.stubGlobal("fetch", fetch);
-  vi.spyOn(window, "confirm").mockReturnValue(true);
   const user = userEvent.setup();
   render(<App />);
   await screen.findByTitle("One preview");
@@ -83,6 +83,7 @@ test("switching clears search, selects available entries, and sends clear to the
       .value,
   ).toBe("research");
   await user.click(screen.getByRole("button", { name: "Clear all" }));
+  await user.click(screen.getByRole("button", { name: "Remove all" }));
   expect(fetch).toHaveBeenCalledWith(
     "/rpc",
     rpcRequest("session.clear", { workspaceId: "research" }),
@@ -138,16 +139,26 @@ test("workspace creation activates its returned ID and deletion requires confirm
     rpcFixture(async () => Response.json({ id: "created", name: "Notes" })),
   );
   vi.stubGlobal("fetch", fetch);
-  vi.spyOn(window, "prompt").mockReturnValue("Notes");
-  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   const user = userEvent.setup();
   render(
-    <WorkspaceControls
-      state={{ activeWorkspaceId: "default", workspaces: states }}
-      reportError={vi.fn()}
-    />,
+    <>
+      <WorkspaceControls
+        state={{ activeWorkspaceId: "default", workspaces: states }}
+        reportError={vi.fn()}
+      />
+      <DialogHost />
+    </>,
   );
   await user.click(screen.getByRole("button", { name: "New workspace" }));
+  const nameField = screen.getByRole("textbox", { name: "Workspace name" });
+  expect(nameField).toBe(document.activeElement);
+  await user.type(nameField, "Notes{Enter}");
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/rpc",
+      rpcRequest("workspaces.create", { name: "Notes" }),
+    ),
+  );
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith(
       "/rpc",
@@ -155,7 +166,11 @@ test("workspace creation activates its returned ID and deletion requires confirm
     ),
   );
   await user.click(screen.getByRole("button", { name: "Delete" }));
-  expect(confirm).toHaveBeenCalledOnce();
+  expect(
+    screen.getByRole("dialog", { name: "Delete workspace" }).textContent,
+  ).toContain("Delete workspace “Default”? Its files remain on disk.");
+  await user.click(screen.getByRole("button", { name: "Cancel dialog" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(
     fetch.mock.calls.some(
       ([, init]) => rpcMethod(init) === "workspaces.delete",
