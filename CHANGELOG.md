@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0](https://github.com/yuske-nakajima/zatto/compare/v3.8.2...v3.9.0) (2026-11-03)
+
+
+### Features
+
+* **web:** ブラウザ標準の確認・入力ダイアログを画面内のダイアログに置き換える ([#136](https://github.com/yuske-nakajima/zatto/issues/136)) ([0d89d2f](https://github.com/yuske-nakajima/zatto/commit/0d89d2f327d6d7bf75e6ce710b3142d25baf70c4))
+
 ## [3.8.2](https://github.com/yuske-nakajima/zatto/compare/v3.8.1...v3.8.2) (2026-10-28)
 
 
