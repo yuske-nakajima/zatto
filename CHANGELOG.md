@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.0](https://github.com/yuske-nakajima/zatto/compare/v3.9.0...v3.10.0) (2026-11-07)
+
+
+### Features
+
+* **review:** 文章を書き換えてもスレッドを失わず、付け直せるようにする ([#138](https://github.com/yuske-nakajima/zatto/issues/138)) ([a737061](https://github.com/yuske-nakajima/zatto/commit/a737061642e542ededea8aefe82973ac07b6d6c0))
+
 ## [3.9.0](https://github.com/yuske-nakajima/zatto/compare/v3.8.2...v3.9.0) (2026-11-03)
 
 
