@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { countPassage, visibleText } from "../src/server/review-text.js";
+import { visibleText } from "../src/server/review-text.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -22,12 +22,22 @@ test("HTML は表示される文字だけを、空白を除いて読む", async 
   expect(await visibleText(file)).toBe("A&Bあ次の段落");
 });
 
+test("noscript と template の中身は表示されないので読まない", async () => {
+  const file = path.join(dir, "a.html");
+  await writeFile(
+    file,
+    "<body><noscript>隠れた文章</noscript><template>型の文章</template><p>本文</p></body>",
+  );
+
+  expect(await visibleText(file)).toBe("本文");
+});
+
 test("Markdown は描画後の文字で照合し、装飾をまたぐ一節も見つける", async () => {
   const file = path.join(dir, "a.md");
   await writeFile(file, "# 見出し\n\n赤枠は**確認してほしい範囲**です。\n");
   const text = await visibleText(file);
 
-  expect(countPassage(text, "赤枠は確認してほしい範囲です")).toBe(1);
-  expect(countPassage(text, "見出し")).toBe(1);
-  expect(countPassage(text, "**")).toBe(0);
+  expect(text).toContain("赤枠は確認してほしい範囲です");
+  expect(text).toContain("見出し");
+  expect(text).not.toContain("**");
 });

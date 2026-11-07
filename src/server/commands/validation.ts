@@ -130,6 +130,21 @@ const schemas = {
       .max(REVIEW_LIMITS.anchorTextLength)
       .optional(),
   }),
+  "review.relink": z.strictObject({
+    ...guards,
+    links: z
+      .array(
+        z.union([
+          z.strictObject({
+            threadId: id,
+            quote: z.string().trim().min(1).max(REVIEW_LIMITS.anchorTextLength),
+          }),
+          z.strictObject({ threadId: id, detach: z.literal(true) }),
+        ]),
+      )
+      .min(1)
+      .max(REVIEW_LIMITS.linksPerRequest),
+  }),
   "review.resolve": z.strictObject({
     ...guards,
     threadId: id,

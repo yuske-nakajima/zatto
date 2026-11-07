@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AgentContextStore } from "../src/server/agent-context.js";
 import { createApp } from "../src/server/app.js";
 import { createCommands } from "../src/server/commands/index.js";
+import { REVIEW_NOTICE_DELAY_MS } from "../src/server/commands/review.js";
 import { RealtimeHub } from "../src/server/realtime.js";
 import { ReviewStore } from "../src/server/review-store.js";
 import { SessionStore } from "../src/server/session.js";
@@ -24,7 +25,9 @@ const ANCHOR = { exact: "本文", prefix: "前の", suffix: "の後" };
 const PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-async function fixture() {
+async function fixture(
+  subscribeFileChanges?: (listener: (entryId: string) => void) => void,
+) {
   const store = new SessionStore(path.join(dir, "session.json"));
   await store.load();
   const reviewPath = path.join(dir, "threads.json");
@@ -39,6 +42,7 @@ async function fixture() {
     reviewStore,
     cliCommand: '"/opt/node" "/opt/zatto/bin/zatto.js"',
     logError: vi.fn(),
+    subscribeFileChanges,
   });
   const file = path.join(dir, "plan.md");
   await writeFile(file, "# Plan\n\n本文\n");
@@ -507,7 +511,36 @@ describe("review threads", () => {
     ).rejects.toMatchObject({ code: 1001 });
   });
 
-  test("LLM の返信は、コメントした文章がファイルから消えていると差し戻し、--quote の文章へ付け直す", async () => {
+  test("文章が消えても LLM は返信でき、返信の結果で探せないスレッドを受け取る", async () => {
+    const { commands, entry } = await fixture();
+    const LLM = { kind: "llm", session: "s" } as const;
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: ANCHOR,
+        author: USER,
+        body: "言い換えて",
+      },
+      [],
+    );
+    await writeFile(entry.absPath, "# Plan\n\nまったく別の内容です。\n");
+
+    const replied = await commands.execute(
+      "review.reply",
+      { threadId: thread.id, author: LLM, body: "文章を削除しました" },
+      [],
+    );
+
+    expect(replied.comments.at(-1)?.body).toBe("文章を削除しました");
+    expect(replied.anchor).toEqual(ANCHOR);
+    expect(replied.unlinked).toEqual([
+      { threadId: thread.id, quote: ANCHOR.exact },
+    ]);
+  });
+
+  test("返信の quote は 1 回だけ現れる文章へスレッドを移し、前後の文脈も記録する", async () => {
     const { commands, entry } = await fixture();
     const LLM = { kind: "llm", session: "s" } as const;
     const thread = await commands.execute(
@@ -523,58 +556,307 @@ describe("review threads", () => {
     );
     await writeFile(
       entry.absPath,
-      "# Plan\n\n**書き換えた**本文の説明です。\n\n説明と説明\n",
-    );
-    // 本文は書き換えた文の中に残っているため、差し戻さない
-    await expect(
-      commands.execute(
-        "review.reply",
-        { threadId: thread.id, author: LLM, body: "まだ残っています" },
-        [],
-      ),
-    ).resolves.toMatchObject({ anchor: ANCHOR });
-    await writeFile(
-      entry.absPath,
       "# Plan\n\n**書き換えた**説明です。\n\n説明と説明\n",
     );
-
-    const reply = (body: string, quote?: string) =>
+    const reply = (quote: string) =>
       commands.execute(
         "review.reply",
-        {
-          threadId: thread.id,
-          author: LLM,
-          body,
-          ...(quote === undefined ? {} : { quote }),
-        },
+        { threadId: thread.id, author: LLM, body: "直しました", quote },
         [],
       );
-    await expect(reply("直しました")).rejects.toMatchObject({
-      code: 1007,
-      message: expect.stringContaining("--quote"),
-    });
-    await expect(reply("直しました", "存在しない文")).rejects.toMatchObject({
-      code: 1007,
-    });
-    await expect(reply("直しました", "説明")).rejects.toMatchObject({
+
+    await expect(reply("存在しない文")).rejects.toMatchObject({ code: 1007 });
+    await expect(reply("説明")).rejects.toMatchObject({
       code: 1007,
       message: expect.stringContaining("more than once"),
     });
-    await expect(
-      commands.execute(
-        "review.reply",
-        { threadId: thread.id, author: USER, body: "人の返信は通る" },
-        [],
-      ),
-    ).resolves.toBeTruthy();
-
-    const moved = await reply("直しました", "書き換えた説明です");
+    const moved = await reply("書き換えた説明です");
     expect(moved.anchor).toEqual({
       exact: "書き換えた説明です",
-      prefix: "",
-      suffix: "",
+      prefix: expect.stringContaining("Plan"),
+      suffix: "。説明と説明",
     });
-    expect(moved.comments.at(-1)?.body).toBe("直しました");
+    expect(moved.unlinked).toEqual([]);
+  });
+
+  test("relink はコメントを増やさず移し、失敗したスレッドは変えずに結果で返す", async () => {
+    const { commands, entry } = await fixture();
+    const create = (body: string) =>
+      commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          anchor: ANCHOR,
+          author: USER,
+          body,
+        },
+        [],
+      );
+    const first = await create("一つ目");
+    const second = await create("二つ目");
+    await writeFile(
+      entry.absPath,
+      "# Plan\n\nまったく別の内容です。\n\n説明と説明\n",
+    );
+
+    const { results, unlinked } = await commands.execute(
+      "review.relink",
+      {
+        links: [
+          { threadId: first.id, quote: "まったく別の内容です" },
+          { threadId: second.id, quote: "説明" },
+          { threadId: "missing", detach: true },
+        ],
+      },
+      [],
+    );
+
+    expect(results).toEqual([
+      { threadId: first.id, ok: true },
+      {
+        threadId: second.id,
+        ok: false,
+        message: expect.stringContaining("more than once"),
+      },
+      { threadId: "missing", ok: false, message: "Thread not found." },
+    ]);
+    expect(unlinked).toEqual([{ threadId: second.id, quote: ANCHOR.exact }]);
+    const { threads } = await commands.execute(
+      "review.list",
+      { workspaceId: "default", entryId: entry.id },
+      [],
+    );
+    const moved = threads.find((thread) => thread.id === first.id);
+    expect(moved?.anchor?.exact).toBe("まったく別の内容です");
+    expect(moved?.comments).toHaveLength(1);
+  });
+
+  test("detach は本文から外して通知の対象から除き、relink で戻せる", async () => {
+    const { commands, entry } = await fixture();
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: ANCHOR,
+        author: USER,
+        body: "確認",
+      },
+      [],
+    );
+    await writeFile(entry.absPath, "# Plan\n\n別の内容です。\n");
+
+    const detached = await commands.execute(
+      "review.relink",
+      { links: [{ threadId: thread.id, detach: true }] },
+      [],
+    );
+    expect(detached.unlinked).toEqual([]);
+    const read = () =>
+      commands.execute("review.get", { threadId: thread.id }, []);
+    expect((await read()).thread).toMatchObject({
+      detached: true,
+      anchor: ANCHOR,
+    });
+
+    await commands.execute(
+      "review.relink",
+      { links: [{ threadId: thread.id, quote: "別の内容です" }] },
+      [],
+    );
+    expect((await read()).thread.detached).toBeUndefined();
+  });
+
+  test("ファイルを読めないとき、quote は確かめられないので受け付けない", async () => {
+    const { commands, entry } = await fixture();
+    const thread = await commands.execute(
+      "review.create",
+      {
+        workspaceId: "default",
+        entryId: entry.id,
+        anchor: ANCHOR,
+        author: USER,
+        body: "確認",
+      },
+      [],
+    );
+    await rm(entry.absPath);
+
+    const { results } = await commands.execute(
+      "review.relink",
+      { links: [{ threadId: thread.id, quote: "どこかの文" }] },
+      [],
+    );
+    expect(results).toEqual([
+      {
+        threadId: thread.id,
+        ok: false,
+        message: expect.stringContaining("cannot be read"),
+      },
+    ]);
+    const { thread: kept } = await commands.execute(
+      "review.get",
+      { threadId: thread.id },
+      [],
+    );
+    expect(kept.anchor).toEqual(ANCHOR);
+  });
+
+  describe("文章を探せなくなったスレッドの通知", () => {
+    async function underReview() {
+      let changed: (entryId: string) => void = () => {};
+      const { commands, entry } = await fixture((listener) => {
+        changed = listener;
+      });
+      await writeFile(entry.absPath, "# Plan\n\n前の本文の後\n");
+      const thread = await commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          anchor: ANCHOR,
+          author: USER,
+          body: "確認",
+        },
+        [],
+      );
+      await commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId: entry.id, session: "s" },
+        [],
+      );
+      const take = async () =>
+        (
+          await commands.execute(
+            "review.take",
+            { session: "s", entryId: entry.id },
+            [],
+          )
+        ).events.filter((event) => event.kind === "unlinked");
+      await vi.waitFor(() => expect(take()).resolves.toEqual([]));
+      const save = async (content: string) => {
+        await writeFile(entry.absPath, content);
+        changed(entry.id);
+      };
+      const settle = async () => {
+        await vi.advanceTimersByTimeAsync(REVIEW_NOTICE_DELAY_MS);
+        await vi.waitFor(() => undefined);
+      };
+      return { commands, entry, thread, take, save, settle };
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test("連続した保存は 1 回にまとめ、付け直されるまで同じスレッドを繰り返さない", async () => {
+      const { commands, entry, thread, take, save, settle } =
+        await underReview();
+
+      await save("# Plan\n\n途中の内容です。\n");
+      await vi.advanceTimersByTimeAsync(REVIEW_NOTICE_DELAY_MS - 1);
+      await save("# Plan\n\n別の内容です。\n");
+      await vi.advanceTimersByTimeAsync(REVIEW_NOTICE_DELAY_MS - 1);
+      expect(await take()).toEqual([]);
+
+      await settle();
+      await vi.waitFor(async () =>
+        expect(await take()).toEqual([
+          expect.objectContaining({
+            kind: "unlinked",
+            entryId: entry.id,
+            threadIds: [thread.id],
+          }),
+        ]),
+      );
+
+      await save("# Plan\n\nさらに別の内容です。\n");
+      await settle();
+      expect(await take()).toEqual([]);
+
+      await commands.execute(
+        "review.relink",
+        { links: [{ threadId: thread.id, quote: "さらに別の内容です" }] },
+        [],
+      );
+      await save("# Plan\n\n書き直しました。\n");
+      await settle();
+      await vi.waitFor(async () =>
+        expect(await take()).toEqual([
+          expect.objectContaining({ threadIds: [thread.id] }),
+        ]),
+      );
+    });
+
+    test("文章が残っているスレッドと解決済みのスレッドは通知しない", async () => {
+      const { commands, thread, take, save, settle } = await underReview();
+
+      await save("# Plan\n\n前の本文の後\n");
+      await settle();
+      expect(await take()).toEqual([]);
+
+      await commands.execute(
+        "review.resolve",
+        { threadId: thread.id, resolved: true },
+        [],
+      );
+      await save("# Plan\n\n別の内容です。\n");
+      await settle();
+      expect(await take()).toEqual([]);
+    });
+
+    test("レビューを終えると通知しない", async () => {
+      const { commands, take, save, settle } = await underReview();
+      const { reviews } = await commands.execute("review.states", {}, []);
+
+      await save("# Plan\n\n別の内容です。\n");
+      await commands.execute(
+        "review.finish",
+        { reviewId: reviews[0]?.id as string },
+        [],
+      );
+      await settle();
+      expect(await take()).toEqual([]);
+    });
+
+    test("レビューを始めた時点で外れているスレッドも通知する", async () => {
+      const { commands, entry } = await fixture();
+      const thread = await commands.execute(
+        "review.create",
+        {
+          workspaceId: "default",
+          entryId: entry.id,
+          anchor: ANCHOR,
+          author: USER,
+          body: "確認",
+        },
+        [],
+      );
+      await writeFile(entry.absPath, "# Plan\n\n別の内容です。\n");
+      await commands.execute(
+        "review.start",
+        { workspaceId: "default", entryId: entry.id, session: "s" },
+        [],
+      );
+
+      await vi.waitFor(async () => {
+        const { events } = await commands.execute(
+          "review.take",
+          { session: "s" },
+          [],
+        );
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            kind: "unlinked",
+            threadIds: [thread.id],
+          }),
+        );
+      });
+    });
   });
 
   test("レビューを始めると、まだ答えていないスレッドをまとめて送り、再接続では送り直さない", async () => {

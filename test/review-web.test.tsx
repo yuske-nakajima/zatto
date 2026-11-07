@@ -177,6 +177,67 @@ describe("レビューのコメント", () => {
     expect(screen.queryByRole("dialog", { name: "Comment thread" })).toBeNull();
   });
 
+  test("文章を探せないスレッドは本文に出さず、一覧で件数を示し、読んで解決できる", async () => {
+    thread = {
+      ...baseThread,
+      anchor: { exact: "削除した文章", prefix: "", suffix: "" },
+      comments: baseThread.comments.slice(0, 1),
+    };
+    render(<App />);
+    const frame = await screen.findByTitle<HTMLIFrameElement>("Plan preview");
+    frame.contentDocument?.write("<p>閲覧URL を返す</p>");
+    frame.contentDocument?.close();
+    fireEvent.load(frame);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved, 1 not on the document",
+      }),
+    );
+    const item = screen.getByRole("button", { name: /削除した文章/ });
+    expect(item.textContent).toContain("Text not found");
+    fireEvent.click(item);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Comment thread",
+    });
+    expect(dialog.textContent).toContain(
+      "The commented text is no longer found.",
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "✓ Resolve" }),
+    ).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Reply" })).toBeTruthy();
+  });
+
+  test("読み込みの後に本文へ現れた文章には、スレッドが付く", async () => {
+    thread = {
+      ...baseThread,
+      anchor: { exact: "後から描画した文章", prefix: "", suffix: "" },
+      comments: baseThread.comments.slice(0, 1),
+    };
+    render(<App />);
+    const frame = await screen.findByTitle<HTMLIFrameElement>("Plan preview");
+    const view = frame.contentWindow as Window & typeof globalThis;
+    view.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+    view.Range.prototype.getBoundingClientRect = () => new DOMRect();
+    frame.contentDocument?.write("<p>閲覧URL を返す</p>");
+    frame.contentDocument?.close();
+    fireEvent.load(frame);
+    await screen.findByRole("button", {
+      name: "Comments, 1 open, 0 resolved, 1 not on the document",
+    });
+
+    const paragraph = frame.contentDocument?.createElement("p") as HTMLElement;
+    paragraph.textContent = "後から描画した文章";
+    frame.contentDocument?.body.append(paragraph);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Comments, 1 open, 0 resolved",
+      }),
+    ).toBeTruthy();
+  });
+
   test("一覧からスレッドを開き、作成者を表示して返信できる", async () => {
     render(<App />);
     await screen.findByTitle("Plan preview");

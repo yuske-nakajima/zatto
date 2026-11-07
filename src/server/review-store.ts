@@ -190,8 +190,7 @@ export class ReviewStore {
     const attachments = await this.storeAttachments(uploads);
     try {
       return await this.update(threadId, (thread) => ({
-        ...thread,
-        anchor: anchor ?? thread.anchor,
+        ...(anchor ? onDocument(thread, anchor) : thread),
         comments: [
           ...thread.comments,
           comment(author, body, Date.now(), attachments),
@@ -201,6 +200,16 @@ export class ReviewStore {
       await removeAttachments(attachments);
       throw error;
     }
+  }
+
+  /** コメントを増やさずにスレッドを移す。 */
+  async relink(threadId: string, anchor: TextAnchor): Promise<ReviewThread> {
+    return this.update(threadId, (thread) => onDocument(thread, anchor));
+  }
+
+  /** スレッドを本文から外し、anchor は引用として残す。 */
+  async detach(threadId: string): Promise<ReviewThread> {
+    return this.update(threadId, (thread) => ({ ...thread, detached: true }));
   }
 
   async setResolved(
@@ -342,6 +351,11 @@ function parseReviewDocument(value: unknown): ReviewDocument {
   )
     throw new Error("Invalid review thread document.");
   return { version: 1, threads: document.threads };
+}
+
+function onDocument(thread: ReviewThread, anchor: TextAnchor): ReviewThread {
+  const { detached: _detached, ...rest } = thread;
+  return { ...rest, anchor };
 }
 
 function isThread(value: unknown): value is ReviewThread {

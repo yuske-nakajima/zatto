@@ -19,6 +19,8 @@ export interface CommandOptions {
   pickDirectory?: PickDirectory;
   shutdown?: () => Promise<void> | void;
   onSessionChanged?: (session: Session) => Promise<void> | void;
+  /** 登録済みエントリのファイルの変更を受け取るリスナーを登録する。 */
+  subscribeFileChanges?: (listener: (entryId: string) => void) => void;
   logError: (error: unknown, message?: string) => void;
 }
 /** Validated command dependencies and mutation guards. */

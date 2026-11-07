@@ -188,7 +188,7 @@ MCPクライアントからは`zatto mcp serve`を起動するように設定し
 | `remove_files` | 任意のワークスペースからファイルを外す。ディスク上のファイルは削除しない |
 | `create_workspace` | 選択を変えずに空のワークスペースを作成する |
 | `update_files` | 任意のワークスペースで星とList上の位置（1始まり）を変更する |
-| `list_review_threads` / `get_review_thread` / `reply_review_thread` / `create_review_thread` / `resolve_review_thread` | ファイルのコメントのスレッドを一覧する・1つ読む・返信する・作る・解決する |
+| `list_review_threads` / `get_review_thread` / `reply_review_thread` / `relink_review_threads` / `create_review_thread` / `resolve_review_thread` | ファイルのコメントのスレッドを一覧する・1つ読む・返信する・移す・作る・解決する |
 
 MCPツールはビューアーを自動起動せず、起動していない場合はエラーを返します。
 

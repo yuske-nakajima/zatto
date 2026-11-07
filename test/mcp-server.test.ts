@@ -48,6 +48,7 @@ describe("Zatto MCP server", () => {
         "get_review_thread",
         "create_review_thread",
         "reply_review_thread",
+        "relink_review_threads",
         "resolve_review_thread",
       ],
     });
@@ -535,6 +536,7 @@ const TOOL_ARGUMENTS: Record<string, Record<string, unknown>> = {
   get_review_thread: { threadId: "t" },
   create_review_thread: { entryId: "a", body: "Why?" },
   reply_review_thread: { threadId: "t", body: "Fixed" },
+  relink_review_threads: { links: [{ threadId: "t", detach: true }] },
   resolve_review_thread: { threadId: "t" },
 };
 

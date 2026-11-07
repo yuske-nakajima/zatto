@@ -1,4 +1,5 @@
 import { REVIEW_LIMITS, type TextAnchor } from "../shared/review.js";
+import { locatePassage } from "../shared/review-match.js";
 
 const EXCLUDED_ELEMENTS = new Set(["SCRIPT", "STYLE", "TEMPLATE", "NOSCRIPT"]);
 
@@ -88,61 +89,38 @@ export function createTextAnchor(
 }
 
 /**
- * Finds the anchored text again, preferring the occurrence whose surroundings match best.
- * @param document - Previewed document
- * @param anchor - Recorded anchor
- * @returns Range covering the text, or null when it no longer exists
- * @throws Never
+ * 文書が変わった後に、コメントした文章を探し直す。
+ * @param document - プレビューの文書
+ * @param anchor - 記録した anchor
+ * @returns 文章の範囲。同じ文章と判断できる箇所がなければ null
+ * @throws しない
  */
 export function locateTextAnchor(
   document: Document,
   anchor: TextAnchor,
 ): Range | null {
   const index = indexText(document);
-  let best: { start: number; score: number } | null = null;
-  for (
-    let start = index.text.indexOf(anchor.exact);
-    start !== -1;
-    start = index.text.indexOf(anchor.exact, start + 1)
-  ) {
-    const score =
-      commonSuffix(index.text.slice(0, start), anchor.prefix) +
-      commonPrefix(
-        index.text.slice(start + anchor.exact.length),
-        anchor.suffix,
-      );
-    if (!best || score > best.score) best = { start, score };
+  // 照合は空白を除いた文字で行うため、見つけた位置を元の文字の位置へ戻す表を作る
+  const positions: number[] = [];
+  let compact = "";
+  for (let at = 0; at < index.text.length; at += 1) {
+    const character = index.text[at] as string;
+    if (/\s/.test(character)) continue;
+    positions.push(at);
+    compact += character;
   }
-  if (!best) return null;
-  const startPoint = pointAt(index, best.start, false);
-  const endPoint = pointAt(index, best.start + anchor.exact.length, true);
+  const match = locatePassage(compact, anchor);
+  if (!match) return null;
+  const start = positions[match.start];
+  const last = positions[match.end - 1];
+  if (start === undefined || last === undefined) return null;
+  const startPoint = pointAt(index, start, false);
+  const endPoint = pointAt(index, last + 1, true);
   if (!startPoint || !endPoint) return null;
   const range = document.createRange();
   range.setStart(startPoint.node, startPoint.offset);
   range.setEnd(endPoint.node, endPoint.offset);
   return range;
-}
-
-function commonSuffix(text: string, expected: string): number {
-  let count = 0;
-  while (
-    count < expected.length &&
-    count < text.length &&
-    text[text.length - 1 - count] === expected[expected.length - 1 - count]
-  )
-    count += 1;
-  return count;
-}
-
-function commonPrefix(text: string, expected: string): number {
-  let count = 0;
-  while (
-    count < expected.length &&
-    count < text.length &&
-    text[count] === expected[count]
-  )
-    count += 1;
-  return count;
 }
 
 /** Elements that can be commented on as a whole by hovering them. */

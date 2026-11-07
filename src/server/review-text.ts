@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { compactText } from "../shared/review-match.js";
 import { renderMarkdownDocument } from "./markdown-view.js";
 import { viewableKind } from "./viewable-file.js";
 
@@ -27,30 +28,14 @@ export async function visibleText(filePath: string): Promise<string> {
   return compactText(
     decodeEntities(
       html
-        .replace(/<(script|style|title)\b[\s\S]*?<\/\1\s*>/gi, " ")
+        .replace(
+          /<(script|style|title|noscript|template)\b[\s\S]*?<\/\1\s*>/gi,
+          " ",
+        )
         .replace(/<!--[\s\S]*?-->/g, " ")
         .replace(/<[^>]*>/g, " "),
     ),
   );
-}
-
-/** Removes all whitespace, matching {@link visibleText}. */
-export function compactText(value: string): string {
-  return value.replace(/\s+/g, "");
-}
-
-/** Counts non-overlapping occurrences of a passage in visible text. */
-export function countPassage(text: string, passage: string): number {
-  const needle = compactText(passage);
-  if (!needle) return 0;
-  let count = 0;
-  for (
-    let at = text.indexOf(needle);
-    at !== -1;
-    at = text.indexOf(needle, at + needle.length)
-  )
-    count += 1;
-  return count;
 }
 
 function decodeEntities(value: string): string {

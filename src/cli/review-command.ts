@@ -9,6 +9,7 @@ import {
   type ReviewClient,
   type ReviewEvent,
   type ReviewThread,
+  type UnlinkedThread,
 } from "../shared/review.js";
 import {
   defaultReviewSession,
@@ -26,6 +27,7 @@ import {
 export const REVIEW_USAGE = `Usage:
   zatto review <file> [--session <id>] [--workspace <id>] [--once] [--no-open] [--port <n>]
   zatto review reply <thread-id> <body> [--session <id>] [--quote <text>] [--port <n>]
+  zatto review relink <thread-id> (--quote <text> | --detach) [--session <id>] [--port <n>]
 
 <file> を --workspace のワークスペースへ登録してレビュー中にし、ユーザーのコメントを待ち続けます。
 --workspace を省くと、起動した時点で選択中のワークスペースを使います。再接続しても同じワークスペースを使い続けます。
@@ -34,7 +36,9 @@ zatto が停止・再起動しても、起動を待って自動で再接続し�
 --once は、最初に届いた内容を読みやすい形で表示して終了します。
 reply は、スレッドにこのセッションとして返信します。
 Claude Code と Codex では、--session を省くと会話の ID を使い、返信に Claude・Codex の別を記録します。
-コメントされた文章を直したときは、--quote に直した後の文章を指定すると、スレッドがその文章へ移ります。`;
+スレッドはファイルに残り、少し直した文章は自動で探し直します。探せなくなったスレッドは通知と返信の結果で伝えます。
+relink は、コメントを増やさずにスレッドを --quote の文章へ移します。--detach は、別の文章に付いたスレッドを本文から外します。
+文章を削除したときは relink せず、返信で伝えてください。`;
 
 const RECONNECT_INTERVAL_MS = 2_000;
 
@@ -64,6 +68,12 @@ type ReviewOptions =
       quote?: string;
       session: string;
       port: number;
+    }
+  | {
+      mode: "relink";
+      threadId: string;
+      link: { quote: string } | { detach: true };
+      port: number;
     };
 
 export interface ReviewCommandDependencies extends ServerClientDependencies {
@@ -82,9 +92,11 @@ const BRIEF_COMMENT_LENGTH = 120;
 
 /** `--brief` の 1 行。全文は MCP の get_review_thread で読む。 */
 export interface BriefReviewReport {
-  event: "comment" | "finished";
+  event: "comment" | "unlinked" | "finished";
   file: string;
   threadId?: string;
+  /** 文章を探せなくなったスレッド。 */
+  threadIds?: string[];
   /** 最新のコメントの冒頭。 */
   comment?: string;
   attachments?: number;
@@ -94,7 +106,7 @@ export interface BriefReviewReport {
 
 /** One delivered user action with the thread state an LLM needs to answer it. */
 export interface ReviewReport {
-  event: "comment" | "finished";
+  event: "comment" | "unlinked" | "finished";
   file: { id: string; title: string; path: string };
   threads: ReviewThread[];
   /** How to keep the thread on text the LLM edits, repeated so long conversations do not lose it. */
@@ -127,7 +139,7 @@ export async function runReviewCommand(
     try {
       const { record } = await connectOrStartServer(options.port, dependencies);
       const reply = await replyWithImages(options.body, options.attach);
-      await rpc(record, dependencies.fetch)("review.reply", {
+      const replied = await rpc(record, dependencies.fetch)("review.reply", {
         threadId: options.threadId,
         author: {
           kind: "llm",
@@ -139,6 +151,27 @@ export async function runReviewCommand(
         ...(options.quote === undefined ? {} : { quote: options.quote }),
       });
       dependencies.stdout(`返信しました: thread ${options.threadId}`);
+      reportUnlinked(replied.unlinked, dependencies);
+      return 0;
+    } catch (error) {
+      dependencies.stderr(errorMessage(error));
+      return 1;
+    }
+  }
+  if (options.mode === "relink") {
+    try {
+      const { record } = await connectOrStartServer(options.port, dependencies);
+      const { results, unlinked } = await rpc(record, dependencies.fetch)(
+        "review.relink",
+        { links: [{ threadId: options.threadId, ...options.link }] },
+      );
+      const result = results[0];
+      if (!result?.ok) {
+        dependencies.stderr(result?.message ?? "付け直せませんでした");
+        return 1;
+      }
+      dependencies.stdout(`付け直しました: thread ${options.threadId}`);
+      reportUnlinked(unlinked, dependencies);
       return 0;
     } catch (error) {
       dependencies.stderr(errorMessage(error));
@@ -177,6 +210,16 @@ export async function runReviewCommand(
   } finally {
     stopInterrupt();
   }
+}
+
+function reportUnlinked(
+  unlinked: UnlinkedThread[] | undefined,
+  dependencies: ReviewCommandDependencies,
+): void {
+  for (const { threadId, quote } of unlinked ?? [])
+    dependencies.stdout(
+      `文章を探せないスレッド: thread ${threadId} ${JSON.stringify(quote)}`,
+    );
 }
 
 interface Interruption {
@@ -366,6 +409,13 @@ export function briefReport(report: ReviewReport): BriefReviewReport {
       openThreads: report.threads.length,
       next: "The user finished the review. Read open threads with list_review_threads if needed.",
     };
+  if (report.event === "unlinked")
+    return {
+      event: "unlinked",
+      file,
+      threadIds: report.threads.map((thread) => thread.id),
+      next: "These threads lost their text. Relink with relink_review_threads; if you deleted the text, reply to say so.",
+    };
   const thread = report.threads[0];
   const latest = thread?.comments.at(-1);
   const body = latest?.body.replace(/\s+/g, " ").trim() ?? "";
@@ -380,7 +430,7 @@ export function briefReport(report: ReviewReport): BriefReviewReport {
     ...(latest?.attachments?.length
       ? { attachments: latest.attachments.length }
       : {}),
-    next: "Read the whole thread with get_review_thread, then answer with reply_review_thread.",
+    next: "Read the whole thread with get_review_thread, then answer with reply_review_thread. If your edit moves commented text, zatto tells you which threads to relink.",
   };
 }
 
@@ -404,7 +454,9 @@ async function collectReports(
       threads:
         event.kind === "finished"
           ? threads.filter((thread) => !thread.resolved)
-          : threads.filter((thread) => thread.id === event.threadId),
+          : event.kind === "unlinked"
+            ? threads.filter((thread) => event.threadIds.includes(thread.id))
+            : threads.filter((thread) => thread.id === event.threadId),
       hint: REVIEW_REANCHOR_GUIDE,
     });
   }
@@ -422,6 +474,7 @@ export function parseReviewArgs(
   let brief = false;
   let open = true;
   let quote: string | undefined;
+  let detach = false;
   const attach: string[] = [];
   const positionals: string[] = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -434,6 +487,7 @@ export function parseReviewArgs(
     if (arg === "--once") once = true;
     else if (arg === "--brief") brief = true;
     else if (arg === "--no-open") open = false;
+    else if (arg === "--detach") detach = true;
     else if (arg === "--attach") {
       const value = args[index + 1];
       if (value === undefined || !value.trim())
@@ -473,6 +527,24 @@ export function parseReviewArgs(
       "--session でセッション ID を指定してください（Claude Code と Codex では省略できます）",
     );
   const client = detectReviewClient(env);
+  if (positionals[0] === "relink") {
+    const [, threadId, ...rest] = positionals;
+    if (!threadId || rest.length)
+      throw new Error("relink にはスレッド ID を 1 つ指定してください");
+    if (workspaceId !== undefined)
+      throw new Error("--workspace は relink では使えません");
+    if ((quote === undefined) === !detach)
+      throw new Error(
+        "relink には --quote か --detach のどちらかを指定してください",
+      );
+    return {
+      mode: "relink",
+      threadId,
+      link: quote === undefined ? { detach: true } : { quote },
+      port,
+    };
+  }
+  if (detach) throw new Error("--detach は relink でだけ使えます");
   if (positionals[0] === "reply") {
     const [, threadId, body, ...rest] = positionals;
     if (!threadId || !body?.trim() || rest.length)
@@ -492,7 +564,8 @@ export function parseReviewArgs(
       ...(quote === undefined ? {} : { quote }),
     };
   }
-  if (quote !== undefined) throw new Error("--quote は reply でだけ使えます");
+  if (quote !== undefined)
+    throw new Error("--quote は reply と relink でだけ使えます");
   if (attach.length) throw new Error("--attach は reply でだけ使えます");
   if (brief && once)
     throw new Error("--brief と --once は同時に指定できません");
@@ -525,7 +598,9 @@ export function formatReports(
     lines.push(
       report.event === "finished"
         ? `ユーザーがレビューを終えました: ${report.file.title} (${report.file.path})`
-        : `ユーザーのコメント: ${report.file.title} (${report.file.path})`,
+        : report.event === "unlinked"
+          ? `コメントの文章を探せなくなりました: ${report.file.title} (${report.file.path})`
+          : `ユーザーのコメント: ${report.file.title} (${report.file.path})`,
     );
     if (report.event === "finished")
       lines.push(
@@ -551,7 +626,7 @@ export function formatReports(
     "",
     `返信: ${cli} review reply <thread-id> "<本文>" --session ${session}`,
     "返信の本文は、段落・箇条書き・太字・インラインコード・コードブロック・リンクの Markdown で書けます。",
-    "コメントされた文章を直したら、返信に --quote で直した後の文章（資料の中で 1 回だけ出てくる短い一節）を付けてください。付けずに返信すると、元の文章が資料にない間は差し戻されます。",
+    `文章を探せなくなったスレッドは、${cli} review relink <thread-id> --quote "<直した後の文章>" で付け直してください（資料の中で 1 回だけ出てくる短い一節）。文章を削除したときは付け直さず、返信で伝えてください。`,
   );
   return lines.join("\n");
 }
