@@ -47,6 +47,7 @@ const POPOVER_LINE_CHARACTERS = 36;
 /** .review-popover の font-size（rem） */
 const POPOVER_FONT_SCALE = 0.875;
 const POPOVER_MARGIN = 16;
+const DOCUMENT_SETTLE_MS = 200;
 /** 返信を待つ表示をやめるまでの時間 */
 export const REPLY_WAIT_MS = 5 * 60 * 1000;
 
@@ -180,16 +181,42 @@ export function ReviewLayer({
     return () => frame.removeEventListener("load", capture);
   }, [frameKey]);
 
+  // 図の描画やページ内の JavaScript は読み込みの後にも本文を変える
+  const [documentVersion, setDocumentVersion] = useState(0);
+  useEffect(() => {
+    const body = frameDocument?.body;
+    const Observer = frameDocument?.defaultView?.MutationObserver;
+    if (!body || !Observer) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new Observer(() => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => setDocumentVersion((version) => version + 1),
+        DOCUMENT_SETTLE_MS,
+      );
+    });
+    observer.observe(body, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [frameDocument]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: documentVersion は本文の変更を受けて探し直すために使う
   const located = useMemo(() => {
     const ranges = new Map<string, Range>();
     if (!frameDocument) return ranges;
     for (const thread of review.threads) {
-      if (!thread.anchor) continue;
+      if (!thread.anchor || thread.detached) continue;
       const range = locateTextAnchor(frameDocument, thread.anchor);
       if (range) ranges.set(thread.id, range);
     }
     return ranges;
-  }, [frameDocument, review.threads]);
+  }, [frameDocument, review.threads, documentVersion]);
 
   const activeThreadId = popover?.kind === "thread" ? popover.threadId : null;
   useEffect(() => {
@@ -443,6 +470,11 @@ export function ReviewLayer({
     (item.resolved ? group.resolved : group.open).push(item.id);
   }
   const closePopover = () => setPopover(null);
+  const isUnlinked = (thread: ReviewThread) =>
+    !!frameDocument && !!thread.anchor && !located.has(thread.id);
+  const unlinkedCount = review.threads.filter(
+    (thread) => !thread.resolved && isUnlinked(thread),
+  ).length;
 
   return (
     <>
@@ -642,9 +674,7 @@ export function ReviewLayer({
                               ? "comment"
                               : "comments"}
                             {item.resolved ? " · Resolved" : ""}
-                            {item.anchor && !located.has(item.id)
-                              ? " · Text not found"
-                              : ""}
+                            {isUnlinked(item) ? " · Text not found" : ""}
                           </span>
                         </button>
                       </li>
@@ -657,7 +687,7 @@ export function ReviewLayer({
             type="button"
             className="review-panel-toggle"
             aria-expanded={isPanelOpen}
-            aria-label={`Comments, ${openCount} open, ${resolvedCount} resolved`}
+            aria-label={`Comments, ${openCount} open, ${resolvedCount} resolved${unlinkedCount ? `, ${unlinkedCount} not on the document` : ""}`}
             data-status-description="Show the comment threads of this file."
             onClick={() => setIsPanelOpen((open) => !open)}
           >
@@ -672,6 +702,14 @@ export function ReviewLayer({
               <span className="review-count review-count--resolved">
                 <ResolvedBubbleIcon size={11} />
                 {resolvedCount}
+              </span>
+            )}
+            {unlinkedCount > 0 && (
+              <span
+                className="review-count review-count--unlinked"
+                title="Threads whose commented text is not found"
+              >
+                {unlinkedCount} not on the document
               </span>
             )}
           </button>

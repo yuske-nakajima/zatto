@@ -82,8 +82,10 @@ export async function startServer(
     );
     await reviewStore.load((id) => sessionStore.hasEntry(id));
     const realtimeHub = new RealtimeHub();
+    const fileChangeListeners: Array<(entryId: string) => void> = [];
     const createdEntryWatcher = new EntryWatcher((id) => {
       realtimeHub.broadcast({ type: "file:changed", id });
+      for (const listener of fileChangeListeners) listener(id);
     });
     entryWatcher = createdEntryWatcher;
     createdEntryWatcher.sync(sessionStore.getSession().entries);
@@ -105,6 +107,9 @@ export async function startServer(
       },
       onSessionChanged: (session) => {
         createdEntryWatcher.sync(session.entries);
+      },
+      subscribeFileChanges: (listener) => {
+        fileChangeListeners.push(listener);
       },
       shutdown: async () => {
         await createdApp.close();

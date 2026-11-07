@@ -12,9 +12,12 @@ import type {
   ReviewAuthor,
   ReviewClient,
   ReviewEvent,
+  ReviewLink,
+  ReviewLinkResult,
   ReviewStates,
   ReviewThread,
   TextAnchor,
+  UnlinkedThread,
 } from "./review.js";
 import type { SearchResponse } from "./search.js";
 import type { SessionExchange } from "./session-exchange.js";
@@ -175,7 +178,12 @@ export interface RpcMethods {
       /** Edited text the thread moves to; must appear once in the file. */
       quote?: string;
     };
-    result: ReviewThread;
+    /** `unlinked` は文章を探せない未解決のスレッド。この項目を持たない版のサーバーでは省略される。 */
+    result: ReviewThread & { unlinked?: UnlinkedThread[] };
+  };
+  "review.relink": {
+    params: RequestContext & { links: ReviewLink[] };
+    result: { results: ReviewLinkResult[]; unlinked: UnlinkedThread[] };
   };
   "review.get": {
     params: RequestContext & { threadId: string };

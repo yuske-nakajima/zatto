@@ -34,6 +34,7 @@ export const MCP_TOOL_NAMES = [
   "get_review_thread",
   "create_review_thread",
   "reply_review_thread",
+  "relink_review_threads",
   "resolve_review_thread",
 ] as const;
 
@@ -60,6 +61,7 @@ export type McpRpcMethod =
   | "review.list"
   | "review.create"
   | "review.reply"
+  | "review.relink"
   | "review.resolve";
 
 /** A verified connection to the running viewer, resolved once per tool call. */
@@ -681,8 +683,9 @@ function registerReviewTools(server: McpServer, connect: Connect): void {
     ({ threadId, body, quote, attachments, session }) =>
       run(async () => {
         const reply = await replyWithImages(body, attachments);
-        return {
-          thread: await (await connect()).call("review.reply", {
+        const { unlinked, ...thread } = await (await connect()).call(
+          "review.reply",
+          {
             threadId,
             author: llmAuthor(session),
             body: reply.body,
@@ -690,9 +693,57 @@ function registerReviewTools(server: McpServer, connect: Connect): void {
               ? { attachments: reply.attachments }
               : {}),
             ...(quote === undefined ? {} : { quote }),
-          }),
-        };
+          },
+        );
+        return { thread, unlinked: unlinked ?? [] };
       }),
+  );
+  server.registerTool(
+    "relink_review_threads",
+    {
+      title: "Move review comment threads to edited text",
+      description: `Use when threads lost their commented text. Moves each thread without adding a comment; a failure leaves that thread as it was and is reported in its result. ${REVIEW_REANCHOR_GUIDE}`,
+      inputSchema: z.object({
+        links: z
+          .array(
+            z.object({
+              threadId: threadIdInput,
+              quote: z
+                .string()
+                .trim()
+                .min(1)
+                .max(2_000)
+                .optional()
+                .describe(
+                  "Edited passage the thread moves to; it must appear once in the file",
+                ),
+              detach: z
+                .literal(true)
+                .optional()
+                .describe(
+                  "Take the thread off the document when it sits on the wrong text and has no right place",
+                ),
+            }),
+          )
+          .min(1)
+          .max(100),
+      }),
+      annotations: CHANGE_ANNOTATIONS,
+    },
+    ({ links }) =>
+      run(async () =>
+        (await connect()).call("review.relink", {
+          links: links.map(({ threadId, quote, detach }) => {
+            if ((quote === undefined) === (detach === undefined))
+              throw new Error(
+                `Give either quote or detach for thread ${threadId}.`,
+              );
+            return quote === undefined
+              ? { threadId, detach: true as const }
+              : { threadId, quote };
+          }),
+        }),
+      ),
   );
   server.registerTool(
     "resolve_review_thread",

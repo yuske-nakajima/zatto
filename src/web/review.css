@@ -711,6 +711,11 @@ span.review-attachment {
   opacity: 0.75;
 }
 
+.review-count--unlinked {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
 .entry-review-label--active {
   background: rgb(250 204 21 / 25%);
   color: var(--color-text-primary);

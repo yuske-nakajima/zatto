@@ -4,6 +4,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
+  briefReport,
   parseReviewArgs,
   runReviewCommand,
 } from "../src/cli/review-command.js";
@@ -352,6 +353,76 @@ describe("zatto review", () => {
     viewer.close();
   });
 
+  test("relink はコメントを増やさずに移し、失敗は終了コードで伝える", async () => {
+    const deps = dependencies();
+    const [entry] = await store.addEntries([file]);
+    const thread = (
+      await rpc(app, "review.create", {
+        workspaceId: "default",
+        entryId: entry?.id,
+        anchor: { exact: "閲覧URL", prefix: "", suffix: "" },
+        author: { kind: "user" },
+        body: "確認",
+      })
+    ).json<{ id: string }>();
+    await writeFile(file, "# 計画\n\n一覧URL を返す\n別の内容\n別の内容\n");
+
+    await expect(
+      runReviewCommand(
+        ["relink", thread.id, "--quote", "別の内容", "--session", "s"],
+        deps,
+      ),
+    ).resolves.toBe(1);
+    expect(deps.stderr).toHaveBeenCalledWith(
+      expect.stringContaining("more than once"),
+    );
+    await expect(
+      runReviewCommand(
+        ["relink", thread.id, "--quote", "一覧URL を返す", "--session", "s"],
+        deps,
+      ),
+    ).resolves.toBe(0);
+    expect(deps.stdout).toHaveBeenCalledWith(
+      `付け直しました: thread ${thread.id}`,
+    );
+
+    await writeFile(file, "# 計画\n\nまったく別の内容です\n");
+    await expect(
+      runReviewCommand(
+        ["reply", thread.id, "削除しました", "--session", "s"],
+        deps,
+      ),
+    ).resolves.toBe(0);
+    expect(deps.stdout).toHaveBeenCalledWith(
+      `文章を探せないスレッド: thread ${thread.id} ${JSON.stringify("一覧URL を返す")}`,
+    );
+  });
+
+  test("--brief は文章を探せなくなったスレッドを 1 行で出す", () => {
+    expect(
+      briefReport({
+        event: "unlinked",
+        file: { id: "e", title: "計画", path: "/計画.md" },
+        threads: [
+          {
+            id: "t",
+            entryId: "e",
+            anchor: { exact: "文", prefix: "", suffix: "" },
+            resolved: false,
+            createdAt: 1,
+            comments: [],
+          },
+        ],
+        hint: "",
+      }),
+    ).toEqual({
+      event: "unlinked",
+      file: "計画",
+      threadIds: ["t"],
+      next: expect.stringContaining("relink_review_threads"),
+    });
+  });
+
   test("--brief はスレッド ID と最新のコメントの冒頭だけを 1 行で出す", async () => {
     const deps = dependencies();
     const running = runReviewCommand(
@@ -478,9 +549,29 @@ describe("zatto review", () => {
         "s",
       ]),
     ).toMatchObject({ mode: "reply", quote: "直した文" });
+    expect(
+      parseReviewArgs(["relink", "t1", "--detach", "--session", "s"]),
+    ).toMatchObject({ mode: "relink", threadId: "t1", link: { detach: true } });
+    expect(() => parseReviewArgs(["relink", "t1", "--session", "s"])).toThrow(
+      "--quote か --detach",
+    );
+    expect(() =>
+      parseReviewArgs([
+        "relink",
+        "t1",
+        "--quote",
+        "x",
+        "--detach",
+        "--session",
+        "s",
+      ]),
+    ).toThrow("--quote か --detach");
+    expect(() =>
+      parseReviewArgs(["a.md", "--detach", "--session", "s"]),
+    ).toThrow("relink でだけ");
     expect(() =>
       parseReviewArgs(["a.md", "--quote", "x", "--session", "s"]),
-    ).toThrow("reply でだけ");
+    ).toThrow("reply と relink でだけ");
     expect(
       parseReviewArgs(["reply", "t1", "本文"], {
         CODEX_THREAD_ID: "019a2b3c-4d5e",

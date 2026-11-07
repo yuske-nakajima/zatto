@@ -109,6 +109,9 @@ function reviewThread(value: unknown): boolean {
     )
   );
 }
+function unlinkedThread(value: unknown): boolean {
+  return object(value) && text(value.threadId) && text(value.quote);
+}
 function counts(value: unknown): boolean {
   return object(value) && Object.values(value).every(number);
 }
@@ -129,6 +132,7 @@ function reviewEvent(value: unknown): boolean {
     text(value.entryId) &&
     text(value.workspaceId) &&
     ((value.kind === "comment" && text(value.threadId)) ||
+      (value.kind === "unlinked" && list(value.threadIds, text)) ||
       value.kind === "finished")
   );
 }
@@ -206,9 +210,27 @@ export function isRpcResult<M extends RpcMethod>(
     case "review.list":
       return object(value) && list(value.threads, reviewThread);
     case "review.create":
-    case "review.reply":
     case "review.resolve":
       return reviewThread(value);
+    case "review.reply":
+      return (
+        object(value) &&
+        reviewThread(value) &&
+        (value.unlinked === undefined || list(value.unlinked, unlinkedThread))
+      );
+    case "review.relink":
+      return (
+        object(value) &&
+        list(value.unlinked, unlinkedThread) &&
+        list(
+          value.results,
+          (result) =>
+            object(result) &&
+            text(result.threadId) &&
+            (result.ok === true ||
+              (result.ok === false && text(result.message))),
+        )
+      );
     case "review.get":
       return (
         object(value) &&

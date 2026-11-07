@@ -68,7 +68,25 @@ export interface ReviewThread {
   resolved: boolean;
   createdAt: number;
   comments: ReviewComment[];
+  /** anchor を引用として残し、本文には表示しない。 */
+  detached?: boolean;
 }
+
+/** ファイルの中で文章を探せない未解決のスレッド。 */
+export interface UnlinkedThread {
+  threadId: string;
+  quote: string;
+}
+
+/** スレッドをファイルの一節へ移す指定、または本文から外す指定。 */
+export type ReviewLink =
+  | { threadId: string; quote: string }
+  | { threadId: string; detach: true };
+
+/** 指定 1 件の結果。失敗したスレッドは変わらない。 */
+export type ReviewLinkResult =
+  | { threadId: string; ok: true }
+  | { threadId: string; ok: false; message: string };
 
 /** A file the user is reviewing with an LLM session; the session receives the user's comments on it. */
 export interface ActiveReview {
@@ -80,7 +98,7 @@ export interface ActiveReview {
   createdAt: number;
 }
 
-/** Something the waiting LLM session must handle: a new user comment, or the user finishing a review. */
+/** 待機中の LLM セッションが扱うもの: ユーザーの新しいコメント、文章を探せなくなったスレッド、レビューの終了。 */
 export type ReviewEvent =
   | {
       kind: "comment";
@@ -88,6 +106,13 @@ export type ReviewEvent =
       entryId: string;
       workspaceId: string;
       threadId: string;
+    }
+  | {
+      kind: "unlinked";
+      reviewId: string;
+      entryId: string;
+      workspaceId: string;
+      threadIds: string[];
     }
   | {
       kind: "finished";
@@ -102,6 +127,7 @@ export const REVIEW_LIMITS = {
   contextLength: 64,
   attachmentsPerComment: 4,
   attachmentBytes: 5 * 1024 * 1024,
+  linksPerRequest: 100,
 } as const;
 
 /**
@@ -130,9 +156,9 @@ export interface ReviewStates {
   latestReplies: Record<string, ReviewLatestReply>;
 }
 
-/** How an LLM keeps a thread on text it edited, shared by the MCP tools, the CLI output, and the copied request. */
+/** LLM がスレッドを文章に保つための案内。MCP ツール、CLI の出力、コピーする依頼文で共有する。 */
 export const REVIEW_REANCHOR_GUIDE =
-  "If you edit the commented text, reply with the edited passage as --quote (quote in reply_review_thread) so the thread follows it; quote a short passage from one paragraph that appears once in the document. A reply without it is refused while the commented text is missing from the file.";
+  "Threads stay on the file when their commented text changes, and zatto finds lightly edited text by itself. When it cannot, reply results and an unlinked event name the thread: move it with relink_review_threads (zatto review relink <thread-id> --quote <passage>), quoting a short passage from one paragraph that appears once in the document, without adding a comment. If you deleted the text, do not relink; reply to say so. If a thread sits on the wrong text and has no right place, detach it (detach in relink_review_threads, --detach).";
 
 /** What an LLM may use in replies and how it reads images, shared by the MCP tools and the copied request. */
 export const REVIEW_REPLY_GUIDE =

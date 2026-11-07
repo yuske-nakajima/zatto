@@ -205,7 +205,7 @@ configuration changes are intentionally outside `zatto`.
 | `remove_files` | Remove file ids from any workspace without deleting files on disk |
 | `create_workspace` | Create an empty workspace without changing the selection |
 | `update_files` | Set stars and one-based List positions in any workspace |
-| `list_review_threads` / `get_review_thread` / `reply_review_thread` / `create_review_thread` / `resolve_review_thread` | List, read one, answer, start, and resolve comment threads on a file |
+| `list_review_threads` / `get_review_thread` / `reply_review_thread` / `relink_review_threads` / `create_review_thread` / `resolve_review_thread` | List, read one, answer, move, start, and resolve comment threads on a file |
 
 The MCP tools never start the viewer and report an error when it is not running.
 

@@ -22,6 +22,7 @@ type CreateAppOptions = {
   pickFiles?: PickFiles;
   pickDirectory?: PickDirectory;
   onSessionChanged?: (session: Session) => Promise<void> | void;
+  subscribeFileChanges?: (listener: (entryId: string) => void) => void;
   agentContextStore?: AgentContextStore;
   reviewStore?: ReviewStore;
   serverIdentity?: {
