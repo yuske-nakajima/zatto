@@ -77,8 +77,8 @@ describe("zatto promotion videos", () => {
   });
 
   test("pins compatible Remotion packages", () => {
-    expect(packageJson.devDependencies.remotion).toBe("4.0.538");
-    expect(packageJson.devDependencies["@remotion/cli"]).toBe("4.0.538");
+    expect(packageJson.devDependencies.remotion).toBe("4.0.539");
+    expect(packageJson.devDependencies["@remotion/cli"]).toBe("4.0.539");
   });
 
   test.each([
