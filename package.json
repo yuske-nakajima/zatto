@@ -20,7 +20,7 @@
     "local"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.22.0"
   },
   "files": [
     "bin",
@@ -42,7 +42,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.17.0",
   "scripts": {
     "build": "pnpm run build:web && pnpm run build:node && pnpm run typecheck",
     "build:node": "tsc -p tsconfig.build.json",
@@ -62,26 +62,26 @@
     "verify:package": "pnpm run build && node scripts/verify-package.mjs"
   },
   "dependencies": {
-    "@fastify/websocket": "11.3.4",
+    "@fastify/websocket": "11.3.6",
     "@modelcontextprotocol/server": "2.4.0",
-    "chokidar": "5.0.0",
+    "chokidar": "6.0.0",
     "fastify": "5.12.7",
-    "marked": "18.1.1",
+    "marked": "18.1.2",
     "nanoid": "6.0.2",
-    "ws": "8.22.0",
+    "ws": "8.22.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.3",
+    "@biomejs/biome": "2.6.4",
     "@fontsource/biz-udpgothic": "5.3.0",
     "@fontsource/geist-mono": "5.3.0",
     "@fontsource/inter": "5.3.0",
     "@modelcontextprotocol/client": "2.4.0",
-    "@remotion/cli": "4.0.538",
+    "@remotion/cli": "4.0.539",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
     "@types/jsdom": "30.0.0",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/ws": "8.18.2",
@@ -91,7 +91,7 @@
     "mermaid": "12.2.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "remotion": "4.0.538",
+    "remotion": "4.0.539",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.5",
